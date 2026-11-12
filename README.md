@@ -34,23 +34,41 @@ prebuild time.
 | `bun run start` | Dev server |
 | `bun run typecheck` | Typecheck |
 | `bun run lint` | ESLint via `expo lint` |
+| `bun run check` | Run every `*.check.ts` self-check |
+| `bun run release` | Bump, tag and push a release |
 
 `@/*` resolves to `src/*`.
 
+CI runs all of the above plus `expo-doctor` on every push and pull request.
+
 ## Releases
 
-Versions are bumped by hand, in `package.json` (`version`) and `app.json`
-(`expo.version` plus `expo.android.versionCode`). The workflow fails if the two
-versions disagree.
+Releases are cut from tags and built on GitHub Actions.
 
-Releases are built on GitHub Actions with a manual run of the `Build & Release`
-workflow. It lints, typechecks, builds a signed APK with `eas build --local`,
-and opens a draft GitHub Release with the APK attached and notes taken from the
-last ten commits. Publish the draft to make it visible, since the in-app update
-check reads `releases/latest`.
+```bash
+bun run release 1.0.1
+```
+
+The script refuses to run unless the working tree is clean, you are on `main`,
+the version differs from the current one, both version files agree and the tag
+`vX.Y.Z` does not exist yet. It then bumps `version` in `app.json` and
+`package.json`, commits with `chore(release): vX.Y.Z`, tags and pushes both. Add
+`--dry-run` to see the plan without touching anything.
+
+The release workflow runs the checks, fails unless the tag matches both
+versions, builds a signed APK with `eas build --local`, and publishes a GitHub
+Release with the APK attached. Notes are generated from the commits since the
+previous tag.
 
 The build runs on the GitHub runner and uses no EAS build minutes. The Android
-keystore lives in EAS, so the only secret the workflow needs is `EXPO_TOKEN`.
+keystore is stored and managed by EAS, so the only secret the workflow needs is
+the `EXPO_TOKEN` repository secret.
+
+`android.versionCode` is not tracked in this repository. `eas.json` sets
+`appVersionSource: "remote"` and `autoIncrement: true`, so EAS owns the
+versionCode and increments it on every production build. The version that
+users see lives in `app.json` (`expo.version`) and `package.json` (`version`),
+and the two must match.
 
 ## Structure
 

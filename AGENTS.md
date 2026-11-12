@@ -7,10 +7,11 @@ Instructions for AI coding agents. Complement to README.md.
 ```bash
 bun run typecheck              # typecheck
 bun run lint                   # ESLint (flat config, type-aware)
-bun run typecheck && bun run lint  # both
+bun run check                  # every *.check.ts self-check
+bun run typecheck && bun run lint && bun run check  # all
 ```
 
-No test framework.
+No test framework. `*.check.ts` files are assert-based self-checks run by `scripts/check.ts`.
 
 ## Project
 
@@ -51,8 +52,8 @@ Expo 58 + React Native 0.88. **Android-only** (no iOS/web). File-based routing v
 - EAS prod build: `buildType: "apk"` (NDK not pinned — local builds ignore the `ndk` field anyway)
 - Signing: EAS-managed credentials (remote) — only `EXPO_TOKEN` needed in CI; keystore lives in EAS (`eas credentials`)
 - `eas build --local` runs prebuild internally — no explicit prebuild step in CI
-- Version is bumped manually by commit — no `autoIncrement` (avoids APK/tag drift)
-- Version: `package.json` + `app.json` (`expo.version` + `expo.android.versionCode`)
+- Version: `bun run release X.Y.Z` bumps `app.json` (`expo.version`) and `package.json`, commits, tags and pushes
+- `android.versionCode` is not in the repo — `appVersionSource: "remote"` plus `autoIncrement: true` in `eas.json` lets EAS own it
 - `bun install` respects `trustedDependencies` — `unrs-resolver` is listed there, without it its native binding never builds and ESLint import resolution fails
 
 ## 🚫 Rules
