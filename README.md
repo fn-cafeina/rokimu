@@ -5,15 +5,15 @@ Android anime streaming client built with Expo SDK 57.
 ## Requirements
 
 - Node.js LTS
-- npm
+- bun
 - JDK 17 and the Android SDK for local builds
 
 ## Setup
 
 ```bash
-npm install
-npx expo prebuild --platform android
-npx expo run:android
+bun install
+bunx expo prebuild --platform android
+bun run android
 ```
 
 Rokimu needs a development build. It does not run in Expo Go: the installer
@@ -30,10 +30,10 @@ prebuild time.
 
 | Command | What it does |
 |---|---|
-| `npm run android` | Build and run on a device or emulator |
-| `npm start` | Dev server |
-| `npx tsc --noEmit` | Typecheck |
-| `npm run lint` | ESLint via `expo lint` |
+| `bun run android` | Build and run on a device or emulator |
+| `bun run start` | Dev server |
+| `bun run typecheck` | Typecheck |
+| `bun run lint` | ESLint via `expo lint` |
 
 `@/*` resolves to `src/*`.
 
