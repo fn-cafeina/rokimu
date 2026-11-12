@@ -127,7 +127,7 @@ function SearchScreenContent() {
                   <Feather name="frown" size={48} color="#404040" />
                   <Text className="mt-4 text-sm text-neutral-500">Sin resultados para &quot;{searchTerm}&quot;</Text>
                 </View>
-              )) : null}
+              )) : undefined}
             />
           </Animated.View>
         )}

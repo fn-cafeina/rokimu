@@ -29,8 +29,8 @@ const LABELS: Record<string, string> = {
 
 export function FloatingTabBar({
   state,
-  descriptors: _,
-  navigation,
+  emitter,
+  navigateToTab,
 }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
   const visible = useUIStore((state) => state.tabBarVisible);
@@ -72,14 +72,14 @@ export function FloatingTabBar({
           const isFocused = state.index === index;
 
           const onPress = () => {
-            const event = navigation.emit({
+            const event = emitter.emit({
               type: "tabPress",
               target: route.key,
               canPreventDefault: true,
             });
 
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+              navigateToTab(route.key);
             }
           };
 

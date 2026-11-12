@@ -16,21 +16,21 @@ export default function TabLayout() {
           name="index"
           options={{
             title: "Inicio",
-            tabBarIcon: ({ color }) => <Feather name="home" size={24} color={color} />,
+            tabBarIcon: ({ color }) => <Feather name="home" size={24} color={typeof color === "string" ? color : undefined} />,
           }}
         />
         <Tabs.Screen
           name="search"
           options={{
             title: "Buscar",
-            tabBarIcon: ({ color }) => <Feather name="search" size={24} color={color} />,
+            tabBarIcon: ({ color }) => <Feather name="search" size={24} color={typeof color === "string" ? color : undefined} />,
           }}
         />
         <Tabs.Screen
           name="settings"
           options={{
             title: "Ajustes",
-            tabBarIcon: ({ color }) => <Feather name="settings" size={24} color={color} />,
+            tabBarIcon: ({ color }) => <Feather name="settings" size={24} color={typeof color === "string" ? color : undefined} />,
           }}
         />
       </Tabs>

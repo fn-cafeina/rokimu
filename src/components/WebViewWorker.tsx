@@ -11,7 +11,7 @@ import type { ISession } from "@/types";
 const WORKER_URL = SOURCE_CONFIG.sessionWashUrl;
 
 export const WebViewWorker = () => {
-  const vRef = useRef<WebView>(null);
+  const vRef = useRef<React.ComponentRef<typeof WebView>>(null);
 
   useEffect(() => {
     webViewBridge.registerNavigation((uri: string) => {
