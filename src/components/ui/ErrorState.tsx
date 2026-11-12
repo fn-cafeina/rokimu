@@ -30,9 +30,9 @@ export function ErrorState({ onRetry, error, title = "Error al cargar" }: ErrorS
       <Text className="mt-2 max-w-[300px] text-center text-sm text-neutral-600">
         {SUBTITLES[error?.type ?? "UNKNOWN"]}
       </Text>
-      <AnimatedPressable className="mt-4 flex-row items-center px-6 py-3 rounded-xl bg-purple-500/15" onPress={onRetry}>
+      <AnimatedPressable className="mt-4 flex-row items-center px-6 py-3 rounded-xl bg-accent/15" onPress={onRetry}>
         <Feather name="refresh-cw" size={16} color={ACCENT_COLOR} />
-        <Text className="ml-2 text-xs font-semibold tracking-wide text-purple-500">
+        <Text className="ml-2 text-xs font-semibold tracking-wide text-accent">
           Reintentar
         </Text>
       </AnimatedPressable>

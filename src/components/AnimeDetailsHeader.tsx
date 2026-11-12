@@ -78,7 +78,7 @@ export const AnimeDetailsHeader = memo(
               style={{ top: insets.top + 4 }}
             >
               <Text
-                className={`text-[11px] font-bold tracking-wider leading-none ${isAiring ? "text-purple-400" : "text-neutral-400"}`}
+                className={`text-[11px] font-bold tracking-wider leading-none ${isAiring ? "text-accent" : "text-neutral-400"}`}
               >
                 {(isAiring ? "En emisión" : "Finalizado").toUpperCase()}
               </Text>
@@ -118,7 +118,7 @@ export const AnimeDetailsHeader = memo(
                 {anime.synopsis}
               </Text>
               {!isExpanded && anime.synopsis.length > 150 && (
-                <Text className="mt-2 text-sm font-bold leading-6 text-purple-500">
+                <Text className="mt-2 text-sm font-bold leading-6 text-accent">
                   Leer más
                 </Text>
               )}
@@ -150,8 +150,8 @@ export const AnimeDetailsHeader = memo(
                           style={{ width: 100, height: 140, borderRadius: 10 }}
                         />
                         {item.type !== "related" && (
-                          <View className="absolute top-1.5 left-1.5 rounded-md bg-purple-500 px-1.5 py-0.5">
-                            <Text className="text-[9px] font-bold text-white uppercase">
+                          <View className="absolute top-1.5 left-1.5 rounded-md bg-accent px-1.5 py-0.5">
+                            <Text className="text-[9px] font-bold text-neutral-950 uppercase">
                               {TYPE_LABEL[item.type]}
                             </Text>
                           </View>

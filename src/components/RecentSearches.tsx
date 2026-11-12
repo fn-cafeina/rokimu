@@ -21,7 +21,7 @@ export const RecentSearches = memo(({ searches, onSelect, onRemove, onClearAll }
         <SectionTitle>Búsquedas recientes</SectionTitle>
         {onClearAll && (
           <AnimatedPressable onPress={onClearAll}>
-            <Text className="text-xs font-semibold text-purple-500">Limpiar</Text>
+            <Text className="text-xs font-semibold text-accent">Limpiar</Text>
           </AnimatedPressable>
         )}
       </View>

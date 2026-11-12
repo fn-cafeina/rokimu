@@ -203,7 +203,7 @@ export default function SettingsScreen() {
                     </Text>
                   )}
                   {!checkingForUpdates && !lastCheckError && updateAvailable && (
-                    <Text className="text-xs font-semibold tracking-wide text-purple-400">
+                    <Text className="text-xs font-semibold tracking-wide text-accent">
                       v{updateAvailable} disponible
                     </Text>
                   )}
@@ -219,7 +219,7 @@ export default function SettingsScreen() {
                   onPress={handleDownloadUpdate}
                   className="flex-row items-center gap-1 ml-auto flex-shrink-0"
                 >
-                  <Text className="text-xs font-semibold tracking-wide text-purple-400">
+                  <Text className="text-xs font-semibold tracking-wide text-accent">
                     Actualizar
                   </Text>
                   <Feather name="arrow-right" size={11} color={ACCENT_COLOR} />

@@ -55,10 +55,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
             {this.state.error?.message ?? "Error inesperado"}
           </Text>
           <AnimatedPressable
-            className="flex-row items-center mt-4 bg-purple-500/15 px-6 py-3 rounded-xl"
+            className="flex-row items-center mt-4 bg-accent/15 px-6 py-3 rounded-xl"
             onPress={this.handleRetry}
           >
-            <Text className="font-semibold text-purple-500">Reintentar</Text>
+            <Text className="font-semibold text-accent">Reintentar</Text>
           </AnimatedPressable>
         </View>
       );

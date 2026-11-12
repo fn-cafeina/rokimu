@@ -115,11 +115,11 @@ function SearchScreenContent() {
                     El sitio está tardando más de lo normal en responder. Inténtalo de nuevo en un momento.
                   </Text>
                   <AnimatedPressable
-                    className="mt-4 flex-row items-center px-6 py-3 rounded-xl bg-purple-500/15"
+                    className="mt-4 flex-row items-center px-6 py-3 rounded-xl bg-accent/15"
                     onPress={retrySearch}
                   >
                     <Feather name="refresh-cw" size={16} color={ACCENT_COLOR} />
-                    <Text className="ml-2 text-xs font-semibold tracking-wide text-purple-500">Reintentar</Text>
+                    <Text className="ml-2 text-xs font-semibold tracking-wide text-accent">Reintentar</Text>
                   </AnimatedPressable>
                 </View>
               ) : (

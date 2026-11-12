@@ -65,11 +65,11 @@ export const AnimeEpisodeModal = ({
               </Text>
               {onRetry != null && (
                 <AnimatedPressable
-                  className="flex-row items-center px-5 py-2.5 rounded-xl bg-purple-500/15"
+                  className="flex-row items-center px-5 py-2.5 rounded-xl bg-accent/15"
                   onPress={onRetry}
                 >
                   <Feather name="refresh-cw" size={14} color={ACCENT_COLOR} />
-                  <Text className="ml-2 text-xs font-semibold tracking-wide text-purple-500">Reintentar</Text>
+                  <Text className="ml-2 text-xs font-semibold tracking-wide text-accent">Reintentar</Text>
                 </AnimatedPressable>
               )}
             </View>

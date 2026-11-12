@@ -54,9 +54,9 @@ export const EpisodeRangeSelector = memo(({
           return (
             <AnimatedPressable
               onPress={() => { setActiveRangeIdx(index); }}
-              className={`rounded-lg bg-neutral-900 gap-3 w-[90px] items-center py-2 ${isActive ? "bg-purple-500/15" : ""}`}
+              className={`rounded-lg bg-neutral-900 gap-3 w-[90px] items-center py-2 ${isActive ? "bg-accent/15" : ""}`}
             >
-              <Text className={`text-xs ${isActive ? "text-purple-500" : "text-neutral-500"}`}>
+              <Text className={`text-xs ${isActive ? "text-accent" : "text-neutral-500"}`}>
                 {item.label}
               </Text>
             </AnimatedPressable>

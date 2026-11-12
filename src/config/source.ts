@@ -1,4 +1,5 @@
-export const ACCENT_COLOR = "#A855F7";
+// Must match --color-accent in global.css
+export const ACCENT_COLOR = "#5BC8F5";
 export const MUTED_ICON = "#737373";
 
 export const SOURCE_CONFIG = {

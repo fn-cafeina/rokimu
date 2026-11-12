@@ -168,7 +168,7 @@ export function PlayerControls({
           >
             <View className="px-4 pb-6 pt-3">
               <View className="flex-row items-center gap-2">
-                <Text className={`text-xs text-right ${isSliding ? "text-purple-400" : "text-white"}`}>
+                <Text className={`text-xs text-right ${isSliding ? "text-accent" : "text-white"}`}>
                   {formatTime(displayTime)}
                 </Text>
 
@@ -230,7 +230,7 @@ export function PlayerControls({
                 )}
                 <View className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
                   <View
-                    className="h-full bg-purple-500 rounded-full"
+                    className="h-full bg-accent rounded-full"
                     style={{ width: `${((nextEpisodeCountdown ?? 0) / NEXT_EPISODE_COUNTDOWN_SECONDS) * 100}%` }}
                   />
                 </View>
@@ -249,7 +249,7 @@ export function PlayerControls({
                   className="flex-1 py-3 items-center"
                   hitSlop={8}
                 >
-                  <Text className="text-sm text-purple-400 font-medium">Saltar ahora</Text>
+                  <Text className="text-sm text-accent font-medium">Saltar ahora</Text>
                 </AnimatedPressable>
               </View>
             </View>

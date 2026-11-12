@@ -67,7 +67,7 @@ export function UpdateModal() {
         </AnimatedPressable>
         <View className="w-px bg-neutral-800" />
         <AnimatedPressable onPress={() => void confirmUpdate()} className="flex-1 py-4 items-center">
-          <Text className="text-sm text-purple-400 font-medium">Actualizar</Text>
+          <Text className="text-sm text-accent font-medium">Actualizar</Text>
         </AnimatedPressable>
       </View>
     );
@@ -92,7 +92,7 @@ export function UpdateModal() {
           onPress={() => void grantInstallPermissionAndDownload()}
           className="flex-1 py-4 items-center"
         >
-          <Text className="text-sm text-purple-400 font-medium">Abrir ajustes</Text>
+          <Text className="text-sm text-accent font-medium">Abrir ajustes</Text>
         </AnimatedPressable>
       </View>
     );
@@ -138,7 +138,7 @@ export function UpdateModal() {
         </AnimatedPressable>
         <View className="w-px bg-neutral-800" />
         <AnimatedPressable onPress={() => void beginDownload()} className="flex-1 py-4 items-center">
-          <Text className="text-sm text-purple-400 font-medium">Reintentar</Text>
+          <Text className="text-sm text-accent font-medium">Reintentar</Text>
         </AnimatedPressable>
       </View>
     );
