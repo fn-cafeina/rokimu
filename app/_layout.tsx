@@ -1,5 +1,4 @@
 import "../global.css";
-import { NetworkBanner } from "@/components/NetworkBanner";
 import { WebViewWorker } from "@/components/WebViewWorker";
 import { useSettingsStore, EPISODE_ORDER_KEY } from "@/stores/settingsStore";
 import { useUserInitializationStore } from "@/stores/userIndex";
@@ -104,7 +103,6 @@ function RootInner() {
 
   return (
     <View className="flex-1 bg-black">
-      <NetworkBanner visible={isInternetReachable === false} />
       <StatusBar style="light" />
       <Stack
         screenOptions={{
