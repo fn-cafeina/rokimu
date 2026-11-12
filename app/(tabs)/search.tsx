@@ -3,8 +3,10 @@ import { AnimeCard } from "@/components/AnimeCard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RecentSearches } from "@/components/RecentSearches";
 import { SearchSkeleton } from "@/components/skeletons/SearchSkeleton";
+import { RecentSkeleton } from "@/components/skeletons/RecentSkeleton";
 import { SuggestionsList } from "@/components/SuggestionsList";
 import type { Anime } from "@/types";
+import { useExploreScreen, type ExploreSection } from "@/hooks/useExploreScreen";
 import { useSearchScreen, MIN_SEARCH_LENGTH } from "@/hooks/useSearchScreen";
 import { SCREEN_BOTTOM_PADDING, calcCardWidth } from "@/utils/layout";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
@@ -21,6 +23,8 @@ function SearchScreenContent() {
     retrySearch, removeRecentSearch, clearRecentSearches, handleSelectSuggestion,
   } = useSearchScreen();
 
+  const { sections, isLoading: homeLoading, error: homeError, fetchHome, hasContent } = useExploreScreen();
+
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = calcCardWidth(screenWidth);
@@ -29,6 +33,10 @@ function SearchScreenContent() {
   useEffect(() => {
     Animated.timing(resultsOpacity, { toValue: isSearched ? 1 : 0, duration: 150, useNativeDriver: true }).start();
   }, [isSearched, resultsOpacity]);
+
+  useEffect(() => {
+    if (isIdle) void fetchHome();
+  }, [isIdle, fetchHome]);
 
   const renderSearchResult = useCallback(({ item }: { item: Anime }) => (
     <View className="mb-2"><AnimeCard anime={item} width={cardWidth} /></View>
@@ -41,6 +49,23 @@ function SearchScreenContent() {
   // matching when the app would otherwise fire a request
   const debouncedLength = useDebounce(searchTerm, 300).trim().length;
   const showMinLengthHint = isTyping && debouncedLength >= 1 && debouncedLength < MIN_SEARCH_LENGTH;
+
+  const renderIdleSection = useCallback(({ item }: { item: ExploreSection }) => (
+    <View>
+      <Text className="mb-3 text-lg font-bold tracking-tight text-white">{item.label}</Text>
+      <View className="gap-3">
+        {chunkRows(item.items, 3).map((row, rowIdx) => (
+          <View key={rowIdx} className="flex-row gap-3">
+            {row.map((anime) => (
+              <View key={anime.url} style={{ width: cardWidth }}>
+                <AnimeCard anime={anime} width={cardWidth} />
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+    </View>
+  ), [cardWidth]);
 
   return (
     <View className="flex-1 bg-black">
@@ -66,8 +91,38 @@ function SearchScreenContent() {
       </View>
 
       <View className="flex-1 bg-black px-5">
-        {showIdleContent && recentSearches.length > 0 && (
-          <RecentSearches searches={recentSearches} onSelect={(t) => handleSearch(t)} onRemove={removeRecentSearch} onClearAll={clearRecentSearches} />
+        {showIdleContent && (
+          <FlatList
+            data={sections}
+            keyExtractor={(_, index) => `section-${index}`}
+            renderItem={renderIdleSection}
+            ListHeaderComponent={
+              recentSearches.length > 0 ? (
+                <RecentSearches searches={recentSearches} onSelect={(t) => handleSearch(t)} onRemove={removeRecentSearch} onClearAll={clearRecentSearches} />
+              ) : undefined
+            }
+            ListEmptyComponent={
+              homeLoading ? (
+                <RecentSkeleton />
+              ) : homeError ? (
+                <View className="items-center pt-16">
+                  <Feather name="wifi-off" size={40} color="#404040" />
+                  <Text className="mt-4 text-sm text-neutral-500">No se pudieron cargar los recién agregados</Text>
+                  <AnimatedPressable
+                    className="mt-4 flex-row items-center px-6 py-3 rounded-xl bg-accent/15"
+                    onPress={() => void fetchHome(true)}
+                  >
+                    <Feather name="refresh-cw" size={16} color={ACCENT_COLOR} />
+                    <Text className="ml-2 text-xs font-semibold tracking-wide text-accent">Reintentar</Text>
+                  </AnimatedPressable>
+                </View>
+              ) : undefined
+            }
+            ItemSeparatorComponent={() => <View className="h-4" />}
+            contentContainerStyle={{ paddingBottom: SCREEN_BOTTOM_PADDING }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={homeLoading && hasContent} onRefresh={() => void fetchHome(true)} tintColor={ACCENT_COLOR} />}
+          />
         )}
         {showHint && (
           <View className="flex-1 justify-start items-center pt-20">
@@ -126,6 +181,12 @@ function SearchScreenContent() {
       </View>
     </View>
   );
+}
+
+function chunkRows<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) rows.push(items.slice(i, i + size));
+  return rows;
 }
 
 export default function SearchScreen() {

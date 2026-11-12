@@ -46,14 +46,3 @@ export function addToHistorySafe(
 export function findHistoryEntry(lastViewed: HistoryItem[], url: string, number: string): HistoryItem | undefined {
   return lastViewed.find((h) => h.url === url && h.number === number);
 }
-
-export function computeContinueWatching(lastViewed: HistoryItem[]): HistoryItem[] {
-  const latestPerAnime = new Map<string, HistoryItem>();
-  for (const item of lastViewed) {
-    const existing = latestPerAnime.get(item.url);
-    if (!existing || item.timestamp > existing.timestamp) {
-      latestPerAnime.set(item.url, item);
-    }
-  }
-  return Array.from(latestPerAnime.values()).slice(0, 16);
-}
