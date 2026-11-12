@@ -39,11 +39,11 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen
-          name="index"
+          name="library"
           options={{
-            title: "Inicio",
+            title: "Biblioteca",
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name="home" color={toIconColor(color)} focused={focused} />
+              <TabBarIcon name="bookmark" color={toIconColor(color)} focused={focused} />
             ),
           }}
         />
