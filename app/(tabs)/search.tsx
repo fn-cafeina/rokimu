@@ -74,10 +74,10 @@ function SearchScreenContent() {
         <TopAppBar title="Explorar" />
       </View>
       <View className="px-5 pb-4">
-        <View className="flex-row items-center h-12 bg-neutral-900 rounded-xl border border-neutral-800 px-4">
+        <View className="flex-row items-center h-14 bg-neutral-900 border border-neutral-800 px-4 rounded-full">
           <Feather name="search" size={18} color="#a3a3a3" style={{ marginRight: 8 }} />
           <TextInput
-            className="flex-1 text-white text-base font-normal h-12"
+            className="flex-1 text-white text-base font-normal h-14"
             placeholder="Buscar anime..."
             placeholderTextColor={MUTED_ICON}
             value={searchTerm}
