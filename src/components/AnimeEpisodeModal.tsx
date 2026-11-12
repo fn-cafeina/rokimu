@@ -1,0 +1,100 @@
+import { Feather } from "@expo/vector-icons";
+import React from "react";
+import { Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { AppError, Episode, VideoServer } from "@/types";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ACCENT_COLOR } from "@/config/source";
+
+interface AnimeEpisodeModalProps {
+  visible: boolean;
+  onClose: () => void;
+  episode: Episode | null;
+  servers: VideoServer[];
+  isLoading: boolean;
+  /** Real fetch failure for this episode; never conflated with "no servers" */
+  error?: AppError | null;
+  onRetry?: () => void;
+  onServerSelect: (server: VideoServer) => void;
+}
+
+export const AnimeEpisodeModal = ({
+  visible, onClose, episode, servers, isLoading, error, onRetry, onServerSelect
+}: AnimeEpisodeModalProps) => {
+  const insets = useSafeAreaInsets();
+
+  if (!visible) return null;
+
+  const delta = servers.filter((s) => s.title.toLowerCase().includes("delta"));
+  const displayServers = delta.length > 0 ? delta : servers;
+
+  return (
+    <View className="absolute inset-0 bg-black/80 justify-end">
+      <Pressable className="absolute inset-0" onPress={onClose} />
+
+      <View
+        className="bg-neutral-900 rounded-t-xl px-5 pt-5"
+        style={{ paddingBottom: insets.bottom + 16 }}
+      >
+
+        <View className="flex-row justify-between items-center mb-2">
+          <Text className="text-white text-xl font-bold">Episodio {episode?.number}</Text>
+          <Feather name="x" size={20} color="#a3a3a3" onPress={onClose} />
+        </View>
+
+        <Text className="text-neutral-400 text-xs mb-2">
+          Selecciona un idioma
+        </Text>
+
+        <View className="gap-2">
+          {isLoading ? (
+            <View className="gap-2">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <View key={`skel-${i}`} className="flex-row items-center bg-black p-4 rounded-xl">
+                  <Skeleton width={120} height={16} borderRadius={4} />
+                </View>
+              ))}
+            </View>
+          ) : error != null ? (
+            <View className="h-48 justify-center items-center gap-3">
+              <Feather name="alert-circle" size={32} color="#404040" />
+              <Text className="text-neutral-400 text-xs text-center px-6">
+                No se pudieron cargar los servidores
+              </Text>
+              {onRetry != null && (
+                <AnimatedPressable
+                  className="flex-row items-center px-5 py-2.5 rounded-xl bg-purple-500/15"
+                  onPress={onRetry}
+                >
+                  <Feather name="refresh-cw" size={14} color={ACCENT_COLOR} />
+                  <Text className="ml-2 text-xs font-semibold tracking-wide text-purple-500">Reintentar</Text>
+                </AnimatedPressable>
+              )}
+            </View>
+          ) : displayServers.length === 0 ? (
+            <View className="h-48 justify-center items-center">
+              <Text className="text-neutral-400 text-xs">No hay servidor disponible</Text>
+            </View>
+          ) : (
+            displayServers.map((server, index) => (
+              <Animated.View key={server.id || `server-${index}`} entering={FadeIn.delay(index * 50).duration(200)}>
+              <AnimatedPressable
+                className="flex-row items-center bg-black p-4 rounded-xl"
+                onPress={() => { onServerSelect(server); }}
+              >
+                <Text className="text-white font-bold flex-1">
+                  {server.language ?? "Desconocido"}
+                </Text>
+              </AnimatedPressable>
+              </Animated.View>
+            ))
+          )}
+        </View>
+      </View>
+    </View>
+  );
+};
+
+AnimeEpisodeModal.displayName = "AnimeEpisodeModal";

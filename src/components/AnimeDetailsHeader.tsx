@@ -1,0 +1,185 @@
+import { ACCENT_COLOR } from "@/config/source";
+import { FlashList } from "@shopify/flash-list";
+import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { memo, useMemo } from "react";
+import { Text, useWindowDimensions, View } from "react-native";
+import type { EdgeInsets } from "react-native-safe-area-context";
+import type { AnimeDetail, AnimeRelations, RelatedAnime } from "@/types";
+import { router } from "expo-router";
+import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { ImageWithLoader } from "@/components/ui/ImageWithLoader";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+
+interface AnimeDetailsHeaderProps {
+  anime: AnimeDetail | null;
+  relations: AnimeRelations | null;
+  isExpanded: boolean;
+  setIsExpanded: (v: boolean) => void;
+  isAscending: boolean;
+  toggleSort: () => void;
+  insets: EdgeInsets;
+  onBackPress?: () => void;
+}
+
+const TYPE_LABEL = { prequel: "Precuela", sequel: "Secuela" };
+
+export const AnimeDetailsHeader = memo(
+  ({
+    anime,
+    relations,
+    isExpanded,
+    setIsExpanded,
+    isAscending,
+    toggleSort,
+    insets,
+    onBackPress,
+  }: AnimeDetailsHeaderProps) => {
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+    const hasSynopsis = anime?.synopsis != null && anime.synopsis.length > 0;
+    const statusLower = anime?.status.toLowerCase();
+    const isAiring = statusLower != null && (statusLower.includes("emisión") || statusLower.includes("emision"));
+
+    const relatedItems = useMemo(() => {
+      if (relations == null) return null;
+      const items: { anime: RelatedAnime; type: "prequel" | "sequel" | "related" }[] = [
+        ...relations.prequel.map((a) => ({ anime: a, type: "prequel" as const })),
+        ...relations.sequel.map((a) => ({ anime: a, type: "sequel" as const })),
+        ...relations.related.map((a) => ({ anime: a, type: "related" as const })),
+      ];
+      return items.length > 0 ? items : null;
+    }, [relations]);
+
+    return (
+      <>
+        <View
+          className="overflow-hidden"
+          style={{ height: windowHeight * 0.38, width: windowWidth }}
+        >
+          <ImageWithLoader
+            uri={anime?.banner ?? anime?.image ?? ''}
+            className="absolute inset-0 w-full h-full"
+          />
+          <LinearGradient
+            colors={["rgba(0,0,0,0.40)","rgba(0,0,0,0.15)","rgba(0,0,0,0.50)","rgba(0,0,0,0.97)"]}
+            locations={[0.05, 0.35, 0.6, 1]}
+            style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingBottom: 20, paddingTop: insets.top }]}
+          >
+            <AnimatedPressable
+              onPress={onBackPress}
+              className="absolute top-0 left-5 w-12 h-12 rounded-full bg-black/60 items-center justify-center"
+              style={{ marginTop: insets.top }}
+            >
+              <Feather name="arrow-left" size={24} color="#FFFFFF" />
+            </AnimatedPressable>
+
+            <View
+              className={`absolute right-4 rounded-lg bg-neutral-950/80 px-2.5 py-1`}
+              style={{ top: insets.top + 4 }}
+            >
+              <Text
+                className={`text-[11px] font-bold tracking-wider leading-none ${isAiring ? "text-purple-400" : "text-neutral-400"}`}
+              >
+                {(isAiring ? "En emisión" : "Finalizado").toUpperCase()}
+              </Text>
+            </View>
+
+            <View className="flex-1 justify-end">
+              <Text className="text-2xl font-extrabold tracking-tight text-white" numberOfLines={2}>
+                {anime?.title}
+              </Text>
+
+              {anime?.genres != null && anime.genres.length > 0 && (
+                <View className="flex-row flex-wrap gap-1.5 mt-2">
+                  {anime.genres.map((genre) => (
+                    <View
+                      key={genre}
+                      className="rounded-md bg-white/10 px-2.5 py-1"
+                    >
+                      <Text className="text-[10px] font-bold uppercase tracking-wider text-white/80">
+                        {genre}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </LinearGradient>
+        </View>
+
+        <View className="px-5 pt-5">
+          <SectionTitle>Sinopsis</SectionTitle>
+          {hasSynopsis ? (
+            <AnimatedPressable onPress={() => { setIsExpanded(!isExpanded); }}>
+              <Text
+                className="text-sm font-medium leading-6 text-neutral-400 mt-2"
+                numberOfLines={isExpanded ? undefined : 3}
+              >
+                {anime.synopsis}
+              </Text>
+              {!isExpanded && anime.synopsis.length > 150 && (
+                <Text className="mt-2 text-sm font-bold leading-6 text-purple-500">
+                  Leer más
+                </Text>
+              )}
+            </AnimatedPressable>
+          ) : (
+            <Text className="text-[10px] font-semibold tracking-wider leading-none text-neutral-400 mt-2">
+              Sinopsis no disponible
+            </Text>
+          )}
+        </View>
+
+        {relatedItems != null && (
+            <View className="pt-5 px-5">
+              <SectionTitle>Relacionados</SectionTitle>
+              <View className="mt-3">
+                <FlashList
+                  horizontal
+                  data={relatedItems}
+                  keyExtractor={(item) => `${item.type}-${item.anime.id}`}
+                  showsHorizontalScrollIndicator={false}
+                  renderItem={({ item }) => (
+                    <AnimatedPressable
+                      className="w-[100px] mr-3"
+                      onPress={() => router.replace(`/anime/${item.anime.slug}`)}
+                    >
+                      <View className="relative">
+                        <ImageWithLoader
+                          uri={item.anime.poster}
+                          style={{ width: 100, height: 140, borderRadius: 10 }}
+                        />
+                        {item.type !== "related" && (
+                          <View className="absolute top-1.5 left-1.5 rounded-md bg-purple-500 px-1.5 py-0.5">
+                            <Text className="text-[9px] font-bold text-white uppercase">
+                              {TYPE_LABEL[item.type]}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text className="mt-1 text-xs font-medium text-neutral-300" numberOfLines={2}>
+                        {item.anime.name}
+                      </Text>
+                    </AnimatedPressable>
+                  )}
+                />
+              </View>
+            </View>
+          )}
+
+        <View className="flex-row items-center justify-between px-5 pt-6">
+          <SectionTitle>Episodios ({anime?.episodes.length ?? 0})</SectionTitle>
+          <AnimatedPressable onPress={toggleSort}>
+            <Feather
+              name={isAscending ? "chevron-up" : "chevron-down"}
+              size={20}
+              color={ACCENT_COLOR}
+            />
+          </AnimatedPressable>
+        </View>
+      </>
+    );
+  },
+);
+
+AnimeDetailsHeader.displayName = "AnimeDetailsHeader";

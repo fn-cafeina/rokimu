@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "Rokimu",
+    "slug": "rokimu",
+    "version": "1.12.10",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "rokimu",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#000000",
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#000000",
+        "foregroundImage": "./assets/images/adaptive-icon.png"
+      },
+      "package": "com.rokimu.app",
+      "softwareKeyboardLayoutMode": "pan",
+      "versionCode": 11210,
+      "permissions": [
+        "REQUEST_INSTALL_PACKAGES"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-video",
+      "./plugins/withInstallerQueries.js",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildArchs": [
+              "arm64-v8a",
+              "armeabi-v7a"
+            ]
+          }
+        }
+      ],
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
+      "expo-status-bar"
+    ],
+    "owner": "fn-cafeina"
+  }
+}
