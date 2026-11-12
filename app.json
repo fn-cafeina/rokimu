@@ -45,6 +45,16 @@
       ],
       "expo-status-bar"
     ],
-    "owner": "cafeina"
+    "owner": "cafeina",
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "137c7b06-4fff-4346-8ad1-7453e7cf567e"
+      }
+    }
   }
 }
