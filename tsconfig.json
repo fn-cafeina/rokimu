@@ -19,6 +19,7 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "nativewind-env.d.ts"
+    "global.d.ts",
+    "uniwind-types.d.ts"
   ]
 }
