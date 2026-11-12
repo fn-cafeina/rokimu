@@ -69,6 +69,13 @@ export interface AutocompleteAnime {
   poster: string;
 }
 
+export interface Favorite {
+  title: string;
+  image: string;
+  url: string; // slug
+  addedAt: number;
+}
+
 export interface ISession {
   cookies: string;
   userAgent: string;

@@ -10,6 +10,7 @@ import { router } from "expo-router";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { ImageWithLoader } from "@/components/ui/ImageWithLoader";
 import { SectionTitle } from "@/components/ui/SectionTitle";
+import { useFavoritesStore } from "@/stores/favoritesStore";
 
 interface AnimeDetailsHeaderProps {
   anime: AnimeDetail | null;
@@ -23,6 +24,23 @@ interface AnimeDetailsHeaderProps {
 }
 
 const TYPE_LABEL = { prequel: "Precuela", sequel: "Secuela" };
+
+function FavoriteButton({ slug, title, image, insetsTop }: { slug: string; title: string; image: string; insetsTop: number }) {
+  const isFavorite = useFavoritesStore((s) => s.favorites.some((f) => f.url === slug));
+  const toggle = useFavoritesStore((s) => s.toggle);
+  if (slug === "") return null;
+  return (
+    <AnimatedPressable
+      onPress={() => { void toggle(slug, title, image); }}
+      className="absolute top-0 right-4 w-12 h-12 rounded-full bg-black/60 items-center justify-center"
+      style={{ marginTop: insetsTop }}
+      accessibilityLabel={isFavorite ? "Quitar de biblioteca" : "Agregar a biblioteca"}
+      hapticFeedback={true}
+    >
+      <Feather name="bookmark" size={22} color={isFavorite ? ACCENT_COLOR : "#FFFFFF"} />
+    </AnimatedPressable>
+  );
+}
 
 export const AnimeDetailsHeader = memo(
   ({
@@ -73,9 +91,11 @@ export const AnimeDetailsHeader = memo(
               <Feather name="arrow-left" size={24} color="#FFFFFF" />
             </AnimatedPressable>
 
+            <FavoriteButton slug={anime?.url ?? ""} title={anime?.title ?? ""} image={anime?.image ?? ""} insetsTop={insets.top} />
+
             <View
               className={`absolute right-4 rounded-lg bg-neutral-950/80 px-2.5 py-1`}
-              style={{ top: insets.top + 4 }}
+              style={{ top: insets.top + 58 }}
             >
               <Text
                 className={`text-[11px] font-bold tracking-wider leading-none ${isAiring ? "text-accent" : "text-neutral-400"}`}

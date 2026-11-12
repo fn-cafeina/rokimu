@@ -6,6 +6,7 @@ import { useUpdateStore, UPDATE_CHECK_KEY } from "@/stores/updateStore";
 import { UpdateModal } from "@/components/UpdateModal";
 import { useHistoryStore, HISTORY_KEY } from "@/stores/historyStore";
 import { useSearchHistoryStore, SEARCHES_KEY } from "@/stores/searchHistoryStore";
+import { useFavoritesStore, FAVORITES_KEY } from "@/stores/favoritesStore";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { sessionManager } from "@/services/session";
 import { resetToPortrait, isPlayerActive } from "@/services/playerUI";
@@ -70,15 +71,17 @@ function RootInner() {
       // Fire and forget: the sweep is IO over every stored key, nothing waits on it
       void pruneExpiredCache();
       await sessionManager.initialize();
-      const [history, searches, order, updateCheckEnabled] = await Promise.all([
+      const [history, searches, order, updateCheckEnabled, favorites] = await Promise.all([
         storage.get<HistoryItem[]>(HISTORY_KEY),
         storage.get<string[]>(SEARCHES_KEY),
         storage.get<"asc" | "desc">(EPISODE_ORDER_KEY),
         storage.get<boolean>(UPDATE_CHECK_KEY),
+        storage.get<import("@/types").Favorite[]>(FAVORITES_KEY),
       ]);
       useHistoryStore.getState().initialize(history ?? []);
       useSearchHistoryStore.getState().initialize(searches ?? []);
       useSettingsStore.getState().initialize(order ?? "asc");
+      useFavoritesStore.getState().initialize(favorites ?? []);
       useUpdateStore.getState().initialize(updateCheckEnabled !== false);
       useUserInitializationStore.setState({ isInitialized: true });
       logger.info("lifecycle", "App boot complete");
