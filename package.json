@@ -5,7 +5,8 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -55,5 +56,8 @@
   "private": true,
   "overrides": {
     "react-dom": "19.2.3"
-  }
+  },
+  "trustedDependencies": [
+    "unrs-resolver"
+  ]
 }
