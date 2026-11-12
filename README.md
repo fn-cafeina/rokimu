@@ -1,6 +1,6 @@
 # Rokimu
 
-Android anime streaming client built with Expo SDK 57.
+Android anime streaming client built with Expo SDK 58.
 
 ## Requirements
 
@@ -22,8 +22,8 @@ prebuild time.
 
 ## Stack
 
-- Expo SDK 57, React Native 0.86, TypeScript 6 (strict)
-- Tailwind CSS v4 through [NativeWind](https://www.nativewind.dev/) v5
+- Expo SDK 58, React Native 0.88, TypeScript 6 (strict)
+- Tailwind CSS v4 through [uniwind](https://uniwind.dev/)
 - expo-router, Zustand 5, expo-video, Reanimated 4
 
 ## Development
