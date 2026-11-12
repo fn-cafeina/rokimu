@@ -1,5 +1,6 @@
 import { AnimeCard } from "@/components/AnimeCard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TopAppBar } from "@/components/ui/TopAppBar";
 import { useFavoritesStore } from "@/stores/favoritesStore";
 import { SCREEN_BOTTOM_PADDING, calcCardWidth } from "@/utils/layout";
 import { Feather } from "@expo/vector-icons";
@@ -15,8 +16,8 @@ const LibraryContent = React.memo(function LibraryContent() {
 
   return (
     <View className="flex-1 bg-black">
-      <View className="px-5 pb-2" style={{ paddingTop: insets.top + 16 }}>
-        <Text className="text-2xl font-extrabold tracking-tight text-white">Biblioteca</Text>
+      <View style={{ paddingTop: insets.top + 8 }}>
+        <TopAppBar title="Biblioteca" />
       </View>
       {favorites.length === 0 ? (
         <View className="flex-1 items-center justify-center px-5">

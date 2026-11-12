@@ -2,6 +2,7 @@ import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { AnimeCard } from "@/components/AnimeCard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RecentSearches } from "@/components/RecentSearches";
+import { TopAppBar } from "@/components/ui/TopAppBar";
 import { SearchSkeleton } from "@/components/skeletons/SearchSkeleton";
 import { RecentSkeleton } from "@/components/skeletons/RecentSkeleton";
 import { SuggestionsList } from "@/components/SuggestionsList";
@@ -69,7 +70,10 @@ function SearchScreenContent() {
 
   return (
     <View className="flex-1 bg-black">
-      <View className="px-5 pb-4" style={{ paddingTop: insets.top + 16 }}>
+      <View style={{ paddingTop: insets.top + 8 }}>
+        <TopAppBar title="Explorar" />
+      </View>
+      <View className="px-5 pb-4">
         <View className="flex-row items-center h-12 bg-neutral-900 rounded-xl border border-neutral-800 px-4">
           <Feather name="search" size={18} color="#a3a3a3" style={{ marginRight: 8 }} />
           <TextInput

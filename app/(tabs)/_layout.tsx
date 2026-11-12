@@ -7,7 +7,8 @@ import { StyleSheet, type ColorValue } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const INACTIVE_TINT = "#a3a3a3";
-const TAB_BAR_HEIGHT = 60;
+// Material 3 navigation bar: 80dp total, label regular weight
+const TAB_BAR_HEIGHT = 64;
 
 function toIconColor(color: ColorValue): string {
   return typeof color === "string" ? color : INACTIVE_TINT;
@@ -35,7 +36,7 @@ export default function TabLayout() {
             elevation: 0,
           },
           tabBarIconStyle: { width: 56, height: 32 },
-          tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+          tabBarLabelStyle: { fontSize: 12, fontWeight: "500" },
         }}
       >
         <Tabs.Screen

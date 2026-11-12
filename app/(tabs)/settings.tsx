@@ -1,6 +1,7 @@
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
 import { CACHE_PREFIXES } from "@/config/cache";
 import { SectionTitle } from "@/components/ui/SectionTitle";
+import { TopAppBar } from "@/components/ui/TopAppBar";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useUpdateStore, UPDATE_CHECK_RESOURCE_KEY } from "@/stores/updateStore";
@@ -130,9 +131,11 @@ export default function SettingsScreen() {
   return (
     <ScrollView
       className="flex-1 bg-black"
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: SCREEN_BOTTOM_PADDING + 8 }}
+      contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: SCREEN_BOTTOM_PADDING + 8 }}
       showsVerticalScrollIndicator={false}
     >
+      <TopAppBar title="Ajustes" />
+      <View className="h-2" />
       <View className="px-5 pb-6">
         <SectionTitle>Conexión</SectionTitle>
         <View className="mb-3" />
