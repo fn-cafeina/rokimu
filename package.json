@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo run:android",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "bun scripts/check.ts",
+    "release": "bun scripts/release.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
