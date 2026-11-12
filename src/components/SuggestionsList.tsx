@@ -1,10 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import React, { memo } from "react";
-import { type NativeScrollEvent, type NativeSyntheticEvent, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import type { AutocompleteAnime } from "@/types";
 import { TMDB_POSTER_W92 } from "@/config/source";
-import { TAB_BAR_OFFSET } from "@/utils/layout";
+import { SCREEN_BOTTOM_PADDING } from "@/utils/layout";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { ImageWithLoader } from "@/components/ui/ImageWithLoader";
 
@@ -12,8 +12,6 @@ interface SuggestionsListProps {
   suggestions: AutocompleteAnime[];
   searchTerm: string;
   onSelect: (suggestion: AutocompleteAnime) => void;
-  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
-  tabBarOffset?: number;
 }
 
 function resolvePoster(poster: string): string {
@@ -45,7 +43,7 @@ function HighlightedTitle({ name, term }: { name: string; term: string }) {
   );
 }
 
-export const SuggestionsList = memo(({ suggestions, searchTerm, onSelect, onScroll, tabBarOffset }: SuggestionsListProps) => {
+export const SuggestionsList = memo(({ suggestions, searchTerm, onSelect }: SuggestionsListProps) => {
   if (suggestions.length === 0) return null;
 
   return (
@@ -53,9 +51,7 @@ export const SuggestionsList = memo(({ suggestions, searchTerm, onSelect, onScro
       <FlashList
         data={suggestions}
         keyExtractor={(item) => item.slug}
-        contentContainerStyle={{ paddingBottom: tabBarOffset ?? TAB_BAR_OFFSET }}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: SCREEN_BOTTOM_PADDING }}
         renderItem={({ item }) => (
           <AnimatedPressable className="flex-row items-center border-b border-neutral-800 py-3" onPress={() => { onSelect(item); }}>
             <View className="h-20 w-14 overflow-hidden rounded bg-neutral-800 border border-neutral-800/60">

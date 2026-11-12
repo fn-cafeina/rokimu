@@ -7,10 +7,11 @@ import { useUpdateStore, UPDATE_CHECK_RESOURCE_KEY } from "@/stores/updateStore"
 import { refreshSession } from "@/services/session";
 import { isLoadingFor } from "@/utils/resource";
 import { storage } from "@/utils/storage";
+import { SCREEN_BOTTOM_PADDING } from "@/utils/layout";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Alert, Linking, Switch, Text, View } from "react-native";
+import { Alert, Linking, ScrollView, Switch, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -127,7 +128,11 @@ export default function SettingsScreen() {
   }, [apkUrl, startUpdate]);
 
   return (
-    <View className="flex-1 bg-black" style={{ paddingTop: insets.top + 16 }}>
+    <ScrollView
+      className="flex-1 bg-black"
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: SCREEN_BOTTOM_PADDING + 8 }}
+      showsVerticalScrollIndicator={false}
+    >
       <View className="px-5 pb-6">
         <SectionTitle>Conexión</SectionTitle>
         <View className="mb-3" />
@@ -241,6 +246,6 @@ export default function SettingsScreen() {
           </View>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }

@@ -1,6 +1,6 @@
 import { useWindowDimensions, View } from "react-native";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { calcCardWidth, CARD_WIDTH_CONFIG, TAB_BAR_OFFSET } from "@/utils/layout";
+import { calcCardWidth, CARD_WIDTH_CONFIG, SCREEN_BOTTOM_PADDING } from "@/utils/layout";
 
 export function SearchSkeleton() {
   const { width: screenWidth } = useWindowDimensions();
@@ -9,7 +9,7 @@ export function SearchSkeleton() {
 
   return (
     <View className="flex-1">
-      <View style={{ paddingBottom: TAB_BAR_OFFSET }}>
+      <View style={{ paddingBottom: SCREEN_BOTTOM_PADDING }}>
         <View className="gap-2">
           {Array.from({ length: 3 }).map((_, rowIdx) => (
             <View key={`row-${rowIdx}`} className="flex-row gap-3">

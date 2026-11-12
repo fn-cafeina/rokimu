@@ -4,8 +4,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HomeSkeleton } from "@/components/skeletons/HomeSkeleton";
 import { useHomeScreen, type SectionItem } from "@/hooks/useHomeScreen";
-import { useTabBarManager } from "@/hooks/useTabBarManager";
-import { TAB_BAR_OFFSET } from "@/utils/layout";
+import { SCREEN_BOTTOM_PADDING } from "@/utils/layout";
 import { ACCENT_COLOR } from "@/config/source";
 import React, { useEffect } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
@@ -15,15 +14,13 @@ import { useCrossfade } from "@/hooks/useCrossfade";
 
 const HomeContent = React.memo(function HomeContent() {
   const { sections, isLoading, error, view, fetchHome, hasContent } = useHomeScreen();
-  const { handleScroll, reset } = useTabBarManager({ threshold: 8 });
   const insets = useSafeAreaInsets();
 
   const { keepSkeleton, skeletonStyle, contentStyle } = useCrossfade(hasContent);
 
   useEffect(() => {
     void fetchHome();
-    reset();
-  }, [fetchHome, reset]);
+  }, [fetchHome]);
 
   if (view === "error") {
     return <ErrorState error={error} onRetry={() => void fetchHome(true)} />;
@@ -44,11 +41,9 @@ const HomeContent = React.memo(function HomeContent() {
             contentContainerStyle={{
               paddingHorizontal: 20,
               paddingTop: insets.top + 16,
-              paddingBottom: TAB_BAR_OFFSET + insets.bottom,
+              paddingBottom: SCREEN_BOTTOM_PADDING,
             }}
             showsVerticalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
             refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => void fetchHome(true)} tintColor={ACCENT_COLOR} />}
           />
         </Animated.View>

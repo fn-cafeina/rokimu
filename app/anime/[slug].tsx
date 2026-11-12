@@ -11,7 +11,7 @@ import { useHistoryStore } from "@/stores/historyStore";
 import { findHistoryEntry } from "@/utils/history";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { calcProgress } from "@/utils/math";
-import { TAB_BAR_OFFSET } from "@/utils/layout";
+import { SCREEN_BOTTOM_PADDING } from "@/utils/layout";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { ACCENT_COLOR } from "@/config/source";
@@ -47,7 +47,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
         <Animated.View style={[{ flex: 1 }, contentStyle]}>
           <View className="flex-1 bg-black">
               <ScrollView
-                contentContainerStyle={{ paddingBottom: TAB_BAR_OFFSET }}
+                contentContainerStyle={{ paddingBottom: SCREEN_BOTTOM_PADDING }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={hasLoaded && isAnimeLoading} onRefresh={refresh} tintColor={ACCENT_COLOR} />}
               >

@@ -6,8 +6,7 @@ import { SearchSkeleton } from "@/components/skeletons/SearchSkeleton";
 import { SuggestionsList } from "@/components/SuggestionsList";
 import type { Anime } from "@/types";
 import { useSearchScreen, MIN_SEARCH_LENGTH } from "@/hooks/useSearchScreen";
-import { useTabBarManager } from "@/hooks/useTabBarManager";
-import { TAB_BAR_OFFSET, calcCardWidth } from "@/utils/layout";
+import { SCREEN_BOTTOM_PADDING, calcCardWidth } from "@/utils/layout";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
 import { Feather } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
@@ -25,12 +24,7 @@ function SearchScreenContent() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = calcCardWidth(screenWidth);
-  const { handleScroll, reset, showTabBar } = useTabBarManager({ threshold: 8 });
   const [resultsOpacity] = useState(() => new Animated.Value(0));
-
-  useEffect(() => {
-    if (!isSearched) { reset(); showTabBar(); }
-  }, [isSearched, reset, showTabBar]);
 
   useEffect(() => {
     Animated.timing(resultsOpacity, { toValue: isSearched ? 1 : 0, duration: 150, useNativeDriver: true }).start();
@@ -64,7 +58,7 @@ function SearchScreenContent() {
           />
           {searchTerm.length > 0 && (
             <Feather name="x" size={16} color="#a3a3a3"
-              onPress={() => { resetSearch(); showTabBar(); }}
+              onPress={resetSearch}
               style={{ padding: 8 }}
             />
           )}
@@ -82,7 +76,7 @@ function SearchScreenContent() {
           </View>
         )}
         {isTyping && suggestions.length > 0 && (
-          <SuggestionsList suggestions={suggestions} searchTerm={searchTerm} onSelect={handleSelectSuggestion} onScroll={handleScroll} tabBarOffset={TAB_BAR_OFFSET} />
+          <SuggestionsList suggestions={suggestions} searchTerm={searchTerm} onSelect={handleSelectSuggestion} />
         )}
         {showMinLengthHint && (
           <View className="flex-1 justify-start items-center pt-20">
@@ -102,10 +96,8 @@ function SearchScreenContent() {
               renderItem={renderSearchResult}
               columnWrapperClassName="justify-start gap-3"
               contentContainerClassName="pt-4"
-              contentContainerStyle={{ paddingBottom: TAB_BAR_OFFSET }}
+              contentContainerStyle={{ paddingBottom: SCREEN_BOTTOM_PADDING }}
               showsVerticalScrollIndicator={false}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
               refreshControl={<RefreshControl refreshing={isLoading} onRefresh={retrySearch} tintColor={ACCENT_COLOR} />}
               ListEmptyComponent={!isLoading ? (error ? (
                 <View className="flex-1 justify-start items-center px-5 pt-20">

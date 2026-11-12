@@ -1,4 +1,4 @@
-export const TAB_BAR_OFFSET = 116;
+export const SCREEN_BOTTOM_PADDING = 24;
 
 export const CARD_WIDTH_CONFIG = { columns: 3, gap: 12, horizontalPad: 20, min: 80, max: 400 };
 
