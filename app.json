@@ -2,7 +2,7 @@
   "expo": {
     "name": "Rokimu",
     "slug": "rokimu",
-    "version": "1.12.10",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rokimu",
@@ -15,7 +15,6 @@
       },
       "package": "com.rokimu.app",
       "softwareKeyboardLayoutMode": "pan",
-      "versionCode": 11210,
       "permissions": [
         "REQUEST_INSTALL_PACKAGES"
       ]
@@ -46,6 +45,6 @@
       ],
       "expo-status-bar"
     ],
-    "owner": "fn-cafeina"
+    "owner": "cafeina"
   }
 }
