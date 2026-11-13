@@ -5,9 +5,6 @@ import { deriveView, errorFor, isLoadingFor, type ResourceView } from "../utils/
 import { useSettingsStore } from "../stores/settingsStore";
 import { useUserInitializationStore } from "../stores/userIndex";
 
-export type ExploreSection =
-  | { type: "SECTION"; label: string; items: Anime[] };
-
 export function useExploreScreen() {
   const fetchHome = useHomeStore((s) => s.fetchHome);
   const resource = useHomeStore((s) => s.resource);
@@ -23,18 +20,15 @@ export function useExploreScreen() {
 
   const homeData = resource.data != null && resource.dataKey === HOME_KEY ? resource.data : null;
 
-  const sections = useMemo((): ExploreSection[] => {
-    if (homeData != null && homeData.recent.length > 0) {
-      return [{ type: "SECTION", label: "Recién agregados", items: homeData.recent }];
-    }
-    return [];
-  }, [homeData]);
+  // The source exposes a single catalogue page, so this is one flat list.
+  // There is no second section to label: the grid is the screen.
+  const items = useMemo((): Anime[] => homeData?.recent ?? [], [homeData]);
 
   const view: ResourceView = deriveView(resource, HOME_KEY);
   const hasContent = isInitialized && view === "content";
 
   return {
-    sections,
+    items,
     isLoading: isLoadingFor(resource, HOME_KEY) || !isInitialized,
     error: errorFor(resource, HOME_KEY),
     view,
