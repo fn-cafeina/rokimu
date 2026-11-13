@@ -2,8 +2,7 @@ import { AnimeGrid } from "@/components/ui/AnimeGrid";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TopAppBar } from "@/components/ui/TopAppBar";
-import { SearchSkeleton } from "@/components/skeletons/SearchSkeleton";
-import { RecentSkeleton } from "@/components/skeletons/RecentSkeleton";
+import { PosterGridSkeleton } from "@/components/skeletons/PosterGridSkeleton";
 import { useExploreScreen } from "@/hooks/useExploreScreen";
 import { useSearchScreen, MIN_SEARCH_LENGTH } from "@/hooks/useSearchScreen";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
@@ -82,11 +81,11 @@ function ExploreScreenContent() {
         onAction={() => void fetchHome(true)}
       />
     ) : homeLoading ? (
-      <RecentSkeleton />
+      <PosterGridSkeleton />
     ) : undefined;
 
   const resultsEmpty: React.ReactElement | undefined = isLoading ? (
-    <SearchSkeleton />
+    <PosterGridSkeleton rows={3} />
   ) : error != null ? (
     <EmptyState
       icon="alert-circle"
