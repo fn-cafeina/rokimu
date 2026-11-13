@@ -115,6 +115,16 @@ function ExploreScreenContent() {
         />
       </View>
 
+      {showExplore && isTyping && (
+        <View className="px-5 pb-3">
+          <Text className="text-xs text-on-surface-variant">
+            {searchTerm.trim().length >= MIN_SEARCH_LENGTH
+              ? "Presioná buscar para ver resultados"
+              : `Escribí al menos ${MIN_SEARCH_LENGTH} caracteres`}
+          </Text>
+        </View>
+      )}
+
       {showExplore && (
         <AnimeGrid
           data={items}
@@ -122,16 +132,6 @@ function ExploreScreenContent() {
           refreshing={homeLoading && hasContent}
           empty={exploreEmpty}
         />
-      )}
-
-      {showExplore && isTyping && (
-        <View className="px-4 pb-2">
-          <Text className="text-xs text-on-surface-variant">
-            {searchTerm.trim().length >= MIN_SEARCH_LENGTH
-              ? "Presioná buscar para ver resultados"
-              : `Escribí al menos ${MIN_SEARCH_LENGTH} caracteres`}
-          </Text>
-        </View>
       )}
 
       {showResults && (
