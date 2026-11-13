@@ -4,6 +4,7 @@
 export const ACCENT_COLOR = "#5BC8F5";
 export const ON_ACCENT_COLOR = "#00344A";
 export const MUTED_ICON = "#938F99";
+export const ON_SURFACE = "#E6E0E9";
 
 export const SURFACE_COLOR = "#141218";
 export const SURFACE_CONTAINER_LOW = "#1D1B20";
