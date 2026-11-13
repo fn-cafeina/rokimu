@@ -1,17 +1,16 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TabBarIcon } from "@/components/TabBarIcon";
-import { ACCENT_COLOR } from "@/config/source";
+import { ACCENT_COLOR, ON_SURFACE_VARIANT, SURFACE_CONTAINER } from "@/config/source";
 import { useUpdateStore } from "@/stores/updateStore";
 import { Tabs } from "expo-router/js-tabs";
-import { StyleSheet, type ColorValue } from "react-native";
+import type { ColorValue } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const INACTIVE_TINT = "#a3a3a3";
-// Material 3 navigation bar: 80dp total, label regular weight
-const TAB_BAR_HEIGHT = 64;
+// Material 3 navigation bar: 80dp of content above the system inset
+const TAB_BAR_HEIGHT = 80;
 
 function toIconColor(color: ColorValue): string {
-  return typeof color === "string" ? color : INACTIVE_TINT;
+  return typeof color === "string" ? color : ON_SURFACE_VARIANT;
 }
 
 export default function TabLayout() {
@@ -25,17 +24,17 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
+          tabBarVariant: "material",
           tabBarActiveTintColor: ACCENT_COLOR,
-          tabBarInactiveTintColor: INACTIVE_TINT,
+          tabBarInactiveTintColor: ON_SURFACE_VARIANT,
           tabBarHideOnKeyboard: true,
           tabBarStyle: {
-            backgroundColor: "#171717",
-            borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: "#262626",
-            height: TAB_BAR_HEIGHT + insets.bottom,
+            backgroundColor: SURFACE_CONTAINER,
+            borderTopWidth: 0,
             elevation: 0,
+            height: TAB_BAR_HEIGHT + insets.bottom,
+            paddingBottom: insets.bottom,
           },
-          tabBarIconStyle: { width: 56, height: 32 },
           tabBarLabelStyle: { fontSize: 12, fontWeight: "500" },
         }}
       >
@@ -43,17 +42,17 @@ export default function TabLayout() {
           name="library"
           options={{
             title: "Biblioteca",
-            tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name="bookmark" color={toIconColor(color)} focused={focused} />
+            tabBarIcon: ({ color }) => (
+              <TabBarIcon name="bookmark" color={toIconColor(color)} />
             ),
           }}
         />
         <Tabs.Screen
           name="search"
           options={{
-            title: "Buscar",
-            tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name="search" color={toIconColor(color)} focused={focused} />
+            title: "Explorar",
+            tabBarIcon: ({ color }) => (
+              <TabBarIcon name="compass" color={toIconColor(color)} />
             ),
           }}
         />
@@ -61,8 +60,8 @@ export default function TabLayout() {
           name="settings"
           options={{
             title: "Ajustes",
-            tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name="settings" color={toIconColor(color)} focused={focused} badge={showUpdateBadge} />
+            tabBarIcon: ({ color }) => (
+              <TabBarIcon name="settings" color={toIconColor(color)} badge={showUpdateBadge} />
             ),
           }}
         />
