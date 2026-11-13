@@ -62,13 +62,6 @@ export interface HistoryItem {
   timestamp: number;
 }
 
-export interface AutocompleteAnime {
-  name: string;
-  slug: string;
-  type: string;
-  poster: string;
-}
-
 export interface Favorite {
   title: string;
   image: string;
