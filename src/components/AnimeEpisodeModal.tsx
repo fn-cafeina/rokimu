@@ -1,12 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text, View } from "react-native";
 import type { AppError, Episode, VideoServer } from "@/types";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { ACCENT_COLOR } from "@/config/source";
+import { BottomSheet } from "@/components/ui/BottomSheet";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
 
 interface AnimeEpisodeModalProps {
   visible: boolean;
@@ -23,77 +25,55 @@ interface AnimeEpisodeModalProps {
 export const AnimeEpisodeModal = ({
   visible, onClose, episode, servers, isLoading, error, onRetry, onServerSelect
 }: AnimeEpisodeModalProps) => {
-  const insets = useSafeAreaInsets();
-
-  if (!visible) return null;
-
   const delta = servers.filter((s) => s.title.toLowerCase().includes("delta"));
   const displayServers = delta.length > 0 ? delta : servers;
 
   return (
-    <View className="absolute inset-0 bg-black/80 justify-end">
-      <Pressable className="absolute inset-0" onPress={onClose} />
+    <BottomSheet visible={visible} onClose={onClose} title={`Episodio ${episode?.number ?? ""}`}>
+      <Text className="mb-3 text-sm text-on-surface-variant">Selecciona un idioma</Text>
 
-      <View
-        className="bg-neutral-900 rounded-t-xl px-5 pt-5"
-        style={{ paddingBottom: insets.bottom + 16 }}
-      >
-
-        <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-white text-xl font-bold">Episodio {episode?.number}</Text>
-          <Feather name="x" size={20} color="#a3a3a3" onPress={onClose} />
-        </View>
-
-        <Text className="text-neutral-400 text-xs mb-2">
-          Selecciona un idioma
-        </Text>
-
+      {isLoading ? (
         <View className="gap-2">
-          {isLoading ? (
-            <View className="gap-2">
-              {Array.from({ length: 2 }).map((_, i) => (
-                <View key={`skel-${i}`} className="flex-row items-center bg-black p-4 rounded-xl">
-                  <Skeleton width={120} height={16} borderRadius={4} />
-                </View>
-              ))}
-            </View>
-          ) : error != null ? (
-            <View className="h-48 justify-center items-center gap-3">
-              <Feather name="alert-circle" size={32} color="#404040" />
-              <Text className="text-neutral-400 text-xs text-center px-6">
-                No se pudieron cargar los servidores
-              </Text>
-              {onRetry != null && (
-                <AnimatedPressable
-                  className="flex-row items-center px-5 py-2.5 rounded-xl bg-accent/15"
-                  onPress={onRetry}
-                >
-                  <Feather name="refresh-cw" size={14} color={ACCENT_COLOR} />
-                  <Text className="ml-2 text-xs font-semibold tracking-wide text-accent">Reintentar</Text>
-                </AnimatedPressable>
-              )}
-            </View>
-          ) : displayServers.length === 0 ? (
-            <View className="h-48 justify-center items-center">
-              <Text className="text-neutral-400 text-xs">No hay servidor disponible</Text>
-            </View>
-          ) : (
-            displayServers.map((server, index) => (
-              <Animated.View key={server.id || `server-${index}`} entering={FadeIn.delay(index * 50).duration(200)}>
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={`skel-${i}`} width="100%" height={56} borderRadius={16} />
+          ))}
+        </View>
+      ) : error != null ? (
+        <EmptyState
+          icon="alert-circle"
+          title="No se pudieron cargar los servidores"
+          description="Revisa tu conexión e inténtalo de nuevo."
+          actionLabel={onRetry != null ? "Reintentar" : undefined}
+          actionIcon="refresh-cw"
+          onAction={onRetry}
+        />
+      ) : displayServers.length === 0 ? (
+        <EmptyState icon="slash" title="No hay servidor disponible" />
+      ) : (
+        <View className="gap-2">
+          {displayServers.map((server, index) => (
+            <Animated.View key={server.id || `server-${index}`} entering={FadeIn.delay(index * 50).duration(200)}>
               <AnimatedPressable
-                className="flex-row items-center bg-black p-4 rounded-xl"
+                className="flex-row items-center gap-4 rounded-2xl bg-surface-container-highest px-4 py-4"
                 onPress={() => { onServerSelect(server); }}
+                hapticFeedback
+                accessibilityLabel={`Ver en ${server.language ?? "servidor desconocido"}`}
               >
-                <Text className="text-white font-bold flex-1">
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-primary-container">
+                  <Feather name="play" size={18} color={ACCENT_COLOR} />
+                </View>
+                <Text className="flex-1 text-base font-medium text-on-surface">
                   {server.language ?? "Desconocido"}
                 </Text>
+                <Feather name="chevron-right" size={20} color={MUTED_ICON} />
               </AnimatedPressable>
-              </Animated.View>
-            ))
-          )}
+            </Animated.View>
+          ))}
         </View>
-      </View>
-    </View>
+      )}
+
+      <Button label="Cancelar" variant="text" onPress={onClose} className="mt-4 self-center" />
+    </BottomSheet>
   );
 };
 
