@@ -60,8 +60,8 @@ export function useSearchScreen() {
     searchTokenRef.current += 1;
     const trimmed = text.trim();
     if (trimmed.length === 0) {
-      // Clearing the input resets immediately; doing it here (not debounced)
-      // avoids wiping results of an in-flight search
+      // Clearing the input resets immediately; doing it here rather than in an
+      // effect avoids wiping the results of an in-flight search
       resetStoreSearch();
       setState({ term: text, status: "idle" });
       return;
@@ -83,6 +83,7 @@ export function useSearchScreen() {
     error,
     isIdle: state.status === "idle",
     isTyping: state.status === "typing",
+    isSearching: state.status === "searching",
     isSearched: state.status === "searched",
     handleSearch,
     handleTextChange,

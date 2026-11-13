@@ -53,7 +53,7 @@ function SearchBar({
 function ExploreScreenContent() {
   const {
     searchTerm, searchAnimes, isLoading, error,
-    isIdle, isTyping, isSearched, handleSearch, handleTextChange, resetSearch, retrySearch,
+    isIdle, isTyping, isSearched, isSearching, handleSearch, handleTextChange, resetSearch, retrySearch,
   } = useSearchScreen();
 
   const { items, isLoading: homeLoading, error: homeError, fetchHome, hasContent } = useExploreScreen();
@@ -62,9 +62,10 @@ function ExploreScreenContent() {
     if (isIdle) void fetchHome();
   }, [isIdle, fetchHome]);
 
-  // Three states, never overlapping: exploring, typing, or showing results.
-  const showResults = isSearched;
-  const showExplore = isIdle || isTyping;
+  // Exactly one branch renders. "searching" belongs to the results branch so
+  // submitting never leaves the screen blank while the request is in flight.
+  const showResults = isSearched || isSearching;
+  const showExplore = !showResults;
 
   const submit = () => { handleSearch(searchTerm); };
 
