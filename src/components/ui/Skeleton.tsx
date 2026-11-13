@@ -26,7 +26,7 @@ export function Skeleton({ width = "100%", height = 20, borderRadius = 8, classN
 
   return (
     <Animated.View
-      className={`bg-neutral-800 ${className ?? ""}`}
+      className={`bg-surface-container-highest ${className ?? ""}`}
       style={[{ width, height, borderRadius } as ViewStyle, animatedStyle]}
     />
   );

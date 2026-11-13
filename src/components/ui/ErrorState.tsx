@@ -1,8 +1,8 @@
-import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
+import { MUTED_ICON } from "@/config/source";
 import type { AppError } from "@/types";
 import { Feather } from "@expo/vector-icons";
 import { Text, View } from "react-native";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { Button } from "@/components/ui/Button";
 
 interface ErrorStateProps {
   onRetry: () => void;
@@ -22,20 +22,13 @@ const SUBTITLES: Record<AppError["type"], string> = {
 
 export function ErrorState({ onRetry, error, title = "Error al cargar" }: ErrorStateProps) {
   return (
-    <View className="flex-1 items-center justify-center bg-black px-5">
-      <Feather name="alert-circle" size={48} color={MUTED_ICON} />
-      <Text className="mt-2 text-lg font-bold text-neutral-500">
-        {title}
-      </Text>
-      <Text className="mt-2 max-w-[300px] text-center text-sm text-neutral-600">
+    <View className="flex-1 items-center justify-center bg-surface px-8">
+      <Feather name="alert-circle" size={44} color={MUTED_ICON} />
+      <Text className="mt-4 text-center text-base font-medium text-on-surface">{title}</Text>
+      <Text className="mt-2 max-w-[300px] text-center text-sm text-on-surface-variant">
         {SUBTITLES[error?.type ?? "UNKNOWN"]}
       </Text>
-      <AnimatedPressable className="mt-4 flex-row items-center px-6 py-3 rounded-xl bg-accent/15" onPress={onRetry}>
-        <Feather name="refresh-cw" size={16} color={ACCENT_COLOR} />
-        <Text className="ml-2 text-xs font-semibold tracking-wide text-accent">
-          Reintentar
-        </Text>
-      </AnimatedPressable>
+      <Button label="Reintentar" icon="refresh-cw" variant="tonal" onPress={onRetry} className="mt-5" />
     </View>
   );
 }

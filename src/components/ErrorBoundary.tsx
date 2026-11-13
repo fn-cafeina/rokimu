@@ -1,8 +1,8 @@
-import { MUTED_ICON } from "@/config/source";
 import { Feather } from "@expo/vector-icons";
 import React, { type ErrorInfo, type ReactNode, Component } from "react";
 import { Text, View } from "react-native";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { Button } from "@/components/ui/Button";
+import { MUTED_ICON } from "@/config/source";
 import { logger } from "@/utils/logger";
 
 interface ErrorBoundaryProps {
@@ -48,18 +48,20 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
       }
 
       return (
-        <View className="flex-1 items-center justify-center bg-black px-5">
-          <Feather name="alert-circle" size={48} color={MUTED_ICON} />
-          <Text className="mt-2 text-lg font-bold text-white">Algo salió mal</Text>
-          <Text className="text-neutral-500">
+        <View className="flex-1 items-center justify-center bg-surface px-8">
+          <Feather name="alert-circle" size={44} color={MUTED_ICON} />
+          <Text className="mt-4 text-center text-base font-medium text-on-surface">
+            Algo salió mal
+          </Text>
+          <Text className="mt-2 max-w-[300px] text-center text-sm text-on-surface-variant">
             {this.state.error?.message ?? "Error inesperado"}
           </Text>
-          <AnimatedPressable
-            className="flex-row items-center mt-4 bg-accent/15 px-6 py-3 rounded-xl"
+          <Button
+            label="Reintentar"
+            variant="tonal"
             onPress={this.handleRetry}
-          >
-            <Text className="font-semibold text-accent">Reintentar</Text>
-          </AnimatedPressable>
+            className="mt-5"
+          />
         </View>
       );
     }

@@ -1,12 +1,18 @@
 import React, { memo, useCallback } from "react";
 import { View, Text } from "react-native";
-import type { Anime, HistoryItem, Favorite } from "@/types";
 import { navigateToAnime } from "@/utils/navigation";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { ImageWithLoader } from "@/components/ui/ImageWithLoader";
 
+/** Anything a poster card can render: Anime, Favorite and HistoryItem all satisfy it. */
+export interface AnimeCardItem {
+  title: string;
+  image: string;
+  url: string;
+}
+
 interface AnimeCardProps {
-  anime: Anime | HistoryItem | Favorite;
+  anime: AnimeCardItem;
   width: number;
   onPress?: () => void;
 }
@@ -36,7 +42,7 @@ export const AnimeCard = memo(function AnimeCard({ anime, width, onPress }: Anim
           style={[{ width, height: cardHeight } as import("react-native").ImageStyle]}
         />
       </View>
-      <Text className="mt-2 text-sm font-medium text-white" numberOfLines={2}>
+      <Text className="mt-2 text-sm font-medium text-on-surface" numberOfLines={2}>
         {anime.title}
       </Text>
     </AnimatedPressable>
