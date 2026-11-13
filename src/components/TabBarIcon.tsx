@@ -4,20 +4,25 @@ import { View } from "react-native";
 interface TabBarIconProps {
   name: keyof typeof Feather.glyphMap;
   color: string;
+  focused: boolean;
   badge?: boolean;
 }
 
 /**
- * The active pill is drawn by the tab bar itself (tabBarVariant "material"
- * paints a 0.12 alpha container behind the focused item), so this renders the
- * glyph only. An earlier version added its own accent pill on top of it and
- * every focused tab showed two indicators.
+ * Material 3 active indicator: a 64x32 pill behind the icon of the focused
+ * destination. The navigator does not paint one on bottom bars (its
+ * "material" variant throws unless the bar is a sidebar), so the pill lives
+ * here.
  */
-export function TabBarIcon({ name, color, badge = false }: TabBarIconProps) {
+export function TabBarIcon({ name, color, focused, badge = false }: TabBarIconProps) {
   return (
     <View className="relative items-center justify-center">
-      <Feather name={name} size={24} color={color} />
-      {badge && <View className="absolute -top-0.5 -right-1 h-2 w-2 rounded-full bg-accent" />}
+      <View
+        className={`h-8 w-16 items-center justify-center rounded-2xl ${focused ? "bg-accent/15" : ""}`}
+      >
+        <Feather name={name} size={22} color={color} />
+      </View>
+      {badge && <View className="absolute right-3 top-0 h-2 w-2 rounded-full bg-accent" />}
     </View>
   );
 }

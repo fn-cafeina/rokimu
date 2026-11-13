@@ -24,7 +24,6 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarVariant: "material",
           tabBarActiveTintColor: ACCENT_COLOR,
           tabBarInactiveTintColor: ON_SURFACE_VARIANT,
           tabBarHideOnKeyboard: true,
@@ -35,6 +34,10 @@ export default function TabLayout() {
             height: TAB_BAR_HEIGHT + insets.bottom,
             paddingBottom: insets.bottom,
           },
+          // The active indicator is drawn by TabBarIcon: the navigator only
+          // paints an item background for the "material" variant, which throws
+          // unless the bar is a left/right sidebar.
+          tabBarIconStyle: { width: 64, height: 32 },
           tabBarLabelStyle: { fontSize: 12, fontWeight: "500" },
         }}
       >
@@ -42,8 +45,8 @@ export default function TabLayout() {
           name="library"
           options={{
             title: "Biblioteca",
-            tabBarIcon: ({ color }) => (
-              <TabBarIcon name="bookmark" color={toIconColor(color)} />
+            tabBarIcon: ({ color, focused }) => (
+              <TabBarIcon name="bookmark" color={toIconColor(color)} focused={focused} />
             ),
           }}
         />
@@ -51,8 +54,8 @@ export default function TabLayout() {
           name="search"
           options={{
             title: "Explorar",
-            tabBarIcon: ({ color }) => (
-              <TabBarIcon name="compass" color={toIconColor(color)} />
+            tabBarIcon: ({ color, focused }) => (
+              <TabBarIcon name="compass" color={toIconColor(color)} focused={focused} />
             ),
           }}
         />
@@ -60,8 +63,8 @@ export default function TabLayout() {
           name="settings"
           options={{
             title: "Ajustes",
-            tabBarIcon: ({ color }) => (
-              <TabBarIcon name="settings" color={toIconColor(color)} badge={showUpdateBadge} />
+            tabBarIcon: ({ color, focused }) => (
+              <TabBarIcon name="settings" color={toIconColor(color)} focused={focused} badge={showUpdateBadge} />
             ),
           }}
         />
