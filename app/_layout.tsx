@@ -5,11 +5,10 @@ import { useUserInitializationStore } from "@/stores/userIndex";
 import { useUpdateStore, UPDATE_CHECK_KEY } from "@/stores/updateStore";
 import { UpdateModal } from "@/components/UpdateModal";
 import { useHistoryStore, HISTORY_KEY } from "@/stores/historyStore";
-import { useFavoritesStore, FAVORITES_KEY } from "@/stores/favoritesStore";
+import { useSearchHistoryStore, SEARCHES_KEY } from "@/stores/searchHistoryStore";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { sessionManager } from "@/services/session";
 import { resetToPortrait, isPlayerActive } from "@/services/playerUI";
-import { SURFACE_COLOR } from "@/config/source";
 import { storage } from "@/utils/storage";
 import { logger } from "@/utils/logger";
 import { pruneExpiredCache } from "@/utils/cache";
@@ -71,15 +70,15 @@ function RootInner() {
       // Fire and forget: the sweep is IO over every stored key, nothing waits on it
       void pruneExpiredCache();
       await sessionManager.initialize();
-      const [history, order, updateCheckEnabled, favorites] = await Promise.all([
+      const [history, searches, order, updateCheckEnabled] = await Promise.all([
         storage.get<HistoryItem[]>(HISTORY_KEY),
+        storage.get<string[]>(SEARCHES_KEY),
         storage.get<"asc" | "desc">(EPISODE_ORDER_KEY),
         storage.get<boolean>(UPDATE_CHECK_KEY),
-        storage.get<import("@/types").Favorite[]>(FAVORITES_KEY),
       ]);
       useHistoryStore.getState().initialize(history ?? []);
+      useSearchHistoryStore.getState().initialize(searches ?? []);
       useSettingsStore.getState().initialize(order ?? "asc");
-      useFavoritesStore.getState().initialize(favorites ?? []);
       useUpdateStore.getState().initialize(updateCheckEnabled !== false);
       useUserInitializationStore.setState({ isInitialized: true });
       logger.info("lifecycle", "App boot complete");
@@ -99,17 +98,17 @@ function RootInner() {
   }, []);
 
   if (!ready) {
-    return <View className="flex-1 bg-surface" />;
+    return <View className="flex-1 bg-black" />;
   }
 
   return (
-    <View className="flex-1 bg-surface">
+    <View className="flex-1 bg-black">
       <StatusBar style="light" />
       <Stack
         screenOptions={{
           headerShown: false,
           animation: "slide_from_right",
-          contentStyle: { backgroundColor: SURFACE_COLOR },
+          contentStyle: { backgroundColor: "#000000" },
           statusBarStyle: "light",
         }}
       >

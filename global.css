@@ -1,34 +1,6 @@
 @import "tailwindcss";
 @import "uniwind";
 
-/*
- * Material 3 dark color roles. `accent` stays as the public name the app
- * already uses; it points at the same value as `primary`, so no existing
- * `text-accent` / `bg-accent` class has to be rewritten.
- * Mirror any change here into ACCENT_COLOR / MUTED_ICON / SURFACE_* in
- * src/config/source.ts, which native props (tintColor, Switch, Slider) use.
- */
 @theme {
   --color-accent: #5bc8f5;
-  --color-primary: #5bc8f5;
-  --color-on-primary: #00344a;
-
-  --color-primary-container: #004d69;
-  --color-on-primary-container: #c2e9fb;
-
-  --color-background: #141218;
-  --color-surface: #141218;
-  --color-surface-container-low: #1d1b20;
-  --color-surface-container: #211f26;
-  --color-surface-container-high: #2b292f;
-  --color-surface-container-highest: #36343b;
-
-  --color-on-surface: #e6e0e9;
-  --color-on-surface-variant: #cac4d0;
-
-  --color-outline: #938f99;
-  --color-outline-variant: #49454f;
-
-  --color-error: #f2b8b5;
-  --color-on-error: #601410;
 }

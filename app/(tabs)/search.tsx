@@ -1,159 +1,137 @@
-import { AnimeGrid } from "@/components/ui/AnimeGrid";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimeCard } from "@/components/AnimeCard";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { TopAppBar } from "@/components/ui/TopAppBar";
-import { PosterGridSkeleton } from "@/components/skeletons/PosterGridSkeleton";
-import { useExploreScreen } from "@/hooks/useExploreScreen";
+import { RecentSearches } from "@/components/RecentSearches";
+import { SearchSkeleton } from "@/components/skeletons/SearchSkeleton";
+import { SuggestionsList } from "@/components/SuggestionsList";
+import type { Anime } from "@/types";
 import { useSearchScreen, MIN_SEARCH_LENGTH } from "@/hooks/useSearchScreen";
+import { useTabBarManager } from "@/hooks/useTabBarManager";
+import { TAB_BAR_OFFSET, calcCardWidth } from "@/utils/layout";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
 import { Feather } from "@expo/vector-icons";
-import React, { useEffect } from "react";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
-import { Text, TextInput, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Animated, FlatList, RefreshControl, Text, TextInput, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-function SearchBar({
-  value,
-  onChangeText,
-  onSubmit,
-  onClear,
-}: {
-  value: string;
-  onChangeText: (text: string) => void;
-  onSubmit: () => void;
-  onClear: () => void;
-}) {
-  return (
-    // Material 3 search bar: 56dp, full corner, surface container high
-    <View className="mx-4 h-14 flex-row items-center gap-3 rounded-full bg-surface-container-high px-4">
-      <Feather name="search" size={20} color={MUTED_ICON} />
-      <TextInput
-        className="h-14 flex-1 text-base text-on-surface"
-        placeholder="Buscar anime"
-        placeholderTextColor={MUTED_ICON}
-        value={value}
-        onChangeText={onChangeText}
-        onSubmitEditing={onSubmit}
-        returnKeyType="search"
-        autoCorrect={false}
-        accessibilityLabel="Buscar anime"
-      />
-      {value.length > 0 && (
-        <AnimatedPressable
-          onPress={onClear}
-          className="h-10 w-10 items-center justify-center rounded-full"
-          accessibilityLabel="Borrar búsqueda"
-        >
-          <Feather name="x" size={18} color={MUTED_ICON} />
-        </AnimatedPressable>
-      )}
-    </View>
-  );
-}
-
-function ExploreScreenContent() {
+function SearchScreenContent() {
   const {
-    searchTerm, searchAnimes, isLoading, error,
-    isIdle, isTyping, isSearched, isSearching, handleSearch, handleTextChange, resetSearch, retrySearch,
+    searchTerm, searchAnimes, suggestions, recentSearches, isLoading, error,
+    isIdle, isTyping, isSearched, handleSearch, handleTextChange, resetSearch,
+    retrySearch, removeRecentSearch, clearRecentSearches, handleSelectSuggestion,
   } = useSearchScreen();
 
-  const { items, isLoading: homeLoading, error: homeError, fetchHome, hasContent } = useExploreScreen();
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const cardWidth = calcCardWidth(screenWidth);
+  const { handleScroll, reset, showTabBar } = useTabBarManager({ threshold: 8 });
+  const [resultsOpacity] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    if (isIdle) void fetchHome();
-  }, [isIdle, fetchHome]);
+    if (!isSearched) { reset(); showTabBar(); }
+  }, [isSearched, reset, showTabBar]);
 
-  // Exactly one branch renders. "searching" belongs to the results branch so
-  // submitting never leaves the screen blank while the request is in flight.
-  const showResults = isSearched || isSearching;
-  const showExplore = !showResults;
+  useEffect(() => {
+    Animated.timing(resultsOpacity, { toValue: isSearched ? 1 : 0, duration: 150, useNativeDriver: true }).start();
+  }, [isSearched, resultsOpacity]);
 
-  const submit = () => { handleSearch(searchTerm); };
+  const renderSearchResult = useCallback(({ item }: { item: Anime }) => (
+    <View className="mb-2"><AnimeCard anime={item} width={cardWidth} /></View>
+  ), [cardWidth]);
 
-  // The grid draws its own empty slot, so the skeleton and the error state are
-  // chosen here instead of stacking over the list
-  const exploreEmpty: React.ReactElement | undefined =
-    homeError != null ? (
-      <EmptyState
-        icon="wifi-off"
-        title="No se pudo cargar el catálogo"
-        description="Revisa tu conexión y vuelve a intentarlo."
-        actionLabel="Reintentar"
-        actionIcon="refresh-cw"
-        onAction={() => void fetchHome(true)}
-      />
-    ) : homeLoading ? (
-      <PosterGridSkeleton />
-    ) : undefined;
-
-  const resultsEmpty: React.ReactElement | undefined = isLoading ? (
-    <PosterGridSkeleton rows={3} />
-  ) : error != null ? (
-    <EmptyState
-      icon="alert-circle"
-      title="No se pudieron cargar los resultados"
-      description="El sitio está tardando más de lo normal. Inténtalo de nuevo en un momento."
-      actionLabel="Reintentar"
-      actionIcon="refresh-cw"
-      onAction={retrySearch}
-    />
-  ) : (
-    <EmptyState
-      icon="search"
-      title="Sin resultados"
-      description={`No encontramos nada para "${searchTerm}".`}
-    />
-  );
+  const showIdleContent = isIdle && !isTyping && !isSearched && !isLoading;
+  const showHint = showIdleContent && recentSearches.length === 0;
+  const showSearchSkeleton = !isSearched && !isIdle && !isTyping && isLoading;
+  // debouncedTerm gates the hint so it only shows once typing pauses,
+  // matching when the app would otherwise fire a request
+  const debouncedLength = useDebounce(searchTerm, 300).trim().length;
+  const showMinLengthHint = isTyping && debouncedLength >= 1 && debouncedLength < MIN_SEARCH_LENGTH;
 
   return (
-    <View className="flex-1 bg-surface">
-      <TopAppBar title="Explorar" />
-      <View className="pb-3">
-        <SearchBar
-          value={searchTerm}
-          onChangeText={handleTextChange}
-          onSubmit={submit}
-          onClear={resetSearch}
-        />
+    <View className="flex-1 bg-black">
+      <View className="px-5 pb-4" style={{ paddingTop: insets.top + 16 }}>
+        <View className="flex-row items-center h-12 bg-neutral-900 rounded-xl border border-neutral-800 px-4">
+          <Feather name="search" size={18} color="#a3a3a3" style={{ marginRight: 8 }} />
+          <TextInput
+            className="flex-1 text-white text-base font-normal h-12"
+            placeholder="Buscar anime..."
+            placeholderTextColor={MUTED_ICON}
+            value={searchTerm}
+            onChangeText={handleTextChange}
+            onSubmitEditing={() => handleSearch(searchTerm)}
+            returnKeyType="search"
+          />
+          {searchTerm.length > 0 && (
+            <Feather name="x" size={16} color="#a3a3a3"
+              onPress={() => { resetSearch(); showTabBar(); }}
+              style={{ padding: 8 }}
+            />
+          )}
+        </View>
       </View>
 
-      {showExplore && isTyping && (
-        <View className="px-5 pb-3">
-          <Text className="text-xs text-on-surface-variant">
-            {searchTerm.trim().length >= MIN_SEARCH_LENGTH
-              ? "Presioná buscar para ver resultados"
-              : `Escribí al menos ${MIN_SEARCH_LENGTH} caracteres`}
-          </Text>
-        </View>
-      )}
-
-      {showExplore && (
-        <AnimeGrid
-          data={items}
-          onRefresh={() => void fetchHome(true)}
-          refreshing={homeLoading && hasContent}
-          empty={exploreEmpty}
-        />
-      )}
-
-      {showResults && (
-        <AnimeGrid
-          data={searchAnimes}
-          onRefresh={retrySearch}
-          refreshing={isLoading}
-          empty={resultsEmpty}
-        />
-      )}
-
-      {showResults && (
-        <AnimatedPressable
-          onPress={resetSearch}
-          className="absolute bottom-6 right-4 flex-row items-center gap-2 rounded-full bg-surface-container-high px-4 py-3"
-          accessibilityLabel="Volver al catálogo"
-        >
-          <Feather name="arrow-left" size={16} color={ACCENT_COLOR} />
-          <Text className="text-xs font-medium text-accent">Catálogo</Text>
-        </AnimatedPressable>
-      )}
+      <View className="flex-1 bg-black px-5">
+        {showIdleContent && recentSearches.length > 0 && (
+          <RecentSearches searches={recentSearches} onSelect={(t) => handleSearch(t)} onRemove={removeRecentSearch} onClearAll={clearRecentSearches} />
+        )}
+        {showHint && (
+          <View className="flex-1 justify-start items-center pt-20">
+            <Feather name="search" size={48} color="#404040" />
+            <Text className="mt-4 text-sm text-neutral-500">Busca tu anime favorito</Text>
+          </View>
+        )}
+        {isTyping && suggestions.length > 0 && (
+          <SuggestionsList suggestions={suggestions} searchTerm={searchTerm} onSelect={handleSelectSuggestion} onScroll={handleScroll} tabBarOffset={TAB_BAR_OFFSET} />
+        )}
+        {showMinLengthHint && (
+          <View className="flex-1 justify-start items-center pt-20">
+            <Feather name="type" size={48} color="#404040" />
+            <Text className="mt-4 text-sm text-neutral-500">
+              {`Escribí al menos ${MIN_SEARCH_LENGTH} caracteres para buscar`}
+            </Text>
+          </View>
+        )}
+        {showSearchSkeleton && <SearchSkeleton />}
+        {isSearched && (
+          <Animated.View style={{ flex: 1, opacity: resultsOpacity }}>
+            <FlatList
+              data={searchAnimes}
+              keyExtractor={(item: Anime) => item.url}
+              numColumns={3}
+              renderItem={renderSearchResult}
+              columnWrapperClassName="justify-start gap-3"
+              contentContainerClassName="pt-4"
+              contentContainerStyle={{ paddingBottom: TAB_BAR_OFFSET }}
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              refreshControl={<RefreshControl refreshing={isLoading} onRefresh={retrySearch} tintColor={ACCENT_COLOR} />}
+              ListEmptyComponent={!isLoading ? (error ? (
+                <View className="flex-1 justify-start items-center px-5 pt-20">
+                  <Feather name="alert-circle" size={48} color="#404040" />
+                  <Text className="mt-4 text-sm font-semibold text-neutral-500">No se pudieron cargar los resultados</Text>
+                  <Text className="mt-2 max-w-[300px] text-center text-xs text-neutral-600">
+                    El sitio está tardando más de lo normal en responder. Inténtalo de nuevo en un momento.
+                  </Text>
+                  <AnimatedPressable
+                    className="mt-4 flex-row items-center px-6 py-3 rounded-xl bg-accent/15"
+                    onPress={retrySearch}
+                  >
+                    <Feather name="refresh-cw" size={16} color={ACCENT_COLOR} />
+                    <Text className="ml-2 text-xs font-semibold tracking-wide text-accent">Reintentar</Text>
+                  </AnimatedPressable>
+                </View>
+              ) : (
+                <View className="flex-1 justify-start items-center px-5 pt-20">
+                  <Feather name="frown" size={48} color="#404040" />
+                  <Text className="mt-4 text-sm text-neutral-500">Sin resultados para &quot;{searchTerm}&quot;</Text>
+                </View>
+              )) : undefined}
+            />
+          </Animated.View>
+        )}
+      </View>
     </View>
   );
 }
@@ -161,7 +139,7 @@ function ExploreScreenContent() {
 export default function SearchScreen() {
   return (
     <ErrorBoundary>
-      <ExploreScreenContent />
+      <SearchScreenContent />
     </ErrorBoundary>
   );
 }

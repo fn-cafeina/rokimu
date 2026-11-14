@@ -14,7 +14,7 @@ export function ProgressBar({ progress, duration, color, className }: ProgressBa
   const pct = calcProgress(progress, duration);
 
   return (
-    <View className={`h-0.5 bg-surface-container-highest ${className ?? ""}`}>
+    <View className={`h-0.5 bg-neutral-800 ${className ?? ""}`}>
       <View className="h-full" style={{ width: `${pct * 100}%`, backgroundColor: color ?? ACCENT_COLOR }} />
     </View>
   );

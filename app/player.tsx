@@ -263,7 +263,7 @@ function PlayerContent() {
   }
 
   return (
-    <View className="flex-1 bg-surface">
+    <View className="flex-1 bg-black">
       <StatusBar hidden />
       <VideoView key={streamUrl ?? "no-stream"} player={player} style={StyleSheet.absoluteFill} nativeControls={false} contentFit="contain" />
       <PlayerControls

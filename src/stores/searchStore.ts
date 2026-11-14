@@ -7,7 +7,7 @@ import { ResourceRunner, resourceInitialState, type ResourceState } from "../uti
 import { logger } from "../utils/logger";
 import { CACHE_PREFIXES, CACHE_TTL } from "../config/cache";
 import { TMDB_IMAGE_BASE } from "../config/source";
-import type { Anime } from "../types";
+import type { Anime, AutocompleteAnime } from "../types";
 
 // Results and suggestions share one cache entry per query (same endpoint).
 // The query itself is the key: collapsing punctuation merged distinct queries
@@ -51,10 +51,17 @@ function toAnime(item: RawSearchItem): Anime {
   };
 }
 
+function toSuggestion(item: RawSearchItem): AutocompleteAnime {
+  return { name: item.name, slug: item.slug, type: item.type ?? "", poster: item.poster };
+}
+
 interface SearchState {
   results: ResourceState<Anime[]>;
+  suggestions: ResourceState<AutocompleteAnime[]>;
   lastSearchTerm: string;
   fetchSearch: (query: string, force?: boolean) => Promise<void>;
+  fetchSuggestions: (query: string) => Promise<void>;
+  clearSuggestions: () => void;
   cancelSearch: () => void;
   resetSearch: () => void;
   setSearchTerm: (term: string) => void;
@@ -66,17 +73,27 @@ export const useSearchStore = create<SearchState>((set, get) => {
     get: () => get().results,
     set: (results) => set({ results }),
   });
+  const suggestionsRunner = new ResourceRunner<AutocompleteAnime[]>({
+    tag: "suggestions",
+    get: () => get().suggestions,
+    set: (suggestions) => set({ suggestions }),
+  });
 
   return {
     results: resourceInitialState<Anime[]>(),
+    suggestions: resourceInitialState<AutocompleteAnime[]>(),
     lastSearchTerm: "",
 
     fetchSearch: async (query: string, force = false) => {
       const trimmed = query.trim();
       if (!trimmed) {
         resultsRunner.reset();
+        suggestionsRunner.reset();
         return;
       }
+      // A search supersedes suggestions; both hit the same heavy endpoint and
+      // running concurrently over one session makes each other time out
+      suggestionsRunner.reset();
 
       const cacheKey = searchCacheKey(trimmed);
       await resultsRunner.load(trimmed, async (signal) => {
@@ -105,12 +122,28 @@ export const useSearchStore = create<SearchState>((set, get) => {
       });
     },
 
+    fetchSuggestions: async (query: string) => {
+      const cacheKey = searchCacheKey(query);
+      await suggestionsRunner.load(query, async (signal) => {
+        const raw = await loadCached(cacheKey, (sig) => source.searchRaw(query, { signal: sig }), {
+          ttl: CACHE_TTL.SEARCH,
+          signal,
+        });
+        return raw.map(toSuggestion);
+      });
+    },
+
+    clearSuggestions: () => {
+      suggestionsRunner.reset();
+    },
+
     cancelSearch: () => {
       resultsRunner.cancel();
     },
 
     resetSearch: () => {
       resultsRunner.reset();
+      suggestionsRunner.reset();
     },
 
     setSearchTerm: (term: string) => set({ lastSearchTerm: term }),

@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import type { HistoryItem } from "../types";
-import { persistWithRollback } from "../utils/history";
+import { computeContinueWatching, persistWithRollback } from "../utils/history";
 import { storage } from "../utils/storage";
 
 export const HISTORY_KEY = "last_viewed";
 
 interface HistoryState {
   lastViewed: HistoryItem[];
+  continueWatching: HistoryItem[];
   initialize: (data: HistoryItem[]) => void;
   addToHistory: (item: HistoryItem) => Promise<void>;
 
@@ -14,22 +15,23 @@ interface HistoryState {
 
 export const useHistoryStore = create<HistoryState>((set, get) => ({
   lastViewed: [],
+  continueWatching: [],
 
-  initialize: (data) => {
-    set({ lastViewed: data });
+  initialize: (data: HistoryItem[]) => {
+    set({ lastViewed: data, continueWatching: computeContinueWatching(data) });
   },
 
-  addToHistory: async (item) => {
+  addToHistory: async (item: HistoryItem) => {
     const newItem = { ...item, timestamp: Date.now() };
     const previous = get().lastViewed;
     const updated = [newItem, ...previous.filter(
       (i) => i.url !== newItem.url || i.number !== newItem.number,
     )].slice(0, 50);
 
-    set({ lastViewed: updated });
+    set({ lastViewed: updated, continueWatching: computeContinueWatching(updated) });
     await persistWithRollback(
       () => storage.set(HISTORY_KEY, updated),
-      () => set({ lastViewed: previous }),
+      () => set({ lastViewed: previous, continueWatching: computeContinueWatching(previous) }),
       "historyStore",
     );
   },

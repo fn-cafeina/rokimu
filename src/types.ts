@@ -62,11 +62,11 @@ export interface HistoryItem {
   timestamp: number;
 }
 
-export interface Favorite {
-  title: string;
-  image: string;
-  url: string; // slug
-  addedAt: number;
+export interface AutocompleteAnime {
+  name: string;
+  slug: string;
+  type: string;
+  poster: string;
 }
 
 export interface ISession {

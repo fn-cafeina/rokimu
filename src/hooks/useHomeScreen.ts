@@ -1,14 +1,20 @@
 import { useEffect, useMemo } from "react";
-import type { Anime } from "../types";
+import type { Anime, HistoryItem } from "../types";
 import { HOME_KEY, useHomeStore } from "../stores/homeStore";
 import { deriveView, errorFor, isLoadingFor, type ResourceView } from "../utils/resource";
+import { useHistoryStore } from "../stores/historyStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useUserInitializationStore } from "../stores/userIndex";
 
-export function useExploreScreen() {
+export type SectionItem =
+  | { type: "CONTINUE"; items: HistoryItem[] }
+  | { type: "SECTION"; label: string; items: Anime[] };
+
+export function useHomeScreen() {
   const fetchHome = useHomeStore((s) => s.fetchHome);
   const resource = useHomeStore((s) => s.resource);
 
+  const continueWatching = useHistoryStore((s) => s.continueWatching);
   const cacheInvalidationTimestamp = useSettingsStore((s) => s.cacheInvalidationTimestamp);
   const isInitialized = useUserInitializationStore((s) => s.isInitialized);
 
@@ -20,15 +26,22 @@ export function useExploreScreen() {
 
   const homeData = resource.data != null && resource.dataKey === HOME_KEY ? resource.data : null;
 
-  // The source exposes a single catalogue page, so this is one flat list.
-  // There is no second section to label: the grid is the screen.
-  const items = useMemo((): Anime[] => homeData?.recent ?? [], [homeData]);
+  const sections = useMemo((): SectionItem[] => {
+    const list: SectionItem[] = [];
+    if (continueWatching.length > 0) {
+      list.push({ type: "CONTINUE", items: continueWatching });
+    }
+    if (homeData != null && homeData.recent.length > 0) {
+      list.push({ type: "SECTION", label: "Recién agregados", items: homeData.recent });
+    }
+    return list;
+  }, [homeData, continueWatching]);
 
   const view: ResourceView = deriveView(resource, HOME_KEY);
   const hasContent = isInitialized && view === "content";
 
   return {
-    items,
+    sections,
     isLoading: isLoadingFor(resource, HOME_KEY) || !isInitialized,
     error: errorFor(resource, HOME_KEY),
     view,

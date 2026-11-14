@@ -121,7 +121,7 @@ export function PlayerControls({
                   </AnimatedPressable>
                   <View className="ml-3 flex-1">
                     <Text className="text-white font-semibold text-sm" numberOfLines={1}>{animeTitle}</Text>
-                    <Text className="text-on-surface-variant text-xs">Episodio {episodeNumber}</Text>
+                    <Text className="text-neutral-400 text-xs">Episodio {episodeNumber}</Text>
                   </View>
                 </View>
 
@@ -201,7 +201,7 @@ export function PlayerControls({
                       restartTimer();
                     }}
                     minimumTrackTintColor={ACCENT_COLOR}
-                    maximumTrackTintColor="rgba(230,224,233,0.24)"
+                    maximumTrackTintColor="rgba(255,255,255,0.25)"
                     thumbTintColor={ACCENT_COLOR}
                   />
                 </View>
@@ -218,37 +218,38 @@ export function PlayerControls({
       {showCountdown && (
         <View className="absolute inset-0" style={{ zIndex: 20, elevation: 20, backgroundColor: "rgba(0,0,0,0.85)" }}>
           <View className="flex-1 items-center justify-center">
-            <View className="w-80 overflow-hidden rounded-[28px] bg-surface-container-high">
-              <View className="items-center gap-3 px-6 pb-5 pt-6">
-                <Text className="text-xs font-medium text-on-surface-variant">
+            <View className="w-72 bg-neutral-900 rounded-lg border border-neutral-800 overflow-hidden">
+              <View className="px-5 pt-5 pb-4 items-center gap-3">
+                <Text className="text-[11px] font-medium text-neutral-400 uppercase tracking-widest">
                   Siguiente episodio
                 </Text>
                 {nextEpisodeNumber != null && (
-                  <Text className="text-xl font-normal text-on-surface">
+                  <Text className="text-neutral-200 text-base font-semibold">
                     Episodio {nextEpisodeNumber}
                   </Text>
                 )}
-                <View className="h-1 w-full overflow-hidden rounded-full bg-surface-container-highest">
+                <View className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
                   <View
                     className="h-full bg-accent rounded-full"
                     style={{ width: `${((nextEpisodeCountdown ?? 0) / NEXT_EPISODE_COUNTDOWN_SECONDS) * 100}%` }}
                   />
                 </View>
               </View>
-              <View className="flex-row justify-end gap-2 border-t border-outline-variant px-2 py-2">
+              <View className="flex-row border-t border-neutral-800">
                 <AnimatedPressable
                   onPress={onCancelNextEpisode}
-                  className="px-4 py-2.5"
+                  className="flex-1 py-3 items-center"
                   hitSlop={8}
                 >
-                  <Text className="text-sm font-medium text-on-surface-variant">Cancelar</Text>
+                  <Text className="text-sm text-neutral-300">Cancelar</Text>
                 </AnimatedPressable>
+                <View className="w-px bg-neutral-800" />
                 <AnimatedPressable
                   onPress={onConfirmNextEpisode}
-                  className="px-4 py-2.5"
+                  className="flex-1 py-3 items-center"
                   hitSlop={8}
                 >
-                  <Text className="text-sm font-medium text-accent">Saltar ahora</Text>
+                  <Text className="text-sm text-accent font-medium">Saltar ahora</Text>
                 </AnimatedPressable>
               </View>
             </View>

@@ -19,7 +19,7 @@ export const ImageWithLoader = ({
   const hasError = failedUri === uri;
 
   return (
-    <View className={`overflow-hidden rounded-xl bg-surface-container-high${className != null ? ` ${className}` : ""}`} style={style}>
+    <View className={`overflow-hidden bg-neutral-900 rounded-lg${className != null ? ` ${className}` : ""}`} style={style}>
       {!hasError && uri ? (
         <Image
           source={{ uri }}
@@ -31,7 +31,7 @@ export const ImageWithLoader = ({
       ) : null}
       {hasError && (
         <View className="absolute inset-0 items-center justify-center">
-          <Text className="text-sm text-on-surface-variant">{errorText}</Text>
+          <Text className="text-sm text-neutral-500">{errorText}</Text>
         </View>
       )}
     </View>

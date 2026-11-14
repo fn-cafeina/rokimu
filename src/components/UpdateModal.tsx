@@ -1,9 +1,11 @@
 import { ACCENT_COLOR } from "@/config/source";
-import { BottomSheet } from "@/components/ui/BottomSheet";
-import { useUpdateStore, grantInstallPermissionAndDownload } from "@/stores/updateStore";
-import { useEffect, useRef } from "react";
-import { AppState, Text, View } from "react-native";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { useUpdateStore, grantInstallPermissionAndDownload } from "@/stores/updateStore";
+import { Feather } from "@expo/vector-icons";
+import React, { useEffect, useRef } from "react";
+import { AppState, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
 function formatSize(bytes: number): string {
   if (bytes <= 0) return "0 MB";
@@ -11,9 +13,6 @@ function formatSize(bytes: number): string {
   if (mb < 1) return `${Math.round(bytes / 1024)} KB`;
   return `${mb.toFixed(1)} MB`;
 }
-
-const ACTION_LABEL = "text-sm font-medium text-on-surface px-6 py-4";
-const ACTION_ACCENT = "text-sm font-medium text-accent px-6 py-4";
 
 export function UpdateModal() {
   const phase = useUpdateStore((s) => s.phase);
@@ -25,6 +24,7 @@ export function UpdateModal() {
   const beginDownload = useUpdateStore((s) => s.beginDownload);
   const cancelDownload = useUpdateStore((s) => s.cancelDownload);
   const resumeAfterPermission = useUpdateStore((s) => s.resumeAfterPermission);
+  const insets = useSafeAreaInsets();
 
   // After granting permission in system settings, resume automatically.
   // resumeAfterPermission is armed only when the settings screen is actually
@@ -47,51 +47,52 @@ export function UpdateModal() {
 
   // Download and install are not dismissable from the backdrop or the X
   const canDismiss = phase === "confirm" || phase === "permission" || phase === "error";
-
-  const title =
-    phase === "confirm" ? "Actualizar"
-      : phase === "permission" ? "Permiso necesario"
-        : phase === "downloading" ? "Descargando"
-          : phase === "installing" ? "Preparando instalación"
-            : "No se pudo actualizar";
+  const onClose = () => {
+    if (canDismiss) closeUpdate();
+  };
 
   let body: React.ReactNode = null;
   let actions: React.ReactNode = null;
 
   if (phase === "confirm") {
     body = (
-      <Text className="text-sm leading-5 text-on-surface-variant">
+      <Text className="text-neutral-400 text-sm leading-5">
         {`Versión ${updateAvailable} disponible.`}
       </Text>
     );
     actions = (
-      <View className="flex-row justify-end">
-        <AnimatedPressable onPress={closeUpdate} className={ACTION_LABEL}>
-          <Text className={ACTION_LABEL}>Cancelar</Text>
+      <View className="flex-row">
+        <AnimatedPressable onPress={onClose} className="flex-1 py-4 items-center">
+          <Text className="text-sm text-neutral-300">Cancelar</Text>
         </AnimatedPressable>
-        <AnimatedPressable onPress={() => void confirmUpdate()} className={ACTION_ACCENT}>
-          <Text className={ACTION_ACCENT}>Actualizar</Text>
+        <View className="w-px bg-neutral-800" />
+        <AnimatedPressable onPress={() => void confirmUpdate()} className="flex-1 py-4 items-center">
+          <Text className="text-sm text-accent font-medium">Actualizar</Text>
         </AnimatedPressable>
       </View>
     );
   } else if (phase === "permission") {
     body = (
       <>
-        <Text className="text-sm leading-5 text-on-surface-variant">
+        <Text className="text-neutral-400 text-sm leading-5">
           Para instalar actualizaciones, permití que Rokimu instale aplicaciones en los ajustes del sistema.
         </Text>
-        <Text className="mt-2 text-xs text-on-surface-variant/70">
+        <Text className="text-neutral-500 text-xs mt-2">
           Al volver, la descarga continúa sola.
         </Text>
       </>
     );
     actions = (
-      <View className="flex-row justify-end">
-        <AnimatedPressable onPress={closeUpdate} className={ACTION_LABEL}>
-          <Text className={ACTION_LABEL}>Cancelar</Text>
+      <View className="flex-row">
+        <AnimatedPressable onPress={onClose} className="flex-1 py-4 items-center">
+          <Text className="text-sm text-neutral-300">Cancelar</Text>
         </AnimatedPressable>
-        <AnimatedPressable onPress={() => void grantInstallPermissionAndDownload()} className={ACTION_ACCENT}>
-          <Text className={ACTION_ACCENT}>Abrir ajustes</Text>
+        <View className="w-px bg-neutral-800" />
+        <AnimatedPressable
+          onPress={() => void grantInstallPermissionAndDownload()}
+          className="flex-1 py-4 items-center"
+        >
+          <Text className="text-sm text-accent font-medium">Abrir ajustes</Text>
         </AnimatedPressable>
       </View>
     );
@@ -102,13 +103,13 @@ export function UpdateModal() {
         : null;
     body = (
       <>
-        <View className="mt-1 h-1 overflow-hidden rounded-full bg-surface-container-highest">
+        <View className="h-1 bg-neutral-800 rounded-full overflow-hidden mt-1">
           <View
             className="h-full"
             style={{ width: `${(pct ?? 0.03) * 100}%`, backgroundColor: ACCENT_COLOR }}
           />
         </View>
-        <Text className="mt-2 text-xs text-on-surface-variant">
+        <Text className="text-neutral-500 text-xs mt-2">
           {pct != null
             ? `${Math.round(pct * 100)}% · ${formatSize(progress.receivedBytes)}`
             : `${formatSize(progress.receivedBytes)} descargados`}
@@ -116,43 +117,63 @@ export function UpdateModal() {
       </>
     );
     actions = (
-      <View className="flex-row justify-end">
-        <AnimatedPressable onPress={cancelDownload} className={ACTION_LABEL}>
-          <Text className={ACTION_LABEL}>Cancelar</Text>
-        </AnimatedPressable>
-      </View>
+      <AnimatedPressable onPress={cancelDownload} className="py-4 items-center">
+        <Text className="text-sm text-neutral-300">Cancelar</Text>
+      </AnimatedPressable>
     );
   } else if (phase === "installing") {
     body = (
-      <Text className="text-sm leading-5 text-on-surface-variant">Abriendo el instalador del sistema…</Text>
+      <Text className="text-neutral-400 text-sm leading-5">Abriendo el instalador del sistema…</Text>
     );
   } else {
     body = (
-      <Text className="text-sm leading-5 text-on-surface-variant" numberOfLines={4}>
+      <Text className="text-neutral-400 text-sm leading-5" numberOfLines={4}>
         {errorMessage ?? "Ocurrió un error inesperado."}
       </Text>
     );
     actions = (
-      <View className="flex-row justify-end">
-        <AnimatedPressable onPress={closeUpdate} className={ACTION_LABEL}>
-          <Text className={ACTION_LABEL}>Cerrar</Text>
+      <View className="flex-row">
+        <AnimatedPressable onPress={onClose} className="flex-1 py-4 items-center">
+          <Text className="text-sm text-neutral-300">Cerrar</Text>
         </AnimatedPressable>
-        <AnimatedPressable onPress={() => void beginDownload()} className={ACTION_ACCENT}>
-          <Text className={ACTION_ACCENT}>Reintentar</Text>
+        <View className="w-px bg-neutral-800" />
+        <AnimatedPressable onPress={() => void beginDownload()} className="flex-1 py-4 items-center">
+          <Text className="text-sm text-accent font-medium">Reintentar</Text>
         </AnimatedPressable>
       </View>
     );
   }
 
   return (
-    <BottomSheet
-      visible
-      onClose={closeUpdate}
-      title={title}
-      dismissable={canDismiss}
-      actions={actions}
+    <Animated.View
+      entering={FadeIn.duration(150)}
+      exiting={FadeOut.duration(150)}
+      className="absolute inset-0 bg-black/80 justify-end"
+      style={{ elevation: 50 }}
     >
-      {body}
-    </BottomSheet>
+      <Pressable className="absolute inset-0" onPress={onClose} disabled={!canDismiss} />
+      <View className="bg-neutral-900 rounded-t-xl px-5 pt-5" style={{ paddingBottom: insets.bottom + (actions != null ? 0 : 20) }}>
+        <View className="flex-row justify-between items-center mb-3">
+          <Text className="text-white text-xl font-bold">
+            {phase === "confirm" && "Actualizar"}
+            {phase === "permission" && "Permiso necesario"}
+            {phase === "downloading" && "Descargando"}
+            {phase === "installing" && "Preparando instalación"}
+            {phase === "error" && "No se pudo actualizar"}
+          </Text>
+          {canDismiss && (
+            <Feather name="x" size={20} color="#a3a3a3" onPress={onClose} />
+          )}
+        </View>
+        {body}
+        {actions != null ? (
+          <View className="mt-5 -mx-5 border-t border-neutral-800">
+            {actions}
+          </View>
+        ) : (
+          <View className="h-5" />
+        )}
+      </View>
+    </Animated.View>
   );
 }

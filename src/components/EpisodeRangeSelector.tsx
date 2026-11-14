@@ -3,8 +3,8 @@ import { FlatList, Text, View } from "react-native";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import type { EpisodeRange } from "@/types";
 
-const RANGE_BADGE_WIDTH = 96;
-const RANGE_BADGE_GAP = 8;
+const RANGE_BADGE_WIDTH = 90;
+const RANGE_BADGE_GAP = 12;
 
 interface EpisodeRangeSelectorProps {
   ranges: EpisodeRange[];
@@ -13,7 +13,6 @@ interface EpisodeRangeSelectorProps {
   isRestoring: boolean;
 }
 
-/** Material 3 segmented button row for episode ranges. */
 export const EpisodeRangeSelector = memo(({
   ranges, activeRangeIdx, setActiveRangeIdx, isRestoring
 }: EpisodeRangeSelectorProps) => {
@@ -43,7 +42,7 @@ export const EpisodeRangeSelector = memo(({
   if (ranges.length <= 1) return null;
 
   return (
-    <View className="mt-4">
+    <View className="mt-3 mb-2">
       <FlatList
         ref={listRef}
         horizontal
@@ -55,20 +54,15 @@ export const EpisodeRangeSelector = memo(({
           return (
             <AnimatedPressable
               onPress={() => { setActiveRangeIdx(index); }}
-              hapticFeedback
-              className={`h-10 items-center justify-center rounded-full px-4 ${
-                isActive ? "bg-primary-container" : "border border-outline-variant"
-              }`}
-              style={{ width: RANGE_BADGE_WIDTH }}
-              accessibilityLabel={`Rango ${item.label}`}
+              className={`rounded-lg bg-neutral-900 gap-3 w-[90px] items-center py-2 ${isActive ? "bg-accent/15" : ""}`}
             >
-              <Text className={`text-xs font-medium ${isActive ? "text-on-primary-container" : "text-on-surface"}`}>
+              <Text className={`text-xs ${isActive ? "text-accent" : "text-neutral-500"}`}>
                 {item.label}
               </Text>
             </AnimatedPressable>
           );
         }}
-        contentContainerClassName="gap-2 px-4"
+        contentContainerClassName="gap-3 px-5"
         getItemLayout={(_, index) => ({
           length: RANGE_BADGE_WIDTH,
           offset: (RANGE_BADGE_WIDTH + RANGE_BADGE_GAP) * index,
