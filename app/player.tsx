@@ -68,10 +68,9 @@ function PlayerContent() {
   useEffect(() => { setCurrentEpNumber(number); }, [number, setCurrentEpNumber]);
 
   useEffect(() => {
-    const init = async () => {
-      await setupImmersiveMode();
-    };
-    void init();
+    // setupImmersiveMode rethrows after logging; a lock failure must not leave
+    // an unhandled rejection behind
+    void setupImmersiveMode().catch(() => {});
     return () => {
       void cleanupImmersiveMode();
       void clearStream();
