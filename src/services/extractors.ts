@@ -35,7 +35,7 @@ function selectIndexes(version: string): [number, number] | null {
   return [n, 31 - n];
 }
 
-function selectKeyParts(data: PlaybackData): string[] {
+export function selectKeyParts(data: PlaybackData): string[] {
   const idx = selectIndexes(data.version);
   if (!idx) return data.key_parts;
   const [a, b] = idx;
@@ -59,7 +59,7 @@ function b64url(input: string): Uint8Array {
   return bytes;
 }
 
-function decrypt(data: PlaybackData): string {
+export function decrypt(data: PlaybackData): string {
   const keyParts = selectKeyParts(data);
   const keyBytes = new Uint8Array(keyParts.reduce((acc, p) => acc + b64url(p).length, 0));
   let offset = 0;
