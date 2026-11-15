@@ -73,16 +73,19 @@ export const AnimeDetailsHeader = memo(
               <Feather name="arrow-left" size={24} color="#FFFFFF" />
             </AnimatedPressable>
 
-            <View
-              className={`absolute right-4 rounded-lg bg-neutral-950/80 px-2.5 py-1`}
-              style={{ top: insets.top + 4 }}
-            >
-              <Text
-                className={`text-[11px] font-bold tracking-wider leading-none ${isAiring ? "text-accent" : "text-neutral-400"}`}
+            {/* Empty status means the parser found none; claiming a state would be wrong */}
+            {(anime?.status ?? "") !== "" && (
+              <View
+                className={`absolute right-4 rounded-lg bg-neutral-950/80 px-2.5 py-1`}
+                style={{ top: insets.top + 4 }}
               >
-                {(isAiring ? "En emisión" : "Finalizado").toUpperCase()}
-              </Text>
-            </View>
+                <Text
+                  className={`text-[11px] font-bold tracking-wider leading-none ${isAiring ? "text-accent" : "text-neutral-400"}`}
+                >
+                  {(isAiring ? "En emisión" : "Finalizado").toUpperCase()}
+                </Text>
+              </View>
+            )}
 
             <View className="flex-1 justify-end">
               <Text className="text-2xl font-extrabold tracking-tight text-white" numberOfLines={2}>
