@@ -263,10 +263,6 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
       void storage.set(INSTALL_PERMISSION_KEY, true);
       set({ phase: "ready" });
     } catch (err) {
-      if (err instanceof Error && err.message === "cancelled") {
-        set({ phase: "idle" });
-        return;
-      }
       logger.error("updateStore", "Download/install failed", err);
       const message =
         err instanceof Error && err.message === "stalled"
