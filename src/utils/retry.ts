@@ -8,7 +8,7 @@ interface WithAuthRetryOptions {
   signal?: AbortSignal;
   /** Extra predicate when the caller carries its own superseded-state (e.g. local AbortController) */
   isAborted?: () => boolean;
-  /** Total attempts including the first; 1 disables retry */
+  /** Retries after the first attempt; 0 disables retry */
   maxRetries?: number;
   /** Tag for logs; errors propagate to the caller regardless */
   tag: string;
