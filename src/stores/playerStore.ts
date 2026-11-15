@@ -19,6 +19,8 @@ export const STREAM_KEY = "stream";
 interface PlayerState {
   servers: ResourceState<VideoServer[]>;
   stream: ResourceState<StreamUrlResult>;
+  /** Episode the current stream resolution belongs to; set before the stream settles */
+  streamEpisodeNumber: string | null;
   lastLanguage: string | null;
   fetchServers: (slug: string, number: string, force?: boolean) => Promise<LoadOutcome<VideoServer[]>>;
   resolveStream: (server: VideoServer, ctx: { slug: string; number: string }) => Promise<LoadOutcome<StreamUrlResult>>;
@@ -77,6 +79,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   return {
     servers: resourceInitialState<VideoServer[]>(),
     stream: resourceInitialState<StreamUrlResult>(),
+    streamEpisodeNumber: null,
     lastLanguage: null,
 
     fetchServers: async (slug: string, number: string, force = false) => {
@@ -97,7 +100,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     },
 
     resolveStream: async (server: VideoServer, ctx: { slug: string; number: string }) => {
-      set({ lastLanguage: server.language });
+      set({ lastLanguage: server.language, streamEpisodeNumber: ctx.number });
       lastStreamServer = server;
       const outcome = await streamRunner.load(STREAM_KEY, (signal) =>
         withAuthRetry(
@@ -134,7 +137,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       streamRunner.reset();
       lastServersKey = null;
       lastStreamServer = null;
-      set({ lastLanguage: null });
+      set({ lastLanguage: null, streamEpisodeNumber: null });
     },
   };
 });

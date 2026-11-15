@@ -27,6 +27,7 @@ function PlayerContent() {
   const insets = useSafeAreaInsets();
 
   const stream = usePlayerStore((s) => s.stream);
+  const streamEpNumber = usePlayerStore((s) => s.streamEpisodeNumber);
   const clearStream = usePlayerStore((s) => s.reset);
   const streamUrl = stream.data?.url ?? null;
   const streamHeaders = stream.data?.headers ?? null;
@@ -143,34 +144,33 @@ function PlayerContent() {
 
   // eslint-disable-next-line react-hooks/immutability -- expo-video player is a native imperative handle; media loading mutates it by design
   useEffect(() => {
-    if (streamUrl == null) return;
+    if (streamUrl == null || streamEpNumber == null) return;
     let cancelled = false;
     const run = async () => {
-      // currentEpNumber settles after the stream, so this effect runs twice per
-      // episode change: media loads once, the follow-up pass only seeks.
+      // streamEpNumber settles with (or before) the stream, so the loaded media
+      // always matches it: the saved-progress seek applies right after the load,
+      // for the first episode and for every following one alike
       if (loadedUrlRef.current !== streamUrl) {
         loadedUrlRef.current = streamUrl;
         // eslint-disable-next-line react-hooks/immutability -- expo-video player is a native imperative handle; loading media mutates it by design
         await player.replaceAsync({ uri: streamUrl, headers: streamHeaders ?? undefined });
         if (cancelled) return;
-        try { player.currentTime = 0; } catch {}
-      } else {
-        const seekKey = `${slug}_${currentEpNumber}`;
-        if (seekKey !== lastSeekKey.current) {
-          lastSeekKey.current = seekKey;
-          const match = findHistoryEntry(useHistoryStore.getState().lastViewed, slug, currentEpNumber);
-          const hasSignificantProgress = match != null && (match.progress ?? 0) > 10;
-          const isCompleted = match != null && match.progress != null && match.duration != null && match.duration > 0 && match.progress / match.duration >= 0.9;
-          if (match?.progress != null && hasSignificantProgress && !isCompleted) {
-            try { player.currentTime = match.progress; } catch {}
-          }
+      }
+      const seekKey = `${slug}_${streamEpNumber}`;
+      if (seekKey !== lastSeekKey.current) {
+        lastSeekKey.current = seekKey;
+        const match = findHistoryEntry(useHistoryStore.getState().lastViewed, slug, streamEpNumber);
+        const hasSignificantProgress = match != null && (match.progress ?? 0) > 10;
+        const isCompleted = match != null && match.progress != null && match.duration != null && match.duration > 0 && match.progress / match.duration >= 0.9;
+        if (match?.progress != null && hasSignificantProgress && !isCompleted) {
+          try { player.currentTime = match.progress; } catch {}
         }
       }
       if (networkOkRef.current !== false) player.play();
     };
     void run();
     return () => { cancelled = true; };
-  }, [streamUrl, streamHeaders, player, slug, currentEpNumber]);
+  }, [streamUrl, streamHeaders, player, slug, streamEpNumber]);
 
   const historyCtx = useRef({ title, url: slug, image, number: currentEpNumber });
   useEffect(() => {
