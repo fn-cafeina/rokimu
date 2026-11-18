@@ -52,7 +52,6 @@ export function EpisodeDownloadButton({ slug, number, onRequestDownload }: Episo
         entry.language != null ? `Guardado en ${entry.language}.` : "Guardado en el dispositivo.",
         [
           { text: "Cancelar", style: "cancel" },
-          { text: "Otro idioma", onPress: onRequestDownload },
           { text: "Eliminar", style: "destructive", onPress: () => void removeEpisode(slug, number) },
         ],
       );
