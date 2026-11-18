@@ -10,6 +10,7 @@ import { errorFor, isLoadingFor } from "../utils/resource";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "../utils/history";
 import { navigateToPlayer } from "../utils/navigation";
 import { downloadedForEpisode, useDownloadsStore, type DownloadEntry } from "../stores/downloadsStore";
+import { useNetworkStatus } from "./useNetworkStatus";
 
 export function useAnimeDetailScreen(slug: string) {
   const { anime, view, isLoading: isAnimeLoading, error, hasLoaded, refresh } = useAnimeData(slug);
@@ -22,6 +23,9 @@ export function useAnimeDetailScreen(slug: string) {
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   // The same sheet serves playback and download: only the confirm action differs
   const [selectionMode, setSelectionMode] = useState<"play" | "download">("play");
+  // Offline the sheet can only list what is already on the device
+  const [localOnly, setLocalOnly] = useState(false);
+  const { isInternetReachable } = useNetworkStatus();
   const entries = useDownloadsStore((s) => s.entries);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -77,23 +81,33 @@ export function useAnimeDetailScreen(slug: string) {
       const saved = downloadedForEpisode(useDownloadsStore.getState().entries, slug, ep.number).filter(
         (entry) => entry.playlistUri != null,
       );
-      // A saved copy is the whole answer: one language plays straight, several
-      // need a choice, and the network list would only add noise
-      const only = saved.length === 1 ? saved[0] : undefined;
-      if (only != null) {
-        playSaved(ep, only);
-        return;
+      if (isInternetReachable === false) {
+        // Offline there is nothing to ask: one language plays straight,
+        // several still need a choice
+        const only = saved.length === 1 ? saved[0] : undefined;
+        if (only != null) {
+          playSaved(ep, only);
+          return;
+        }
+        if (saved.length > 1) {
+          setSelectionMode("play");
+          setLocalOnly(true);
+          setSelectedEpisode(ep);
+          return;
+        }
       }
       setSelectionMode("play");
+      setLocalOnly(false);
       setSelectedEpisode(ep);
-      if (saved.length === 0) void fetchServers(slug, ep.number);
+      void fetchServers(slug, ep.number);
     },
-    [slug, fetchServers, playSaved],
+    [slug, fetchServers, playSaved, isInternetReachable],
   );
 
   const handleDownloadPress = useCallback(
     (ep: Episode) => {
       setSelectionMode("download");
+      setLocalOnly(false);
       setSelectedEpisode(ep);
       void fetchServers(slug, ep.number);
     },
@@ -174,6 +188,7 @@ export function useAnimeDetailScreen(slug: string) {
     handleServerSelect,
     selectionMode,
     localLanguages,
+    localOnly,
     downloadedLanguages,
     selectedEpisode,
     setSelectedEpisode,
