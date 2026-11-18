@@ -2,7 +2,7 @@ import { create } from "zustand";
 import {
   deleteEpisodeDownload,
   downloadEpisode,
-  episodePlaylist,
+  isEpisodeDownloaded,
   toDownloadError,
   type EpisodeTarget,
 } from "../services/downloader";
@@ -154,7 +154,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
     for (const entry of entries) {
       const key = downloadKey(entry.slug, entry.number);
       // Downloads whose files vanished are dropped instead of offered as playable
-      if (entry.status === "done" && entry.playlistUri != null && !episodePlaylist(entry.slug, entry.number).exists) {
+      if (entry.status === "done" && !isEpisodeDownloaded(entry.slug, entry.number)) {
         logger.info("download", `Dropping ${key}: playlist missing`);
         continue;
       }
