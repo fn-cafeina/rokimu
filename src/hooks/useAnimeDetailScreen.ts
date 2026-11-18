@@ -9,6 +9,7 @@ import { computeEpisodePagination } from "./episodeHelpers";
 import { errorFor, isLoadingFor } from "../utils/resource";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "../utils/history";
 import { navigateToPlayer } from "../utils/navigation";
+import { downloadKey, useDownloadsStore } from "../stores/downloadsStore";
 
 export function useAnimeDetailScreen(slug: string) {
   const { anime, view, isLoading: isAnimeLoading, error, hasLoaded, refresh } = useAnimeData(slug);
@@ -35,12 +36,41 @@ export function useAnimeDetailScreen(slug: string) {
   const serverLoading = serversKey != null && isLoadingFor(serversResource, serversKey);
   const serverError: AppError | null = serversKey != null ? errorFor(serversResource, serversKey) : null;
 
+  const openPlayer = useCallback(
+    (episode: Episode) => {
+      if (!anime) return;
+      const existing = findHistoryEntry(useHistoryStore.getState().lastViewed, slug, episode.number);
+      addToHistorySafe(addToHistory, makeHistoryEntry({
+        title: anime.title,
+        image: anime.image,
+        url: slug,
+        number: episode.number,
+        progress: existing?.progress,
+        duration: existing?.duration,
+      }));
+      navigateToPlayer({
+        slug,
+        number: episode.number,
+        title: anime.title,
+        image: anime.image,
+      });
+    },
+    [anime, slug, addToHistory],
+  );
+
   const handleEpisodePress = useCallback(
     (ep: Episode) => {
+      // A saved episode plays from disk, so the server sheet would only fail
+      // offline and add a step when online
+      const saved = useDownloadsStore.getState().entries[downloadKey(slug, ep.number)];
+      if (saved?.status === "done") {
+        openPlayer(ep);
+        return;
+      }
       setSelectedEpisode(ep);
       void fetchServers(slug, ep.number);
     },
-    [slug, fetchServers],
+    [slug, fetchServers, openPlayer],
   );
 
   const retryServers = useCallback(() => {
@@ -49,26 +79,12 @@ export function useAnimeDetailScreen(slug: string) {
 
   const handleServerSelect = useCallback(
     (server: VideoServer) => {
-      if (!selectedEpisode || !anime) return;
+      if (!selectedEpisode) return;
       void resolveStream(server, { slug, number: selectedEpisode.number });
+      openPlayer(selectedEpisode);
       setSelectedEpisode(null);
-      const existing = findHistoryEntry(useHistoryStore.getState().lastViewed, slug, selectedEpisode.number);
-      addToHistorySafe(addToHistory, makeHistoryEntry({
-        title: anime.title,
-        image: anime.image,
-        url: slug,
-        number: selectedEpisode.number,
-        progress: existing?.progress,
-        duration: existing?.duration,
-      }));
-      navigateToPlayer({
-        slug,
-        number: selectedEpisode.number,
-        title: anime.title,
-        image: anime.image,
-      });
     },
-    [selectedEpisode, anime, slug, resolveStream, setSelectedEpisode, addToHistory],
+    [selectedEpisode, slug, resolveStream, setSelectedEpisode, openPlayer],
   );
 
   return {
