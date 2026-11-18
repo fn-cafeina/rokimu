@@ -172,6 +172,7 @@ export async function downloadEpisode(
   target: EpisodeTarget,
   onProgress: (progress: EpisodeDownloadProgress) => void,
   signal: AbortSignal,
+  options: { resume?: boolean } = {},
 ): Promise<EpisodeDownloadResult> {
   const stream = await pickStream(target);
   logger.info("download", `Resolving playlist for ${target.slug} ep ${target.number}`);
@@ -182,6 +183,9 @@ export async function downloadEpisode(
   }
 
   const dir = episodeDirectory(target.slug, target.number);
+  // Only an interrupted run resumes. Anything else starts from an empty folder,
+  // so segments from a dead attempt can never mix into the new playlist.
+  if (options.resume !== true) deleteEpisodeDownload(target.slug, target.number);
   dir.create({ intermediates: true, idempotent: true });
 
   const init = playlist.initSegment != null

@@ -56,7 +56,8 @@ export function clampConcurrency(value: number): number {
 }
 
 // Worker pool stays outside the store: it is lifecycle, not rendered state
-const queue: DownloadInput[] = [];
+type QueuedDownload = { input: DownloadInput; resume: boolean };
+const queue: QueuedDownload[] = [];
 const controllers = new Map<string, AbortController>();
 let activeWorkers = 0;
 
@@ -81,7 +82,7 @@ function updateEntry(
   useDownloadsStore.setState({ entries: { ...entries, [key]: { ...existing, ...next } } });
 }
 
-async function runDownload(input: DownloadInput): Promise<void> {
+async function runDownload(input: DownloadInput, resume: boolean): Promise<void> {
   const key = downloadKey(input.slug, input.number);
   const controller = new AbortController();
   controllers.set(key, controller);
@@ -99,6 +100,7 @@ async function runDownload(input: DownloadInput): Promise<void> {
         });
       },
       controller.signal,
+      { resume },
     );
     updateEntry(key, {
       status: "done",
@@ -134,12 +136,12 @@ function withoutKey(entries: Record<string, DownloadEntry>, key: string): Record
 function pump(): void {
   const { concurrency, entries } = useDownloadsStore.getState();
   while (activeWorkers < concurrency && queue.length > 0) {
-    const input = queue.shift();
-    if (input == null) break;
-    const key = downloadKey(input.slug, input.number);
+    const nextItem = queue.shift();
+    if (nextItem == null) break;
+    const key = downloadKey(nextItem.input.slug, nextItem.input.number);
     // Removed or finished while it waited: nothing to download
     if (entries[key]?.status !== "queued") continue;
-    void runDownload(input);
+    void runDownload(nextItem.input, nextItem.resume);
   }
 }
 
@@ -149,7 +151,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
 
   initialize: (entries, concurrency) => {
     const next: Record<string, DownloadEntry> = {};
-    const resumable: DownloadInput[] = [];
+    const resumable: QueuedDownload[] = [];
 
     for (const entry of entries) {
       const key = downloadKey(entry.slug, entry.number);
@@ -161,15 +163,20 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
       const normalized = entry.status === "downloading" ? { ...entry, status: "queued" as const } : entry;
       next[key] = normalized;
       if (normalized.status === "queued") {
-        resumable.push({ slug: entry.slug, number: entry.number, title: entry.title, image: entry.image });
+        // Interrupted by a shutdown, not by a decision: keep the files
+        resumable.push({
+          input: { slug: entry.slug, number: entry.number, title: entry.title, image: entry.image },
+          resume: true,
+        });
       }
     }
 
     set({ entries: next, concurrency: clampConcurrency(concurrency) });
     // An interrupted queue resumes: segment files already on disk are skipped
-    for (const input of resumable) {
-      if (!queue.some((q) => downloadKey(q.slug, q.number) === downloadKey(input.slug, input.number))) {
-        queue.push(input);
+    for (const item of resumable) {
+      const key = downloadKey(item.input.slug, item.input.number);
+      if (!queue.some((q) => downloadKey(q.input.slug, q.input.number) === key)) {
+        queue.push(item);
       }
     }
     pump();
@@ -196,13 +203,14 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
     };
     set({ entries: { ...get().entries, [key]: entry } });
     persist(get().entries);
-    queue.push(input);
+    // A user request starts clean: leftovers of a cancelled attempt are dropped
+    queue.push({ input, resume: false });
     pump();
   },
 
   cancel: (key) => {
     controllers.get(key)?.abort();
-    const index = queue.findIndex((item) => downloadKey(item.slug, item.number) === key);
+    const index = queue.findIndex((item) => downloadKey(item.input.slug, item.input.number) === key);
     if (index >= 0) queue.splice(index, 1);
     const rest = withoutKey(get().entries, key);
     set({ entries: rest });
