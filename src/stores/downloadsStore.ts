@@ -226,7 +226,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
       number: input.number,
       title: input.title,
       image: input.image,
-      language: null,
+      language: input.language ?? null,
       status: "queued",
       segmentsDone: 0,
       segmentsTotal: 0,
