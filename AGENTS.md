@@ -52,6 +52,6 @@ Expo 58 + React Native 0.88. **Android-only** (no iOS/web). File-based routing v
 - EAS prod build: `buildType: "apk"` (NDK not pinned — local builds ignore the `ndk` field anyway)
 - Signing: EAS-managed credentials (remote) — only `EXPO_TOKEN` needed in CI; keystore lives in EAS (`eas credentials`)
 - `eas build --local` runs prebuild internally — no explicit prebuild step in CI
-- Version: `bun run release X.Y.Z` bumps `app.json` (`expo.version`) and `package.json`, commits, tags and pushes
+- Version: `bun run release patch|minor|major|X.Y.Z` bumps `app.json` (`expo.version`) and `package.json`, commits, tags and pushes; the words resolve like `npm version`
 - `android.versionCode` is not in the repo — `appVersionSource: "remote"` plus `autoIncrement: true` in `eas.json` lets EAS own it
 - `bun install` respects `trustedDependencies` — `unrs-resolver` is listed there, without it its native binding never builds and ESLint import resolution fails
