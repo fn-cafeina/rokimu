@@ -163,7 +163,8 @@ export interface RawSearchItem {
   type?: string;
 }
 
-// Raw search data shared by search results and suggestions so both hit the endpoint once per query
+// Raw search payload; the memory and storage caches both come from this one
+// endpoint call per query
 async function searchRaw(query: string, options?: { signal?: AbortSignal }): Promise<RawSearchItem[]> {
   const res = await fetchWithSession(`/api/anime/search?q=${encodeURIComponent(query)}`, options ?? {});
   if (!res.ok) throw new SourceError(`HTTP Error: ${res.status}`, "NETWORK_ERROR");
