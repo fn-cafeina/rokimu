@@ -6,8 +6,6 @@ import { COVER_ASPECT_RATIO } from "@/utils/layout";
 export function DetailSkeleton() {
   return (
     <View className="flex-1 bg-black">
-      <View className="mt-14 h-12 w-12 rounded-full" />
-
       <View className="flex-row px-5">
         <View className="overflow-hidden rounded-2xl" style={{ width: "34%", aspectRatio: COVER_ASPECT_RATIO }}>
           <Skeleton width="100%" height="100%" borderRadius={16} />

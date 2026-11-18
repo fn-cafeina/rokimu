@@ -3,7 +3,6 @@ import { FlashList } from "@shopify/flash-list";
 import { Feather } from "@expo/vector-icons";
 import React, { memo, useMemo } from "react";
 import { ScrollView, Text, View } from "react-native";
-import type { EdgeInsets } from "react-native-safe-area-context";
 import type { AnimeDetail, AnimeRelations, Episode, RelatedAnime } from "@/types";
 import { router } from "expo-router";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
@@ -18,8 +17,6 @@ interface AnimeDetailsHeaderProps {
   setIsExpanded: (v: boolean) => void;
   isAscending: boolean;
   toggleSort: () => void;
-  insets: EdgeInsets;
-  onBackPress?: () => void;
   /** Episode to resume; null when the user has no progress on this anime. */
   resumeEpisode: Episode | null;
   firstEpisode: Episode | null;
@@ -40,8 +37,6 @@ export const AnimeDetailsHeader = memo(
     setIsExpanded,
     isAscending,
     toggleSort,
-    insets,
-    onBackPress,
     resumeEpisode,
     firstEpisode,
     onResume,
@@ -68,17 +63,6 @@ export const AnimeDetailsHeader = memo(
 
     return (
       <>
-        <View className="flex-row items-center px-2 py-1" style={{ marginTop: insets.top }}>
-          <AnimatedPressable
-            onPress={onBackPress}
-            accessibilityLabel="Volver"
-            hitSlop={8}
-            className="min-h-12 min-w-12 items-center justify-center rounded-full"
-          >
-            <Feather name="arrow-left" size={24} color="#FFFFFF" />
-          </AnimatedPressable>
-        </View>
-
         <View className="flex-row px-5">
           <View
             className="overflow-hidden rounded-2xl bg-neutral-800"

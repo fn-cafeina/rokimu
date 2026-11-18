@@ -4,6 +4,7 @@ import { AnimeEpisodeModal } from "@/components/AnimeEpisodeModal";
 import { EpisodeRangeSelector } from "@/components/EpisodeRangeSelector";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { DetailTopBar } from "@/components/ui/DetailTopBar";
 import { DetailSkeleton } from "@/components/skeletons/DetailSkeleton";
 import { useAnimeDetailScreen } from "@/hooks/useAnimeDetailScreen";
 import { navigateBack } from "@/utils/navigation";
@@ -18,13 +19,11 @@ import { useLocalSearchParams } from "expo-router";
 import { ACCENT_COLOR } from "@/config/source";
 import { memo, useMemo } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
 import { useCrossfade } from "@/hooks/useCrossfade";
 
 const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   const { slug } = useLocalSearchParams();
-  const insets = useSafeAreaInsets();
   const {
     anime, view, isAnimeLoading, error, servers, serverLoading, serverError, retryServers, setEpisodeOrder,
     isExpanded, setIsExpanded, selectedEpisode, setSelectedEpisode,
@@ -58,11 +57,18 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   const { keepSkeleton, skeletonStyle, contentStyle } = useCrossfade(showContent);
 
   if (view === "error") {
-    return <ErrorState error={error} onRetry={refresh} />;
+    return (
+      <View className="flex-1 bg-black">
+        <DetailTopBar anime={anime} onBack={navigateBack} />
+        <ErrorState error={error} onRetry={refresh} />
+      </View>
+    );
   }
 
   return (
     <View className="flex-1 bg-black">
+      <DetailTopBar anime={anime} onBack={navigateBack} />
+      <View className="flex-1">
       {showContent && (
         <Animated.View style={[{ flex: 1 }, contentStyle]}>
           <View className="flex-1 bg-black">
@@ -78,8 +84,6 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                   setIsExpanded={setIsExpanded}
                   isAscending={isAscending}
                   toggleSort={() => void setEpisodeOrder(isAscending ? "desc" : "asc")}
-                  insets={insets}
-                  onBackPress={navigateBack}
                   resumeEpisode={resumeEpisode}
                   firstEpisode={firstEpisode}
                   onResume={handleEpisodePress}
@@ -137,6 +141,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
           <DetailSkeleton />
         </Animated.View>
       )}
+      </View>
     </View>
   );
 });
