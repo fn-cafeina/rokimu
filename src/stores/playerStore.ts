@@ -26,6 +26,8 @@ interface PlayerState {
   resolveStream: (server: VideoServer, ctx: { slug: string; number: string }) => Promise<LoadOutcome<StreamUrlResult>>;
   /** Settles the stream from an orchestrator-level failure (e.g. servers fetch) */
   failStream: (error: AppError) => void;
+  /** Plays an episode already saved on disk, without touching the network */
+  playLocal: (number: string, playlistUri: string) => void;
   reset: () => void;
 }
 
@@ -130,6 +132,21 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       logger.warn("stream", `Stream failed upstream: ${error.type}: ${error.message}`);
       dropPlaybackArtifacts();
       streamRunner.fail(STREAM_KEY, error);
+    },
+
+    playLocal: (number: string, playlistUri: string) => {
+      dropPlaybackArtifacts();
+      set({
+        streamEpisodeNumber: number,
+        stream: {
+          status: "success",
+          key: STREAM_KEY,
+          dataKey: STREAM_KEY,
+          data: { url: playlistUri },
+          error: null,
+          requestId: 0,
+        },
+      });
     },
 
     reset: () => {

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { VideoPlayer } from "expo-video";
 import { usePlayerStore } from "../stores/playerStore";
 import { useHistoryStore } from "../stores/historyStore";
+import { downloadKey, useDownloadsStore } from "../stores/downloadsStore";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "../utils/history";
 
 export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, animeImage: string) {
@@ -32,6 +33,23 @@ export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, an
       setLoading(true);
       const store = usePlayerStore.getState();
       try {
+        // A saved episode plays from disk, even offline: no servers, no stream
+        const saved = useDownloadsStore.getState().entries[downloadKey(targetSlug, targetEp.number)];
+        if (saved != null && saved.status === "done" && saved.playlistUri != null) {
+          store.playLocal(targetEp.number, saved.playlistUri);
+          setCurrentEpNumber(targetEp.number);
+          const localExisting = findHistoryEntry(useHistoryStore.getState().lastViewed, targetSlug, targetEp.number);
+          addToHistorySafe(addToHistory, makeHistoryEntry({
+            title: animeTitle,
+            url: targetSlug,
+            image: animeImage,
+            number: targetEp.number,
+            progress: localExisting?.progress,
+            duration: localExisting?.duration,
+          }));
+          return;
+        }
+
         // Each store operation owns its own auth ladder; this only sequences
         // them and surfaces orchestrator failures into the stream resource
         const serversOutcome = await store.fetchServers(targetSlug, targetEp.number);
