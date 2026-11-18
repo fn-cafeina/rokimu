@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const EMPTY_CATALOG: Anime[] = [];
 
 function SearchScreenContent() {
-  const { searchTerm, searchAnimes, isLoading, error, hasQuery, handleTextChange, resetSearch, retrySearch } = useSearchScreen();
+  const { searchTerm, searchAnimes, isLoading, isPending, error, hasQuery, handleTextChange, resetSearch, retrySearch } = useSearchScreen();
 
   // The catalog is the discover feed when nothing is typed: /directorio, no query
   const fetchHome = useHomeStore((s) => s.fetchHome);
@@ -53,7 +53,7 @@ function SearchScreenContent() {
   ), [cardWidth]);
 
   const grid = hasQuery ? searchAnimes : catalog;
-  const gridLoading = hasQuery ? isLoading && grid.length === 0 : catalogView === "skeleton";
+  const gridLoading = hasQuery ? isPending && grid.length === 0 : catalogView === "skeleton";
   const gridFailed = hasQuery ? error != null && grid.length === 0 : catalogView === "error";
 
   return (

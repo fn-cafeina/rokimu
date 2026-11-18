@@ -39,6 +39,13 @@ export function deriveView<T>(state: ResourceState<T>, key: string): ResourceVie
   return "skeleton";
 }
 
+/** True while `key` has no settled payload yet and has not failed: covers the
+ * debounce window before a request even starts, not only status "loading". */
+export function isPendingFor<T>(state: ResourceState<T>, key: string): boolean {
+  if (state.data != null && state.dataKey === key) return false;
+  return !(state.status === "error" && state.key === key);
+}
+
 export function isLoadingFor<T>(state: ResourceState<T>, key: string): boolean {
   return state.status === "loading" && state.key === key;
 }

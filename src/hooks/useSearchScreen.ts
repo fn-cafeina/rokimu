@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchStore } from "../stores/searchStore";
-import { errorFor } from "../utils/resource";
+import { errorFor, isPendingFor } from "../utils/resource";
 import { useDebounce } from "./useDebounce";
 
 // The source site rejects queries shorter than 3 characters
@@ -26,6 +26,9 @@ export function useSearchScreen() {
   const isLoading = results.status === "loading";
   const error = errorFor(results, results.key ?? "");
   const hasQuery = term.trim().length >= MIN_SEARCH_LENGTH;
+  // True from the first keystroke until this term settles: the debounce window
+  // is idle state, and rendering it as "no results" flashed an empty state.
+  const isPending = hasQuery && isPendingFor(results, term.trim());
 
   const executeSearch = useCallback(
     async (query: string, force = false) => {
@@ -68,6 +71,7 @@ export function useSearchScreen() {
     searchTerm: term,
     searchAnimes,
     isLoading,
+    isPending,
     error,
     hasQuery,
     handleTextChange,
