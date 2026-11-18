@@ -31,10 +31,12 @@ export const AnimeCard = memo(function AnimeCard({ anime, width, onPress }: Anim
       hapticFeedback={true}
     >
       <View className="relative">
-        <ImageWithLoader
-          uri={anime.image}
-          style={[{ width, height: cardHeight } as import("react-native").ImageStyle]}
-        />
+        <View className="overflow-hidden rounded-xl bg-neutral-800" style={{ width, height: cardHeight }}>
+          <ImageWithLoader
+            uri={anime.image}
+            style={{ width, height: cardHeight } as import("react-native").ImageStyle}
+          />
+        </View>
       </View>
       <Text className="mt-2 text-sm font-medium text-white" numberOfLines={2}>
         {anime.title}
