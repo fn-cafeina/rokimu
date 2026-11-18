@@ -65,7 +65,9 @@ function persist(entries: Record<string, DownloadEntry>): void {
   const snapshot = Object.values(entries).map((entry) =>
     entry.status === "downloading" ? { ...entry, status: "queued" as const } : entry,
   );
-  void storage.set(DOWNLOADS_KEY, snapshot);
+  void storage.set(DOWNLOADS_KEY, snapshot).catch((error) => {
+    logger.warn("downloadsStore", "Failed to persist index", error);
+  });
 }
 
 function updateEntry(
