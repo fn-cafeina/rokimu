@@ -11,6 +11,7 @@ import { navigateBack } from "@/utils/navigation";
 import { useHistoryStore } from "@/stores/historyStore";
 import { findHistoryEntry } from "@/utils/history";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { EpisodeDownloadButton } from "@/components/ui/EpisodeDownloadButton";
 import { calcProgress } from "@/utils/math";
 import { TAB_BAR_OFFSET } from "@/utils/layout";
 import { orderEpisodes } from "@/hooks/episodeHelpers";
@@ -110,7 +111,15 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                         <View className="rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden">
                           <View className="flex-row items-center justify-between p-4">
                             <Text className={`font-semibold ${isWatched ? "text-neutral-400 line-through" : "text-white"}`}>Episodio {item.number}</Text>
-                            <Feather name={isWatched ? "check" : "play"} size={16} color={ACCENT_COLOR} />
+                            <View className="flex-row items-center gap-4">
+                              <EpisodeDownloadButton
+                                slug={slug as string}
+                                number={item.number}
+                                title={anime?.title ?? ""}
+                                image={anime?.image ?? ""}
+                              />
+                              <Feather name={isWatched ? "check" : "play"} size={16} color={ACCENT_COLOR} />
+                            </View>
                           </View>
                           {hasProgress && (
                             <ProgressBar progress={barProgress} duration={historyEntry.duration} />
