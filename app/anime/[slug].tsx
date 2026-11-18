@@ -118,7 +118,6 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                                 title={anime?.title ?? ""}
                                 image={anime?.image ?? ""}
                               />
-                              <Feather name={isWatched ? "check" : "play"} size={16} color={ACCENT_COLOR} />
                             </View>
                           </View>
                           {hasProgress && (
