@@ -60,7 +60,6 @@ export const AnimeEpisodeModal = ({
               className="flex-row items-center bg-black p-4 rounded-xl"
               onPress={item.onSelect}
             >
-              <Feather name="check-circle" size={14} color={ACCENT_COLOR} style={{ marginRight: 8 }} />
               <Text className="text-white font-bold flex-1">{item.language}</Text>
               <Text className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
                 Descargado

@@ -138,9 +138,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                 servers={
                   localOnly
                     ? []
-                    : selectionMode === "download"
-                      ? servers.filter((server) => !downloadedLanguages.includes(server.language))
-                      : servers
+                    : servers.filter((server) => !downloadedLanguages.includes(server.language))
                 }
                 isLoading={localOnly ? false : serverLoading}
                 error={localOnly ? null : serverError}
