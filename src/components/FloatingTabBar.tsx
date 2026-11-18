@@ -16,14 +16,14 @@ import { AnimatedPressable } from "@/components/AnimatedPressable";
 type FloatingTabBarProps = BottomTabBarProps;
 
 const ICONS: Record<string, keyof typeof Feather.glyphMap> = {
-  index: "home",
-  search: "search",
+  library: "bookmark",
+  search: "compass",
   settings: "settings",
 };
 
 const LABELS: Record<string, string> = {
-  index: "Inicio",
-  search: "Buscar",
+  library: "Biblioteca",
+  search: "Explorar",
   settings: "Ajustes",
 };
 

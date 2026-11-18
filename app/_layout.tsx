@@ -1,19 +1,18 @@
 import "../global.css";
-import { NetworkBanner } from "@/components/NetworkBanner";
 import { WebViewWorker } from "@/components/WebViewWorker";
 import { useSettingsStore, EPISODE_ORDER_KEY } from "@/stores/settingsStore";
 import { useUserInitializationStore } from "@/stores/userIndex";
 import { useUpdateStore, UPDATE_CHECK_KEY } from "@/stores/updateStore";
 import { UpdateModal } from "@/components/UpdateModal";
 import { useHistoryStore, HISTORY_KEY } from "@/stores/historyStore";
-import { useSearchHistoryStore, SEARCHES_KEY } from "@/stores/searchHistoryStore";
+import { useSavedStore, SAVED_KEY } from "@/stores/savedStore";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { sessionManager } from "@/services/session";
 import { resetToPortrait, isPlayerActive } from "@/services/playerUI";
 import { storage } from "@/utils/storage";
 import { logger } from "@/utils/logger";
 import { pruneExpiredCache } from "@/utils/cache";
-import type { HistoryItem } from "@/types";
+import type { Anime, HistoryItem } from "@/types";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
@@ -71,14 +70,14 @@ function RootInner() {
       // Fire and forget: the sweep is IO over every stored key, nothing waits on it
       void pruneExpiredCache();
       await sessionManager.initialize();
-      const [history, searches, order, updateCheckEnabled] = await Promise.all([
+      const [history, saved, order, updateCheckEnabled] = await Promise.all([
         storage.get<HistoryItem[]>(HISTORY_KEY),
-        storage.get<string[]>(SEARCHES_KEY),
+        storage.get<Anime[]>(SAVED_KEY),
         storage.get<"asc" | "desc">(EPISODE_ORDER_KEY),
         storage.get<boolean>(UPDATE_CHECK_KEY),
       ]);
       useHistoryStore.getState().initialize(history ?? []);
-      useSearchHistoryStore.getState().initialize(searches ?? []);
+      useSavedStore.getState().initialize(saved ?? []);
       useSettingsStore.getState().initialize(order ?? "asc");
       useUpdateStore.getState().initialize(updateCheckEnabled !== false);
       useUserInitializationStore.setState({ isInitialized: true });
@@ -104,7 +103,6 @@ function RootInner() {
 
   return (
     <View className="flex-1 bg-black">
-      <NetworkBanner visible={isInternetReachable === false} />
       <StatusBar style="light" />
       <Stack
         screenOptions={{

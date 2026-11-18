@@ -3,6 +3,9 @@ import { FloatingTabBar } from '@/components/FloatingTabBar';
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
+// Biblioteca is the landing tab; the tabs group is the app's root screen
+export const unstable_settings = { initialRouteName: 'library' };
+
 export default function TabLayout() {
   return (
     <ErrorBoundary>
@@ -13,17 +16,17 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen
-          name="index"
+          name="library"
           options={{
-            title: "Inicio",
-            tabBarIcon: ({ color }) => <Feather name="home" size={24} color={typeof color === "string" ? color : undefined} />,
+            title: "Biblioteca",
+            tabBarIcon: ({ color }) => <Feather name="bookmark" size={24} color={typeof color === "string" ? color : undefined} />,
           }}
         />
         <Tabs.Screen
           name="search"
           options={{
-            title: "Buscar",
-            tabBarIcon: ({ color }) => <Feather name="search" size={24} color={typeof color === "string" ? color : undefined} />,
+            title: "Explorar",
+            tabBarIcon: ({ color }) => <Feather name="compass" size={24} color={typeof color === "string" ? color : undefined} />,
           }}
         />
         <Tabs.Screen
