@@ -184,7 +184,7 @@ export function useAnimeDetailScreen(slug: string) {
       out.push({
         key: `server-${server.id}`,
         language: server.language ?? "Desconocido",
-        hint: "En línea",
+        hint: "Sin descargar",
         icon: "download",
         onSelect: () => {
           void resolveStream(server, { slug, number: ep.number });
