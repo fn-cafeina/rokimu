@@ -43,11 +43,45 @@ interface DownloadsState {
   enqueue: (input: DownloadInput) => void;
   cancel: (key: string) => void;
   remove: (key: string) => Promise<void>;
+  /** Drops every language saved for one episode. */
+  removeEpisode: (slug: string, number: string) => Promise<void>;
   setConcurrency: (value: number) => Promise<void>;
 }
 
-export function downloadKey(slug: string, number: string): string {
-  return `${slug}_${number}`;
+export function downloadKey(slug: string, number: string, language: string | null): string {
+  return `${slug}_${number}_${language ?? "default"}`;
+}
+
+/** Every entry of one episode, whatever language it belongs to. */
+export function entriesForEpisode(
+  entries: Record<string, DownloadEntry>,
+  slug: string,
+  number: string,
+): DownloadEntry[] {
+  return Object.values(entries).filter((entry) => entry.slug === slug && entry.number === number);
+}
+
+export function downloadedForEpisode(
+  entries: Record<string, DownloadEntry>,
+  slug: string,
+  number: string,
+): DownloadEntry[] {
+  return entriesForEpisode(entries, slug, number).filter((entry) => entry.status === "done");
+}
+
+/** The entry that owns the episode's button: work in flight wins, then done. */
+export function activeEntryForEpisode(
+  entries: Record<string, DownloadEntry>,
+  slug: string,
+  number: string,
+): DownloadEntry | undefined {
+  const mine = entriesForEpisode(entries, slug, number);
+  return (
+    mine.find((entry) => entry.status === "downloading") ??
+    mine.find((entry) => entry.status === "queued") ??
+    mine.find((entry) => entry.status === "done") ??
+    mine.find((entry) => entry.status === "error")
+  );
 }
 
 export function clampConcurrency(value: number): number {
@@ -83,7 +117,7 @@ function updateEntry(
 }
 
 async function runDownload(input: DownloadInput, resume: boolean): Promise<void> {
-  const key = downloadKey(input.slug, input.number);
+  const key = downloadKey(input.slug, input.number, input.language ?? null);
   const controller = new AbortController();
   controllers.set(key, controller);
   activeWorkers += 1;
@@ -138,7 +172,7 @@ function pump(): void {
   while (activeWorkers < concurrency && queue.length > 0) {
     const nextItem = queue.shift();
     if (nextItem == null) break;
-    const key = downloadKey(nextItem.input.slug, nextItem.input.number);
+    const key = downloadKey(nextItem.input.slug, nextItem.input.number, nextItem.input.language ?? null);
     // Removed or finished while it waited: nothing to download
     if (entries[key]?.status !== "queued") continue;
     void runDownload(nextItem.input, nextItem.resume);
@@ -154,9 +188,9 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
     const resumable: QueuedDownload[] = [];
 
     for (const entry of entries) {
-      const key = downloadKey(entry.slug, entry.number);
+      const key = downloadKey(entry.slug, entry.number, entry.language);
       // Downloads whose files vanished are dropped instead of offered as playable
-      if (entry.status === "done" && !isEpisodeDownloaded(entry.slug, entry.number)) {
+      if (entry.status === "done" && !isEpisodeDownloaded(entry.slug, entry.number, entry.language)) {
         logger.info("download", `Dropping ${key}: playlist missing`);
         continue;
       }
@@ -174,8 +208,8 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
     set({ entries: next, concurrency: clampConcurrency(concurrency) });
     // An interrupted queue resumes: segment files already on disk are skipped
     for (const item of resumable) {
-      const key = downloadKey(item.input.slug, item.input.number);
-      if (!queue.some((q) => downloadKey(q.input.slug, q.input.number) === key)) {
+      const key = downloadKey(item.input.slug, item.input.number, item.input.language ?? null);
+      if (!queue.some((q) => downloadKey(q.input.slug, q.input.number, q.input.language ?? null) === key)) {
         queue.push(item);
       }
     }
@@ -183,11 +217,9 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
   },
 
   enqueue: (input) => {
-    const key = downloadKey(input.slug, input.number);
+    const key = downloadKey(input.slug, input.number, input.language ?? null);
     const existing = get().entries[key];
-    if (existing?.status === "queued" || existing?.status === "downloading") return;
-    // A finished download only restarts for a different language
-    if (existing?.status === "done" && (input.language == null || input.language === existing.language)) return;
+    if (existing?.status === "queued" || existing?.status === "downloading" || existing?.status === "done") return;
 
     const entry: DownloadEntry = {
       slug: input.slug,
@@ -212,7 +244,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
 
   cancel: (key) => {
     controllers.get(key)?.abort();
-    const index = queue.findIndex((item) => downloadKey(item.input.slug, item.input.number) === key);
+    const index = queue.findIndex((item) => downloadKey(item.input.slug, item.input.number, item.input.language ?? null) === key);
     if (index >= 0) queue.splice(index, 1);
     const rest = withoutKey(get().entries, key);
     set({ entries: rest });
@@ -227,10 +259,36 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
     const rest = withoutKey(previous, key);
     set({ entries: rest });
     try {
-      deleteEpisodeDownload(entry.slug, entry.number);
+      deleteEpisodeDownload(entry.slug, entry.number, entry.language);
     } catch (error) {
       logger.warn("download", `Failed to delete files for ${key}`, error);
     }
+    await persistWithRollback(
+      () => storage.set(DOWNLOADS_KEY, Object.values(rest)),
+      () => set({ entries: previous }),
+      "downloadsStore",
+    );
+  },
+
+  removeEpisode: async (slug, number) => {
+    const previous = get().entries;
+    const mine = entriesForEpisode(previous, slug, number);
+    let rest = previous;
+    for (const entry of mine) {
+      const key = downloadKey(slug, number, entry.language);
+      controllers.get(key)?.abort();
+      const index = queue.findIndex(
+        (item) => downloadKey(item.input.slug, item.input.number, item.input.language ?? null) === key,
+      );
+      if (index >= 0) queue.splice(index, 1);
+      rest = withoutKey(rest, key);
+      try {
+        deleteEpisodeDownload(slug, number, entry.language);
+      } catch (error) {
+        logger.warn("download", `Failed to delete files for ${key}`, error);
+      }
+    }
+    set({ entries: rest });
     await persistWithRollback(
       () => storage.set(DOWNLOADS_KEY, Object.values(rest)),
       () => set({ entries: previous }),

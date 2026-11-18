@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { VideoPlayer } from "expo-video";
 import { usePlayerStore } from "../stores/playerStore";
 import { useHistoryStore } from "../stores/historyStore";
-import { downloadKey, useDownloadsStore } from "../stores/downloadsStore";
+import { downloadedForEpisode, useDownloadsStore } from "../stores/downloadsStore";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "../utils/history";
 
 export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, animeImage: string) {
@@ -34,8 +34,11 @@ export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, an
       const store = usePlayerStore.getState();
       try {
         // A saved episode plays from disk, even offline: no servers, no stream
-        const saved = useDownloadsStore.getState().entries[downloadKey(targetSlug, targetEp.number)];
-        if (saved != null && saved.status === "done" && saved.playlistUri != null) {
+        const savedEntries = downloadedForEpisode(useDownloadsStore.getState().entries, targetSlug, targetEp.number);
+        const saved =
+          savedEntries.find((entry) => entry.language === lastLanguage && entry.playlistUri != null) ??
+          savedEntries.find((entry) => entry.playlistUri != null);
+        if (saved?.playlistUri != null) {
           store.playLocal(targetEp.number, saved.playlistUri);
           setCurrentEpNumber(targetEp.number);
           const localExisting = findHistoryEntry(useHistoryStore.getState().lastViewed, targetSlug, targetEp.number);

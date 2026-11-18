@@ -39,20 +39,26 @@ export interface EpisodeDownloadResult {
   segmentsTotal: number;
 }
 
-export function episodeDirectory(slug: string, number: string): Directory {
-  return new Directory(Paths.document, DOWNLOADS_DIR, slug, `ep-${number}`);
+/** One folder per language: an episode can keep Latino and Subtitulado at once. */
+function languageDir(language: string | null): string {
+  const normalized = (language ?? "").normalize("NFD").replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
+  return normalized === "" || normalized === "-" ? "default" : normalized;
 }
 
-export function episodePlaylist(slug: string, number: string): File {
-  return new File(episodeDirectory(slug, number), PLAYLIST_FILE);
+export function episodeDirectory(slug: string, number: string, language: string | null): Directory {
+  return new Directory(Paths.document, DOWNLOADS_DIR, slug, `ep-${number}-${languageDir(language)}`);
 }
 
-export function isEpisodeDownloaded(slug: string, number: string): boolean {
-  return episodePlaylist(slug, number).exists;
+export function episodePlaylist(slug: string, number: string, language: string | null): File {
+  return new File(episodeDirectory(slug, number, language), PLAYLIST_FILE);
 }
 
-export function deleteEpisodeDownload(slug: string, number: string): void {
-  const dir = episodeDirectory(slug, number);
+export function isEpisodeDownloaded(slug: string, number: string, language: string | null): boolean {
+  return episodePlaylist(slug, number, language).exists;
+}
+
+export function deleteEpisodeDownload(slug: string, number: string, language: string | null): void {
+  const dir = episodeDirectory(slug, number, language);
   if (dir.exists) dir.delete();
 }
 
@@ -182,10 +188,10 @@ export async function downloadEpisode(
     throw new SourceError("El playlist no tiene segmentos", "VIDEO_ERROR");
   }
 
-  const dir = episodeDirectory(target.slug, target.number);
+  const dir = episodeDirectory(target.slug, target.number, stream.language);
   // Only an interrupted run resumes. Anything else starts from an empty folder,
   // so segments from a dead attempt can never mix into the new playlist.
-  if (options.resume !== true) deleteEpisodeDownload(target.slug, target.number);
+  if (options.resume !== true) deleteEpisodeDownload(target.slug, target.number, stream.language);
   dir.create({ intermediates: true, idempotent: true });
 
   const init = playlist.initSegment != null

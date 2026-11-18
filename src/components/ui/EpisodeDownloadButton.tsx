@@ -2,7 +2,12 @@ import { Alert, ActivityIndicator, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
-import { downloadKey, useDownloadsStore, type DownloadStatus } from "@/stores/downloadsStore";
+import {
+  activeEntryForEpisode,
+  downloadKey,
+  useDownloadsStore,
+  type DownloadStatus,
+} from "@/stores/downloadsStore";
 
 interface EpisodeDownloadButtonProps {
   slug: string;
@@ -23,11 +28,10 @@ function labelFor(status: DownloadStatus | undefined, title: string): string {
  * tick repaints this button and not the episode list around it.
  */
 export function EpisodeDownloadButton({ slug, number, onRequestDownload }: EpisodeDownloadButtonProps) {
-  const key = downloadKey(slug, number);
-  const entry = useDownloadsStore((s) => s.entries[key]);
-  const enqueue = useDownloadsStore((s) => s.enqueue);
+  const entries = useDownloadsStore((s) => s.entries);
+  const entry = activeEntryForEpisode(entries, slug, number);
   const cancel = useDownloadsStore((s) => s.cancel);
-  const remove = useDownloadsStore((s) => s.remove);
+  const removeEpisode = useDownloadsStore((s) => s.removeEpisode);
 
   const status = entry?.status;
   const progress =
@@ -36,25 +40,26 @@ export function EpisodeDownloadButton({ slug, number, onRequestDownload }: Episo
       : 0;
 
   const handlePress = () => {
+    if (entry == null) {
+      onRequestDownload();
+      return;
+    }
+    const key = downloadKey(slug, number, entry.language);
+
     if (status === "done") {
       Alert.alert(
         `Episodio ${number} descargado`,
-        entry?.language != null ? `Guardado en ${entry.language}.` : "Guardado en el dispositivo.",
+        entry.language != null ? `Guardado en ${entry.language}.` : "Guardado en el dispositivo.",
         [
           { text: "Cancelar", style: "cancel" },
           { text: "Otro idioma", onPress: onRequestDownload },
-          { text: "Eliminar", style: "destructive", onPress: () => void remove(key) },
+          { text: "Eliminar", style: "destructive", onPress: () => void removeEpisode(slug, number) },
         ],
       );
       return;
     }
     if (status === "queued" || status === "downloading") {
       cancel(key);
-      return;
-    }
-    if (status === "error" && entry != null) {
-      // Same language as the failed attempt, and a clean folder
-      enqueue({ slug, number, title: entry.title, image: entry.image, language: entry.language });
       return;
     }
     onRequestDownload();

@@ -9,7 +9,7 @@ import { computeEpisodePagination } from "./episodeHelpers";
 import { errorFor, isLoadingFor } from "../utils/resource";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "../utils/history";
 import { navigateToPlayer } from "../utils/navigation";
-import { downloadKey, useDownloadsStore } from "../stores/downloadsStore";
+import { downloadedForEpisode, useDownloadsStore } from "../stores/downloadsStore";
 
 export function useAnimeDetailScreen(slug: string) {
   const { anime, view, isLoading: isAnimeLoading, error, hasLoaded, refresh } = useAnimeData(slug);
@@ -64,8 +64,10 @@ export function useAnimeDetailScreen(slug: string) {
     (ep: Episode) => {
       // A saved episode plays from disk, so the server sheet would only fail
       // offline and add a step when online
-      const saved = useDownloadsStore.getState().entries[downloadKey(slug, ep.number)];
-      if (saved?.status === "done" && saved.playlistUri != null) {
+      const saved = downloadedForEpisode(useDownloadsStore.getState().entries, slug, ep.number).find(
+        (entry) => entry.playlistUri != null,
+      );
+      if (saved?.playlistUri != null) {
         // The player reads the stream from the store on mount; a local episode
         // must settle it here, exactly like a server pick does
         usePlayerStore.getState().playLocal(ep.number, saved.playlistUri);
