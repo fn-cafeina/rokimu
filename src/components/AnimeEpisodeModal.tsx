@@ -14,6 +14,8 @@ interface AnimeEpisodeModalProps {
   episode: Episode | null;
   /** Overrides the heading; the same sheet is reused to pick a download. */
   title?: string;
+  /** Languages already on the device, listed before the network servers. */
+  localLanguages?: { language: string; onSelect: () => void }[];
   servers: VideoServer[];
   isLoading: boolean;
   /** Real fetch failure for this episode; never conflated with "no servers" */
@@ -23,7 +25,7 @@ interface AnimeEpisodeModalProps {
 }
 
 export const AnimeEpisodeModal = ({
-  visible, onClose, episode, title, servers, isLoading, error, onRetry, onServerSelect
+  visible, onClose, episode, title, localLanguages = [], servers, isLoading, error, onRetry, onServerSelect
 }: AnimeEpisodeModalProps) => {
   const insets = useSafeAreaInsets();
 
@@ -51,6 +53,20 @@ export const AnimeEpisodeModal = ({
         </Text>
 
         <View className="gap-2">
+          {localLanguages.map((item) => (
+            <AnimatedPressable
+              key={`local-${item.language}`}
+              accessibilityLabel={`Reproducir descargado en ${item.language}`}
+              className="flex-row items-center bg-black p-4 rounded-xl"
+              onPress={item.onSelect}
+            >
+              <Feather name="check-circle" size={14} color={ACCENT_COLOR} style={{ marginRight: 8 }} />
+              <Text className="text-white font-bold flex-1">{item.language}</Text>
+              <Text className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+                Descargado
+              </Text>
+            </AnimatedPressable>
+          ))}
           {isLoading ? (
             <View className="gap-2">
               {Array.from({ length: 2 }).map((_, i) => (
@@ -75,7 +91,7 @@ export const AnimeEpisodeModal = ({
                 </AnimatedPressable>
               )}
             </View>
-          ) : displayServers.length === 0 ? (
+          ) : displayServers.length === 0 && localLanguages.length === 0 ? (
             <View className="h-48 justify-center items-center">
               <Text className="text-neutral-400 text-xs">No hay servidor disponible</Text>
             </View>

@@ -9,7 +9,8 @@ import { computeEpisodePagination } from "./episodeHelpers";
 import { errorFor, isLoadingFor } from "../utils/resource";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "../utils/history";
 import { navigateToPlayer } from "../utils/navigation";
-import { downloadedForEpisode, useDownloadsStore } from "../stores/downloadsStore";
+import { downloadedForEpisode, useDownloadsStore, type DownloadEntry } from "../stores/downloadsStore";
+import { useNetworkStatus } from "./useNetworkStatus";
 
 export function useAnimeDetailScreen(slug: string) {
   const { anime, view, isLoading: isAnimeLoading, error, hasLoaded, refresh } = useAnimeData(slug);
@@ -22,6 +23,10 @@ export function useAnimeDetailScreen(slug: string) {
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   // The same sheet serves playback and download: only the confirm action differs
   const [selectionMode, setSelectionMode] = useState<"play" | "download">("play");
+  // Offline the sheet can only list what is already on the device
+  const [localOnly, setLocalOnly] = useState(false);
+  const { isInternetReachable } = useNetworkStatus();
+  const entries = useDownloadsStore((s) => s.entries);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const [activeRangeIdx, setActiveRangeIdx, isRestoring] = usePersistedRange(slug);
@@ -60,34 +65,76 @@ export function useAnimeDetailScreen(slug: string) {
     [anime, slug, addToHistory],
   );
 
+  const playSaved = useCallback(
+    (episode: Episode, entry: DownloadEntry) => {
+      if (entry.playlistUri == null) return;
+      // The player reads the stream from the store on mount; a local episode
+      // must settle it here, exactly like a server pick does
+      usePlayerStore.getState().playLocal(episode.number, entry.playlistUri);
+      openPlayer(episode);
+    },
+    [openPlayer],
+  );
+
   const handleEpisodePress = useCallback(
     (ep: Episode) => {
-      // A saved episode plays from disk, so the server sheet would only fail
-      // offline and add a step when online
-      const saved = downloadedForEpisode(useDownloadsStore.getState().entries, slug, ep.number).find(
+      const saved = downloadedForEpisode(useDownloadsStore.getState().entries, slug, ep.number).filter(
         (entry) => entry.playlistUri != null,
       );
-      if (saved?.playlistUri != null) {
-        // The player reads the stream from the store on mount; a local episode
-        // must settle it here, exactly like a server pick does
-        usePlayerStore.getState().playLocal(ep.number, saved.playlistUri);
-        openPlayer(ep);
-        return;
+      if (isInternetReachable === false) {
+        // Offline there is nothing to ask: one language plays straight,
+        // several still need a choice
+        const only = saved.length === 1 ? saved[0] : undefined;
+        if (only != null) {
+          playSaved(ep, only);
+          return;
+        }
+        if (saved.length > 1) {
+          setSelectionMode("play");
+          setLocalOnly(true);
+          setSelectedEpisode(ep);
+          return;
+        }
       }
       setSelectionMode("play");
+      setLocalOnly(false);
       setSelectedEpisode(ep);
       void fetchServers(slug, ep.number);
     },
-    [slug, fetchServers, openPlayer],
+    [slug, fetchServers, playSaved, isInternetReachable],
   );
 
   const handleDownloadPress = useCallback(
     (ep: Episode) => {
       setSelectionMode("download");
+      setLocalOnly(false);
       setSelectedEpisode(ep);
       void fetchServers(slug, ep.number);
     },
     [slug, fetchServers],
+  );
+
+  const localLanguages = useMemo(() => {
+    if (selectionMode === "download" || selectedEpisode == null) return [];
+    return downloadedForEpisode(entries, slug, selectedEpisode.number)
+      .filter((entry) => entry.playlistUri != null)
+      .map((entry) => ({
+        language: entry.language ?? "Descargado",
+        onSelect: () => {
+          playSaved(selectedEpisode, entry);
+          setSelectedEpisode(null);
+        },
+      }));
+  }, [entries, slug, selectedEpisode, selectionMode, playSaved]);
+
+  const downloadedLanguages = useMemo(
+    () =>
+      selectedEpisode == null
+        ? []
+        : downloadedForEpisode(entries, slug, selectedEpisode.number)
+            .map((entry) => entry.language)
+            .filter((language): language is string => language != null),
+    [entries, slug, selectedEpisode],
   );
 
   const retryServers = useCallback(() => {
@@ -140,6 +187,9 @@ export function useAnimeDetailScreen(slug: string) {
     handleDownloadPress,
     handleServerSelect,
     selectionMode,
+    localLanguages,
+    localOnly,
+    downloadedLanguages,
     selectedEpisode,
     setSelectedEpisode,
     isExpanded,

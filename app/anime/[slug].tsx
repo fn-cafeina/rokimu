@@ -29,7 +29,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
     anime, view, isAnimeLoading, error, servers, serverLoading, serverError, retryServers, setEpisodeOrder,
     isExpanded, setIsExpanded, selectedEpisode, setSelectedEpisode,
     hasLoaded, activeRangeIdx, setActiveRangeIdx, isRestoring,
-    ranges, visibleEpisodes, isAscending, handleEpisodePress, handleDownloadPress, handleServerSelect, selectionMode, refresh,
+    ranges, visibleEpisodes, isAscending, handleEpisodePress, handleDownloadPress, handleServerSelect, selectionMode, localLanguages, localOnly, downloadedLanguages, refresh,
   } = useAnimeDetailScreen(slug as string);
 
   // Subscribed so returning from the player repaints the episode progress bars
@@ -134,9 +134,16 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                 onClose={() => setSelectedEpisode(null)}
                 episode={selectedEpisode}
                 title={selectionMode === "download" ? `Descargar Episodio ${selectedEpisode?.number ?? ""}` : undefined}
-                servers={servers}
-                isLoading={serverLoading}
-                error={serverError}
+                localLanguages={localLanguages}
+                servers={
+                  localOnly
+                    ? []
+                    : selectionMode === "download"
+                      ? servers.filter((server) => !downloadedLanguages.includes(server.language))
+                      : servers
+                }
+                isLoading={localOnly ? false : serverLoading}
+                error={localOnly ? null : serverError}
                 onRetry={retryServers}
                 onServerSelect={handleServerSelect}
               />
