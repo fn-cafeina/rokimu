@@ -12,7 +12,6 @@ import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "../utils/h
 import { navigateToPlayer } from "../utils/navigation";
 import {
   downloadKey,
-  downloadedForEpisode,
   entriesForEpisode,
   useDownloadsStore,
   type DownloadEntry,
@@ -85,20 +84,14 @@ export function useAnimeDetailScreen(slug: string) {
     [openPlayer],
   );
 
+  // The sheet is the only place a saved episode is played or deleted, so it
+  // opens the same way whether the copy exists already or not
   const openSheet = useCallback(
     (ep: Episode) => {
-      // Offline only a single saved language can play without asking
-      const saved = downloadedForEpisode(useDownloadsStore.getState().entries, slug, ep.number).filter(
-        (entry) => entry.playlistUri != null,
-      );
-      if (isInternetReachable === false && saved.length === 1 && saved[0] != null) {
-        playSaved(ep, saved[0]);
-        return;
-      }
       setSelectedEpisode(ep);
       if (isInternetReachable !== false) void fetchServers(slug, ep.number);
     },
-    [slug, fetchServers, playSaved, isInternetReachable],
+    [slug, fetchServers, isInternetReachable],
   );
 
   const handleEpisodePress = openSheet;
