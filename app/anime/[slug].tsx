@@ -67,8 +67,6 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
 
   return (
     <View className="flex-1 bg-black">
-      <DetailTopBar anime={anime} onBack={navigateBack} />
-      <View className="flex-1">
       {showContent && (
         <Animated.View style={[{ flex: 1 }, contentStyle]}>
           <View className="flex-1 bg-black">
@@ -77,6 +75,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={hasLoaded && isAnimeLoading} onRefresh={refresh} tintColor={ACCENT_COLOR} />}
               >
+                <DetailTopBar anime={anime} onBack={navigateBack} />
                 <AnimeDetailsHeader
                   anime={anime!}
                   relations={anime?.relations ?? null}
@@ -138,10 +137,9 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
       )}
       {(keepSkeleton || !showContent) && (
         <Animated.View style={[StyleSheet.absoluteFill, skeletonStyle]}>
-          <DetailSkeleton />
+          <DetailSkeleton topBar={<DetailTopBar anime={anime} onBack={navigateBack} />} />
         </Animated.View>
       )}
-      </View>
     </View>
   );
 });

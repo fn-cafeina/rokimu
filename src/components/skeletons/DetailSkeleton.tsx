@@ -1,11 +1,14 @@
+import type { ReactNode } from "react";
 import { View } from "react-native";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { COVER_ASPECT_RATIO } from "@/utils/layout";
 
-/** Mirrors the poster hero: cover, title, status, tags, resume button, heading. */
-export function DetailSkeleton() {
+/** Mirrors the poster hero: cover, title, status, tags, resume button, heading.
+ * `topBar` scrolls with the content, so it is rendered inside the skeleton. */
+export function DetailSkeleton({ topBar }: { topBar?: ReactNode }) {
   return (
     <View className="flex-1 bg-black">
+      {topBar}
       <View className="flex-row px-5">
         <View className="overflow-hidden rounded-2xl" style={{ width: "34%", aspectRatio: COVER_ASPECT_RATIO }}>
           <Skeleton width="100%" height="100%" borderRadius={16} />
