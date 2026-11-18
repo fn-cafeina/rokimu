@@ -137,7 +137,10 @@ async function downloadSegment(
     return { file: name, bytes: file.size };
   }
 
-  await downloadTo(segment.uri, file, headers, signal, segment.range);
+  // Landing in a .part file keeps a half-written or still-encrypted segment
+  // from ever looking complete to the resume check
+  const part = new File(dir, `${name}.part`);
+  await downloadTo(segment.uri, part, headers, signal, segment.range);
 
   const key = segment.key;
   if (key != null) {
@@ -148,8 +151,11 @@ async function downloadSegment(
       keyCache.set(key.uri, keyBytes);
     }
     const iv = key.iv ?? sequenceIv(segment.sequence);
-    const plain = decryptSegment(await file.bytes(), keyBytes, iv);
+    const plain = decryptSegment(await part.bytes(), keyBytes, iv);
     await file.write(plain);
+    part.delete();
+  } else {
+    await part.move(file);
   }
 
   return { file: name, bytes: file.size };
