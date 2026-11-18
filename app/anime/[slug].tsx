@@ -12,10 +12,11 @@ import { findHistoryEntry } from "@/utils/history";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { calcProgress } from "@/utils/math";
 import { TAB_BAR_OFFSET } from "@/utils/layout";
+import { orderEpisodes } from "@/hooks/episodeHelpers";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { ACCENT_COLOR } from "@/config/source";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
@@ -33,6 +34,25 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
 
   // Subscribed so returning from the player repaints the episode progress bars
   const lastViewed = useHistoryStore((s) => s.lastViewed);
+
+  const { resumeEpisode, firstEpisode, watchedCount } = useMemo(() => {
+    const episodes = anime?.episodes ?? [];
+    const ordered = orderEpisodes(episodes);
+    const withProgress = ordered
+      .map((episode) => ({ episode, entry: findHistoryEntry(lastViewed, slug as string, episode.number) }))
+      .filter(({ entry }) => entry != null && (entry.progress ?? 0) > 0 && (entry.duration ?? 0) > 0);
+    // Most recently played episode with real progress, not the highest one
+    const latest = withProgress.reduce<typeof withProgress[number] | null>(
+      (best, current) => (best == null || current.entry!.timestamp > best.entry!.timestamp ? current : best),
+      null,
+    );
+    const watched = withProgress.filter(({ entry }) => calcProgress(entry!.progress, entry!.duration) >= 0.9);
+    return {
+      resumeEpisode: latest?.episode ?? null,
+      firstEpisode: ordered[0] ?? null,
+      watchedCount: watched.length,
+    };
+  }, [anime?.episodes, lastViewed, slug]);
 
   const showContent = view === "content";
   const { keepSkeleton, skeletonStyle, contentStyle } = useCrossfade(showContent);
@@ -60,6 +80,10 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                   toggleSort={() => void setEpisodeOrder(isAscending ? "desc" : "asc")}
                   insets={insets}
                   onBackPress={navigateBack}
+                  resumeEpisode={resumeEpisode}
+                  firstEpisode={firstEpisode}
+                  onResume={handleEpisodePress}
+                  watchedCount={watchedCount}
                 />
                 {ranges.length > 0 && (
                 <EpisodeRangeSelector ranges={ranges} activeRangeIdx={activeRangeIdx} setActiveRangeIdx={setActiveRangeIdx} isRestoring={isRestoring} />
@@ -75,14 +99,15 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                     const historyEntry = findHistoryEntry(lastViewed, slug as string, item.number);
                     const hasProgress = historyEntry != null && (historyEntry.progress ?? 0) > 0 && (historyEntry.duration ?? 0) > 0;
                     const pct = hasProgress ? calcProgress(historyEntry.progress, historyEntry.duration) : 0;
-                    const barProgress = hasProgress && pct >= 0.9 ? historyEntry!.duration : historyEntry?.progress;
+                    const isWatched = pct >= 0.9;
+                    const barProgress = isWatched ? historyEntry!.duration : historyEntry?.progress;
 
                     return (
                       <AnimatedPressable key={item.id} onPress={() => handleEpisodePress(item)}>
-                        <View className="rounded-xl bg-neutral-950 border border-neutral-800 overflow-hidden">
+                        <View className="rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden">
                           <View className="flex-row items-center justify-between p-4">
-                            <Text className="font-semibold text-white">Episodio {item.number}</Text>
-                            <Feather name="play" size={16} color={ACCENT_COLOR} />
+                            <Text className={`font-semibold ${isWatched ? "text-neutral-400 line-through" : "text-white"}`}>Episodio {item.number}</Text>
+                            <Feather name={isWatched ? "check" : "play"} size={16} color={ACCENT_COLOR} />
                           </View>
                           {hasProgress && (
                             <ProgressBar progress={barProgress} duration={historyEntry.duration} />
