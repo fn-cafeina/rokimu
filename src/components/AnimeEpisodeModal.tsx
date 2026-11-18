@@ -2,37 +2,53 @@ import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { AppError, Episode, VideoServer } from "@/types";
+import type { AppError } from "@/types";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ACCENT_COLOR } from "@/config/source";
 
+export interface EpisodeSheetRow {
+  key: string;
+  language: string;
+  /** Right-aligned status: Descargado, 42%, En cola */
+  hint: string;
+  icon: "download" | "trash" | "stop";
+  /** Row tap: play, from disk or from the network. */
+  onSelect: () => void;
+  /** Icon tap: download, delete or stop this language. */
+  onAction: () => void;
+}
+
 interface AnimeEpisodeModalProps {
   visible: boolean;
   onClose: () => void;
-  episode: Episode | null;
-  /** Overrides the heading; the same sheet is reused to pick a download. */
-  title?: string;
-  /** Languages already on the device, listed before the network servers. */
-  localLanguages?: { language: string; onSelect: () => void }[];
-  servers: VideoServer[];
+  title: string;
+  rows: EpisodeSheetRow[];
   isLoading: boolean;
   /** Real fetch failure for this episode; never conflated with "no servers" */
   error?: AppError | null;
   onRetry?: () => void;
-  onServerSelect: (server: VideoServer) => void;
 }
 
+const ACTION_LABEL: Record<EpisodeSheetRow["icon"], (language: string) => string> = {
+  download: (language) => `Descargar en ${language}`,
+  trash: (language) => `Eliminar descarga en ${language}`,
+  stop: (language) => `Detener descarga en ${language}`,
+};
+
+const ACTION_ICON: Record<EpisodeSheetRow["icon"], React.ComponentProps<typeof Feather>["name"]> = {
+  download: "download",
+  trash: "trash-2",
+  stop: "square",
+};
+
 export const AnimeEpisodeModal = ({
-  visible, onClose, episode, title, localLanguages = [], servers, isLoading, error, onRetry, onServerSelect
+  visible, onClose, title, rows, isLoading, error, onRetry
 }: AnimeEpisodeModalProps) => {
   const insets = useSafeAreaInsets();
 
   if (!visible) return null;
-
-  const delta = servers.filter((s) => s.title.toLowerCase().includes("delta"));
-  const displayServers = delta.length > 0 ? delta : servers;
 
   return (
     <View className="absolute inset-0 bg-black/80 justify-end">
@@ -44,7 +60,7 @@ export const AnimeEpisodeModal = ({
       >
 
         <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-white text-xl font-bold">{title ?? `Episodio ${episode?.number}`}</Text>
+          <Text className="text-white text-xl font-bold">{title}</Text>
           <Feather name="x" size={20} color="#a3a3a3" onPress={onClose} />
         </View>
 
@@ -53,20 +69,29 @@ export const AnimeEpisodeModal = ({
         </Text>
 
         <View className="gap-2">
-          {localLanguages.map((item) => (
-            <AnimatedPressable
-              key={`local-${item.language}`}
-              accessibilityLabel={`Reproducir descargado en ${item.language}`}
-              className="flex-row items-center bg-black p-4 rounded-xl"
-              onPress={item.onSelect}
-            >
-              <Text className="text-white font-bold flex-1">{item.language}</Text>
-              <Text className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-                Descargado
-              </Text>
-            </AnimatedPressable>
+          {rows.map((row, index) => (
+            <Animated.View key={row.key} entering={FadeIn.delay(index * 50).duration(200)}>
+              <AnimatedPressable
+                accessibilityLabel={`Reproducir en ${row.language}`}
+                className="flex-row items-center bg-black p-4 rounded-xl"
+                onPress={row.onSelect}
+              >
+                <Text className="text-white font-bold flex-1">{row.language}</Text>
+                <Text className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+                  {row.hint}
+                </Text>
+                <AnimatedPressable
+                  accessibilityLabel={ACTION_LABEL[row.icon](row.language)}
+                  className="ml-3 h-8 w-8 items-center justify-center rounded-full bg-white/5"
+                  hitSlop={8}
+                  onPress={row.onAction}
+                >
+                  <Feather name={ACTION_ICON[row.icon]} size={14} color="#a3a3a3" />
+                </AnimatedPressable>
+              </AnimatedPressable>
+            </Animated.View>
           ))}
-          {isLoading ? (
+          {isLoading && rows.length === 0 ? (
             <View className="gap-2">
               {Array.from({ length: 2 }).map((_, i) => (
                 <View key={`skel-${i}`} className="flex-row items-center bg-black p-4 rounded-xl">
@@ -90,24 +115,11 @@ export const AnimeEpisodeModal = ({
                 </AnimatedPressable>
               )}
             </View>
-          ) : displayServers.length === 0 && localLanguages.length === 0 ? (
+          ) : rows.length === 0 ? (
             <View className="h-48 justify-center items-center">
               <Text className="text-neutral-400 text-xs">No hay servidor disponible</Text>
             </View>
-          ) : (
-            displayServers.map((server, index) => (
-              <Animated.View key={server.id || `server-${index}`} entering={FadeIn.delay(index * 50).duration(200)}>
-              <AnimatedPressable
-                className="flex-row items-center bg-black p-4 rounded-xl"
-                onPress={() => { onServerSelect(server); }}
-              >
-                <Text className="text-white font-bold flex-1">
-                  {server.language ?? "Desconocido"}
-                </Text>
-              </AnimatedPressable>
-              </Animated.View>
-            ))
-          )}
+          ) : null}
         </View>
       </View>
     </View>

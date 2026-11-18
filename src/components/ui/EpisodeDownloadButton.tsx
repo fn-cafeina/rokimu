@@ -1,4 +1,4 @@
-import { Alert, ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
@@ -17,9 +17,9 @@ interface EpisodeDownloadButtonProps {
 }
 
 function labelFor(status: DownloadStatus | undefined, title: string): string {
-  if (status === "queued" || status === "downloading") return `Cancelar descarga de ${title}`;
-  if (status === "done") return `Eliminar descarga de ${title}`;
-  if (status === "error") return `Reintentar descarga de ${title}`;
+  if (status === "queued" || status === "downloading") return `Detener descarga de ${title}`;
+  if (status === "done") return `Idiomas del episodio ${title}`;
+  if (status === "error") return `Revisar descarga de ${title}`;
   return `Descargar ${title}`;
 }
 
@@ -31,7 +31,6 @@ export function EpisodeDownloadButton({ slug, number, onRequestDownload }: Episo
   const entries = useDownloadsStore((s) => s.entries);
   const entry = activeEntryForEpisode(entries, slug, number);
   const cancel = useDownloadsStore((s) => s.cancel);
-  const removeEpisode = useDownloadsStore((s) => s.removeEpisode);
 
   const status = entry?.status;
   const progress =
@@ -40,26 +39,9 @@ export function EpisodeDownloadButton({ slug, number, onRequestDownload }: Episo
       : 0;
 
   const handlePress = () => {
-    if (entry == null) {
-      onRequestDownload();
-      return;
-    }
-    const key = downloadKey(slug, number, entry.language);
-
-    if (status === "done") {
-      Alert.alert(
-        `Episodio ${number} descargado`,
-        entry.language != null ? `Guardado en ${entry.language}.` : "Guardado en el dispositivo.",
-        [
-          { text: "Cancelar", style: "cancel" },
-          { text: "Otro idioma", onPress: onRequestDownload },
-          { text: "Eliminar", style: "destructive", onPress: () => void removeEpisode(slug, number) },
-        ],
-      );
-      return;
-    }
-    if (status === "queued" || status === "downloading") {
-      cancel(key);
+    // Only work in flight is cancelled here; everything else opens the sheet
+    if (entry != null && (status === "queued" || status === "downloading")) {
+      cancel(downloadKey(slug, number, entry.language));
       return;
     }
     onRequestDownload();

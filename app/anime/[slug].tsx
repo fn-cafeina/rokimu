@@ -26,10 +26,10 @@ import { useCrossfade } from "@/hooks/useCrossfade";
 const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   const { slug } = useLocalSearchParams();
   const {
-    anime, view, isAnimeLoading, error, servers, serverLoading, serverError, retryServers, setEpisodeOrder,
+    anime, view, isAnimeLoading, error, rows, serverLoading, serverError, retryServers, setEpisodeOrder,
     isExpanded, setIsExpanded, selectedEpisode, setSelectedEpisode,
     hasLoaded, activeRangeIdx, setActiveRangeIdx, isRestoring,
-    ranges, visibleEpisodes, isAscending, handleEpisodePress, handleDownloadPress, handleServerSelect, selectionMode, localLanguages, localOnly, downloadedLanguages, refresh,
+    ranges, visibleEpisodes, isAscending, handleEpisodePress, handleDownloadPress, refresh,
   } = useAnimeDetailScreen(slug as string);
 
   // Subscribed so returning from the player repaints the episode progress bars
@@ -132,18 +132,11 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
               <AnimeEpisodeModal
                 visible={!!selectedEpisode}
                 onClose={() => setSelectedEpisode(null)}
-                episode={selectedEpisode}
-                title={selectionMode === "download" ? `Descargar Episodio ${selectedEpisode?.number ?? ""}` : undefined}
-                localLanguages={localLanguages}
-                servers={
-                  localOnly
-                    ? []
-                    : servers.filter((server) => !downloadedLanguages.includes(server.language))
-                }
-                isLoading={localOnly ? false : serverLoading}
-                error={localOnly ? null : serverError}
+                title={`Episodio ${selectedEpisode?.number ?? ""}`}
+                rows={rows}
+                isLoading={serverLoading}
+                error={serverError}
                 onRetry={retryServers}
-                onServerSelect={handleServerSelect}
               />
             </View>
         </Animated.View>
