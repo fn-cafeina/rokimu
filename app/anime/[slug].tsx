@@ -29,7 +29,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
     anime, view, isAnimeLoading, error, servers, serverLoading, serverError, retryServers, setEpisodeOrder,
     isExpanded, setIsExpanded, selectedEpisode, setSelectedEpisode,
     hasLoaded, activeRangeIdx, setActiveRangeIdx, isRestoring,
-    ranges, visibleEpisodes, isAscending, handleEpisodePress, handleServerSelect, refresh,
+    ranges, visibleEpisodes, isAscending, handleEpisodePress, handleDownloadPress, handleServerSelect, selectionMode, refresh,
   } = useAnimeDetailScreen(slug as string);
 
   // Subscribed so returning from the player repaints the episode progress bars
@@ -115,8 +115,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                               <EpisodeDownloadButton
                                 slug={slug as string}
                                 number={item.number}
-                                title={anime?.title ?? ""}
-                                image={anime?.image ?? ""}
+                                onRequestDownload={() => handleDownloadPress(item)}
                               />
                             </View>
                           </View>
@@ -134,6 +133,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                 visible={!!selectedEpisode}
                 onClose={() => setSelectedEpisode(null)}
                 episode={selectedEpisode}
+                title={selectionMode === "download" ? `Descargar Episodio ${selectedEpisode?.number ?? ""}` : undefined}
                 servers={servers}
                 isLoading={serverLoading}
                 error={serverError}

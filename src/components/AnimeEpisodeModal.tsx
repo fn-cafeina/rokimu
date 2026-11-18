@@ -12,6 +12,8 @@ interface AnimeEpisodeModalProps {
   visible: boolean;
   onClose: () => void;
   episode: Episode | null;
+  /** Overrides the heading; the same sheet is reused to pick a download. */
+  title?: string;
   servers: VideoServer[];
   isLoading: boolean;
   /** Real fetch failure for this episode; never conflated with "no servers" */
@@ -21,7 +23,7 @@ interface AnimeEpisodeModalProps {
 }
 
 export const AnimeEpisodeModal = ({
-  visible, onClose, episode, servers, isLoading, error, onRetry, onServerSelect
+  visible, onClose, episode, title, servers, isLoading, error, onRetry, onServerSelect
 }: AnimeEpisodeModalProps) => {
   const insets = useSafeAreaInsets();
 
@@ -40,7 +42,7 @@ export const AnimeEpisodeModal = ({
       >
 
         <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-white text-xl font-bold">Episodio {episode?.number}</Text>
+          <Text className="text-white text-xl font-bold">{title ?? `Episodio ${episode?.number}`}</Text>
           <Feather name="x" size={20} color="#a3a3a3" onPress={onClose} />
         </View>
 

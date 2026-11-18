@@ -20,6 +20,8 @@ export function useAnimeDetailScreen(slug: string) {
   const setEpisodeOrder = useSettingsStore((s) => s.setEpisodeOrder);
   const addToHistory = useHistoryStore((s) => s.addToHistory);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
+  // The same sheet serves playback and download: only the confirm action differs
+  const [selectionMode, setSelectionMode] = useState<"play" | "download">("play");
   const [isExpanded, setIsExpanded] = useState(false);
 
   const [activeRangeIdx, setActiveRangeIdx, isRestoring] = usePersistedRange(slug);
@@ -67,10 +69,20 @@ export function useAnimeDetailScreen(slug: string) {
         openPlayer(ep);
         return;
       }
+      setSelectionMode("play");
       setSelectedEpisode(ep);
       void fetchServers(slug, ep.number);
     },
     [slug, fetchServers, openPlayer],
+  );
+
+  const handleDownloadPress = useCallback(
+    (ep: Episode) => {
+      setSelectionMode("download");
+      setSelectedEpisode(ep);
+      void fetchServers(slug, ep.number);
+    },
+    [slug, fetchServers],
   );
 
   const retryServers = useCallback(() => {
@@ -80,11 +92,23 @@ export function useAnimeDetailScreen(slug: string) {
   const handleServerSelect = useCallback(
     (server: VideoServer) => {
       if (!selectedEpisode) return;
+      if (selectionMode === "download") {
+        // Language is the server: it decides which audio track gets saved
+        useDownloadsStore.getState().enqueue({
+          slug,
+          number: selectedEpisode.number,
+          title: anime?.title ?? "",
+          image: anime?.image ?? "",
+          language: server.language,
+        });
+        setSelectedEpisode(null);
+        return;
+      }
       void resolveStream(server, { slug, number: selectedEpisode.number });
       openPlayer(selectedEpisode);
       setSelectedEpisode(null);
     },
-    [selectedEpisode, slug, resolveStream, setSelectedEpisode, openPlayer],
+    [selectedEpisode, selectionMode, anime, slug, resolveStream, setSelectedEpisode, openPlayer],
   );
 
   return {
@@ -108,7 +132,9 @@ export function useAnimeDetailScreen(slug: string) {
     ranges,
     visibleEpisodes,
     handleEpisodePress,
+    handleDownloadPress,
     handleServerSelect,
+    selectionMode,
     selectedEpisode,
     setSelectedEpisode,
     isExpanded,

@@ -7,8 +7,8 @@ import { downloadKey, useDownloadsStore, type DownloadStatus } from "@/stores/do
 interface EpisodeDownloadButtonProps {
   slug: string;
   number: string;
-  title: string;
-  image: string;
+  /** Opens the language sheet; the picker decides what gets downloaded. */
+  onRequestDownload: () => void;
 }
 
 function labelFor(status: DownloadStatus | undefined, title: string): string {
@@ -22,7 +22,7 @@ function labelFor(status: DownloadStatus | undefined, title: string): string {
  * One episode's download control. Subscribes to its own entry, so a segment
  * tick repaints this button and not the episode list around it.
  */
-export function EpisodeDownloadButton({ slug, number, title, image }: EpisodeDownloadButtonProps) {
+export function EpisodeDownloadButton({ slug, number, onRequestDownload }: EpisodeDownloadButtonProps) {
   const key = downloadKey(slug, number);
   const entry = useDownloadsStore((s) => s.entries[key]);
   const enqueue = useDownloadsStore((s) => s.enqueue);
@@ -51,7 +51,12 @@ export function EpisodeDownloadButton({ slug, number, title, image }: EpisodeDow
       cancel(key);
       return;
     }
-    enqueue({ slug, number, title, image });
+    if (status === "error" && entry != null) {
+      // Same language as the failed attempt, and a clean folder
+      enqueue({ slug, number, title: entry.title, image: entry.image, language: entry.language });
+      return;
+    }
+    onRequestDownload();
   };
 
   let glyph: React.ReactNode;
