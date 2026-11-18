@@ -6,6 +6,13 @@ import { useUpdateStore, UPDATE_CHECK_KEY } from "@/stores/updateStore";
 import { UpdateModal } from "@/components/UpdateModal";
 import { useHistoryStore, HISTORY_KEY } from "@/stores/historyStore";
 import { useSavedStore, SAVED_KEY } from "@/stores/savedStore";
+import {
+  useDownloadsStore,
+  DOWNLOADS_KEY,
+  DOWNLOAD_CONCURRENCY_KEY,
+  DEFAULT_DOWNLOAD_CONCURRENCY,
+  type DownloadEntry,
+} from "@/stores/downloadsStore";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { sessionManager } from "@/services/session";
 import { resetToPortrait, isPlayerActive } from "@/services/playerUI";
@@ -76,10 +83,15 @@ function RootInner() {
         storage.get<"asc" | "desc">(EPISODE_ORDER_KEY),
         storage.get<boolean>(UPDATE_CHECK_KEY),
       ]);
+      const [downloads, downloadConcurrency] = await Promise.all([
+        storage.get<DownloadEntry[]>(DOWNLOADS_KEY),
+        storage.get<number>(DOWNLOAD_CONCURRENCY_KEY),
+      ]);
       useHistoryStore.getState().initialize(history ?? []);
       useSavedStore.getState().initialize(saved ?? []);
       useSettingsStore.getState().initialize(order ?? "asc");
       useUpdateStore.getState().initialize(updateCheckEnabled !== false);
+      useDownloadsStore.getState().initialize(downloads ?? [], downloadConcurrency ?? DEFAULT_DOWNLOAD_CONCURRENCY);
       useUserInitializationStore.setState({ isInitialized: true });
       logger.info("lifecycle", "App boot complete");
       if (!cancelled) setReady(true);
