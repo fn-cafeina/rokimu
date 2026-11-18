@@ -13,7 +13,7 @@ import {
 } from "./hls";
 
 // A single segment request at a time leaves a fast wifi link idle
-const SEGMENT_CONCURRENCY = 4;
+const SEGMENT_CONCURRENCY = 8;
 
 export const DOWNLOADS_DIR = "downloads";
 export const PLAYLIST_FILE = "index.m3u8";
