@@ -12,6 +12,9 @@ import {
   type HlsSegment,
 } from "./hls";
 
+// A single segment request at a time leaves a fast wifi link idle
+const SEGMENT_CONCURRENCY = 4;
+
 export const DOWNLOADS_DIR = "downloads";
 export const PLAYLIST_FILE = "index.m3u8";
 
@@ -61,6 +64,10 @@ function extensionOf(uri: string, fallback: string): string {
   } catch {
     return fallback;
   }
+}
+
+function segmentFileName(index: number, uri: string): string {
+  return `seg_${String(index).padStart(5, "0")}${extensionOf(uri, ".ts")}`;
 }
 
 function rangeHeaders(range: { length: number; offset: number } | null): Record<string, string> {
@@ -126,15 +133,15 @@ async function downloadSegment(
   index: number,
   dir: Directory,
   headers: Record<string, string>,
-  keyCache: Map<string, Uint8Array>,
+  getKey: (uri: string) => Promise<Uint8Array>,
   signal: AbortSignal,
-): Promise<{ file: string; bytes: number }> {
-  const name = `seg_${String(index).padStart(5, "0")}${extensionOf(segment.uri, ".ts")}`;
+): Promise<number> {
+  const name = segmentFileName(index, segment.uri);
   const file = new File(dir, name);
 
   // A file from an interrupted run is kept: resuming skips what is already there
   if (file.exists && file.size > 0) {
-    return { file: name, bytes: file.size };
+    return file.size;
   }
 
   // Landing in a .part file keeps a half-written or still-encrypted segment
@@ -144,12 +151,7 @@ async function downloadSegment(
 
   const key = segment.key;
   if (key != null) {
-    let keyBytes = keyCache.get(key.uri);
-    if (keyBytes == null) {
-      keyBytes = await fetchBytes(key.uri, headers, signal);
-      if (keyBytes.length !== 16) throw new SourceError("Clave AES-128 inválida", "VIDEO_ERROR");
-      keyCache.set(key.uri, keyBytes);
-    }
+    const keyBytes = await getKey(key.uri);
     const iv = key.iv ?? sequenceIv(segment.sequence);
     const plain = decryptSegment(await part.bytes(), keyBytes, iv);
     await file.write(plain);
@@ -158,7 +160,7 @@ async function downloadSegment(
     await part.move(file);
   }
 
-  return { file: name, bytes: file.size };
+  return file.size;
 }
 
 /**
@@ -191,17 +193,49 @@ export async function downloadEpisode(
   let bytesDone = init?.bytes ?? 0;
   onProgress({ segmentsDone, segmentsTotal, bytesDone });
 
-  const keyCache = new Map<string, Uint8Array>();
-  const localSegments: { duration: number; file: string }[] = [];
+  // Rotation keys are fetched once even when several segments need them
+  const keyRequests = new Map<string, Promise<Uint8Array>>();
+  const getKey = (uri: string): Promise<Uint8Array> => {
+    let request = keyRequests.get(uri);
+    if (request == null) {
+      request = fetchBytes(uri, stream.headers, signal).then((bytes) => {
+        if (bytes.length !== 16) throw new SourceError("Clave AES-128 inválida", "VIDEO_ERROR");
+        return bytes;
+      });
+      keyRequests.set(uri, request);
+    }
+    return request;
+  };
 
-  for (const [index, segment] of playlist.segments.entries()) {
-    if (signal.aborted) throw new SourceError("Descarga cancelada", "NETWORK_ERROR");
-    const result = await downloadSegment(segment, index, dir, stream.headers, keyCache, signal);
-    localSegments.push({ duration: segment.duration, file: result.file });
-    segmentsDone += 1;
-    bytesDone += result.bytes;
-    onProgress({ segmentsDone, segmentsTotal, bytesDone });
-  }
+  // Segments are independent files: several requests in flight keep a fast
+  // link busy, which a strict one-at-a-time loop never does.
+  let nextIndex = 0;
+  let failure: unknown = null;
+  const worker = async (): Promise<void> => {
+    while (failure == null && !signal.aborted) {
+      const index = nextIndex++;
+      const segment = playlist.segments[index];
+      if (segment == null) return;
+      try {
+        const bytes = await downloadSegment(segment, index, dir, stream.headers, getKey, signal);
+        segmentsDone += 1;
+        bytesDone += bytes;
+        onProgress({ segmentsDone, segmentsTotal, bytesDone });
+      } catch (error) {
+        failure = error;
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(SEGMENT_CONCURRENCY, playlist.segments.length) }, worker),
+  );
+  if (failure != null) throw failure;
+  if (signal.aborted) throw new SourceError("Descarga cancelada", "NETWORK_ERROR");
+
+  const localSegments = playlist.segments.map((segment, index) => ({
+    duration: segment.duration,
+    file: segmentFileName(index, segment.uri),
+  }));
 
   const playlistFile = new File(dir, PLAYLIST_FILE);
   await playlistFile.write(
