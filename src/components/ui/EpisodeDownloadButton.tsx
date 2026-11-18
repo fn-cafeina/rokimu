@@ -38,10 +38,11 @@ export function EpisodeDownloadButton({ slug, number, onRequestDownload }: Episo
   const handlePress = () => {
     if (status === "done") {
       Alert.alert(
-        "Eliminar descarga",
-        `Se eliminará el episodio ${number} del dispositivo.`,
+        `Episodio ${number} descargado`,
+        entry?.language != null ? `Guardado en ${entry.language}.` : "Guardado en el dispositivo.",
         [
           { text: "Cancelar", style: "cancel" },
+          { text: "Otro idioma", onPress: onRequestDownload },
           { text: "Eliminar", style: "destructive", onPress: () => void remove(key) },
         ],
       );

@@ -185,7 +185,9 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
   enqueue: (input) => {
     const key = downloadKey(input.slug, input.number);
     const existing = get().entries[key];
-    if (existing?.status === "queued" || existing?.status === "downloading" || existing?.status === "done") return;
+    if (existing?.status === "queued" || existing?.status === "downloading") return;
+    // A finished download only restarts for a different language
+    if (existing?.status === "done" && (input.language == null || input.language === existing.language)) return;
 
     const entry: DownloadEntry = {
       slug: input.slug,
