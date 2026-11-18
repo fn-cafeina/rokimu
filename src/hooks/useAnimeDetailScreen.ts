@@ -65,7 +65,10 @@ export function useAnimeDetailScreen(slug: string) {
       // A saved episode plays from disk, so the server sheet would only fail
       // offline and add a step when online
       const saved = useDownloadsStore.getState().entries[downloadKey(slug, ep.number)];
-      if (saved?.status === "done") {
+      if (saved?.status === "done" && saved.playlistUri != null) {
+        // The player reads the stream from the store on mount; a local episode
+        // must settle it here, exactly like a server pick does
+        usePlayerStore.getState().playLocal(ep.number, saved.playlistUri);
         openPlayer(ep);
         return;
       }
