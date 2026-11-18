@@ -2,14 +2,14 @@ import { useWindowDimensions, View } from "react-native";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { calcCardWidth, CARD_WIDTH_CONFIG } from "@/utils/layout";
 
-/** Mirrors the 3-column grid: cover, then the two lines a title can take. */
+/** Mirrors the 3-column grid: cover, then the two lines a title can take. Parent supplies px-5. */
 export function GridSkeleton({ rows = 3 }: { rows?: number }) {
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = calcCardWidth(screenWidth);
   const cardHeight = cardWidth * 1.4;
 
   return (
-    <View className="gap-3 px-5 pt-4">
+    <View className="gap-3 pt-4">
       {Array.from({ length: rows }).map((_, rowIdx) => (
         <View key={`row-${rowIdx}`} className="flex-row gap-3">
           {Array.from({ length: CARD_WIDTH_CONFIG.columns }).map((_, colIdx) => (
