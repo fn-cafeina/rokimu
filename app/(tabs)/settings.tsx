@@ -3,6 +3,11 @@ import { CACHE_PREFIXES } from "@/config/cache";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { useSettingsStore } from "@/stores/settingsStore";
+import {
+  useDownloadsStore,
+  MIN_DOWNLOAD_CONCURRENCY,
+  MAX_DOWNLOAD_CONCURRENCY,
+} from "@/stores/downloadsStore";
 import { useUpdateStore, UPDATE_CHECK_RESOURCE_KEY } from "@/stores/updateStore";
 import { refreshSession } from "@/services/session";
 import { isLoadingFor } from "@/utils/resource";
@@ -23,8 +28,7 @@ export default function SettingsScreen() {
   const refreshedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const updateCheckEnabled = useUpdateStore((s) => s.updateCheckEnabled);
-  const setUpdateCheckEnabled = useUpdateStore((s) => s.setUpdateCheckEnabled);
+  const updateCheckEnabled = useUpdateStore((s) => s.updateCheckEnabled);  const setUpdateCheckEnabled = useUpdateStore((s) => s.setUpdateCheckEnabled);
   const updateAvailable = useUpdateStore((s) => s.check.data?.updateAvailable ?? null);
   const checkingForUpdates = useUpdateStore((s) => isLoadingFor(s.check, UPDATE_CHECK_RESOURCE_KEY));
   const lastCheckError = useUpdateStore((s) =>
@@ -36,6 +40,9 @@ export default function SettingsScreen() {
   const checkForUpdates = useUpdateStore((s) => s.checkForUpdates);
   const apkUrl = useUpdateStore((s) => s.check.data?.apkUrl ?? null);
   const startUpdate = useUpdateStore((s) => s.startUpdate);
+
+  const concurrency = useDownloadsStore((s) => s.concurrency);
+  const setConcurrency = useDownloadsStore((s) => s.setConcurrency);
 
   const appVersion = currentVersion ?? "—";
 
@@ -156,6 +163,53 @@ export default function SettingsScreen() {
             </Text>
           </View>
         </AnimatedPressable>
+
+        <View className="mt-8">
+          <SectionTitle>Descargas</SectionTitle>
+          <View className="mb-3" />
+          <View className="flex-row items-center px-5 py-4 rounded-xl border border-neutral-800 bg-neutral-900">
+            <Feather name="layers" size={18} color={MUTED_ICON} style={{ marginRight: 12 }} />
+            <View className="flex-1">
+              <Text className="text-base font-medium text-white">Simultáneas</Text>
+              <Text className="mt-1 text-xs font-semibold tracking-wide text-neutral-400">
+                Episodios a la vez
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <AnimatedPressable
+                accessibilityLabel="Disminuir descargas simultáneas"
+                accessibilityState={{ disabled: concurrency <= MIN_DOWNLOAD_CONCURRENCY }}
+                disabled={concurrency <= MIN_DOWNLOAD_CONCURRENCY}
+                hitSlop={6}
+                hapticFeedback={true}
+                onPress={() => void setConcurrency(concurrency - 1)}
+                className="min-h-8 min-w-8 items-center justify-center"
+              >
+                <Feather
+                  name="minus"
+                  size={18}
+                  color={concurrency <= MIN_DOWNLOAD_CONCURRENCY ? "#404040" : MUTED_ICON}
+                />
+              </AnimatedPressable>
+              <Text className="w-8 text-center text-base font-semibold text-white">{concurrency}</Text>
+              <AnimatedPressable
+                accessibilityLabel="Aumentar descargas simultáneas"
+                accessibilityState={{ disabled: concurrency >= MAX_DOWNLOAD_CONCURRENCY }}
+                disabled={concurrency >= MAX_DOWNLOAD_CONCURRENCY}
+                hitSlop={6}
+                hapticFeedback={true}
+                onPress={() => void setConcurrency(concurrency + 1)}
+                className="min-h-8 min-w-8 items-center justify-center"
+              >
+                <Feather
+                  name="plus"
+                  size={18}
+                  color={concurrency >= MAX_DOWNLOAD_CONCURRENCY ? "#404040" : MUTED_ICON}
+                />
+              </AnimatedPressable>
+            </View>
+          </View>
+        </View>
 
         <View className="mt-8">
           <SectionTitle>Actualizaciones</SectionTitle>
