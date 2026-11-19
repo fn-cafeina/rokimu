@@ -5,6 +5,7 @@ import { TIMEOUTS } from "../config/cache";
 import { storage } from "../utils/storage";
 import { logger } from "../utils/logger";
 import { SourceError } from "../utils/errors";
+import { EMPTY_CHECK, parseStoredCheck, shouldCheck, type StoredCheck } from "../utils/updateCheck";
 import {
   ResourceRunner,
   resourceInitialState,
@@ -22,7 +23,8 @@ export const UPDATE_CHECK_KEY = "update_check_enabled";
 const INSTALL_PERMISSION_KEY = "install_permission_granted";
 const GITHUB_RELEASES_URL =
   "https://api.github.com/repos/fn-cafeina/rokimu/releases/latest";
-const CHECK_COOLDOWN_MS = 60 * 60 * 1000;
+/** Survives launches: the throttle and the ETag only pay off if they persist. */
+const UPDATE_STATE_KEY = "update_check_state";
 
 function parseVersion(v: string): number[] {
   return v.split(".").map((n) => parseInt(n, 10) || 0);
@@ -76,10 +78,35 @@ interface UpdateState {
 
 let downloadAbort: AbortController | null = null;
 let checkPromise: Promise<boolean> | null = null;
-let lastSuccessAt = 0;
+let storedCheck: StoredCheck | null = null;
 
 const CHECK_KEY = "check";
 export const UPDATE_CHECK_RESOURCE_KEY = CHECK_KEY;
+
+/** Release held from the last answer, when it beats the installed version. */
+function dataFromStored(value: StoredCheck, current: string): UpdateCheckData | null {
+  if (value.tag == null || value.apkUrl == null) return null;
+  // Prereleases and downgrades never reach the user
+  if (value.tag.includes("-") || !isNewer(value.tag, current)) return null;
+  return { updateAvailable: value.tag, apkUrl: value.apkUrl };
+}
+
+async function loadStoredCheck(): Promise<StoredCheck> {
+  if (storedCheck != null) return storedCheck;
+  const raw = await storage.get<unknown>(UPDATE_STATE_KEY);
+  storedCheck = parseStoredCheck(raw) ?? { ...EMPTY_CHECK };
+  return storedCheck;
+}
+
+async function persistCheck(next: StoredCheck): Promise<void> {
+  storedCheck = next;
+  try {
+    await storage.set(UPDATE_STATE_KEY, next);
+  } catch (error) {
+    // Losing the anchor only costs one extra request on the next launch
+    logger.warn("updateStore", "Failed to persist the update check", error);
+  }
+}
 
 export const useUpdateStore = create<UpdateState>((set, get) => {
   const checkRunner = new ResourceRunner<UpdateCheckData>({
@@ -88,6 +115,17 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
     set: (check) => set({ check }),
   });
 
+  /** Shows a stored release without waiting for the network. */
+  function seedCheck(current: string, data: UpdateCheckData | null): void {
+    if (data == null) return;
+    // A request in flight owns the state and settles it itself
+    if (get().check.status === "loading") return;
+    set({
+      currentVersion: current,
+      check: { status: "success", key: CHECK_KEY, dataKey: CHECK_KEY, data, error: null, requestId: 0 },
+    });
+  }
+
   async function runCheck(force: boolean): Promise<boolean> {
     const current = Constants.expoConfig?.version;
     if (!current) {
@@ -95,26 +133,40 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
       return false;
     }
     if (!force && get().updateCheckEnabled === false) return true;
-    if (!force && Date.now() - lastSuccessAt < CHECK_COOLDOWN_MS) return true;
+
+    const previous = await loadStoredCheck();
+    const known = dataFromStored(previous, current);
+    if (!force && !shouldCheck(previous.checkedAt, Date.now())) {
+      seedCheck(current, known);
+      return true;
+    }
 
     // Non-forced checks skip silently when offline; a forced one surfaces it
     try {
       const net = await NetInfo.fetch();
       if (net.isConnected === false || net.isInternetReachable === false) {
-        if (!force) return true;
+        if (!force) {
+          seedCheck(current, known);
+          return true;
+        }
         checkRunner.fail(CHECK_KEY, new SourceError("Sin conexión", "NETWORK_ERROR"));
         return false;
       }
     } catch {
     }
 
-    const outcome = await checkRunner.load(CHECK_KEY, async () => {
+    const outcome = await checkRunner.load(CHECK_KEY, async (signal) => {
+      const headers: Record<string, string> = {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "Rokimu-Android",
+      };
+      // An unchanged release answers 304, which costs no rate limit
+      if (previous.etag != null) headers["If-None-Match"] = previous.etag;
+
       let res: Response;
       try {
         res = await Promise.race([
-          fetch(`${GITHUB_RELEASES_URL}?_=${Date.now()}`, {
-            headers: { "User-Agent": "Rokimu-Android" },
-          }),
+          fetch(GITHUB_RELEASES_URL, { headers, signal }),
           new Promise<never>((_, reject) =>
             setTimeout(
               () => reject(new SourceError("Se agotó el tiempo de búsqueda", "TIMEOUT")),
@@ -127,7 +179,17 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
           ? err
           : new SourceError("Error al buscar actualizaciones", "NETWORK_ERROR");
       }
+
+      if (res.status === 304) {
+        await persistCheck({ ...previous, checkedAt: Date.now() });
+        return known ?? { updateAvailable: null, apkUrl: null };
+      }
+      if (res.status === 404) {
+        await persistCheck({ ...EMPTY_CHECK, checkedAt: Date.now() });
+        return { updateAvailable: null, apkUrl: null };
+      }
       if (!res.ok) throw new SourceError("Error al buscar actualizaciones", "NETWORK_ERROR");
+
       const data = (await res.json()) as {
         tag_name?: string;
         assets?: { name: string; browser_download_url: string; size?: number }[];
@@ -141,15 +203,23 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
           a.name.toLowerCase().endsWith(".apk") &&
           (a.size == null || a.size > 5 * 1024 * 1024),
       );
-      return {
+      const result = {
         updateAvailable: !isPrerelease && isNewer(latest, current) ? latest : null,
         apkUrl: apkAsset?.browser_download_url ?? null,
       };
+      // Stored even when it is not an update: the anchor and the ETag are what
+      // keep the next launch from spending a request
+      await persistCheck({
+        checkedAt: Date.now(),
+        etag: res.headers.get("etag"),
+        tag: latest,
+        apkUrl: result.apkUrl,
+      });
+      return result;
     });
 
     if (outcome.status !== "success") return false;
     set({ currentVersion: current });
-    lastSuccessAt = Date.now();
     return true;
   }
 
@@ -171,6 +241,10 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
       .get<boolean>(INSTALL_PERMISSION_KEY)
       .then((granted) => set({ installPermissionGranted: granted === true }))
       .catch(() => {});
+    // The release kept from the last check is on screen before the request runs
+    if (currentVersion != null) {
+      void loadStoredCheck().then((previous) => seedCheck(currentVersion, dataFromStored(previous, currentVersion)));
+    }
   },
 
   setUpdateCheckEnabled: async (enabled) => {
