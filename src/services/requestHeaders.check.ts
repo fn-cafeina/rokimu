@@ -23,7 +23,8 @@ assert.equal(source["User-Agent"], SESSION.userAgent);
 // A foreign host gets none of it, not even an empty cookie header
 for (const foreign of [bridge, video]) {
   assert.equal("Cookie" in foreign, false);
-  assert.equal("Referer" in foreign, false);
+  // The bridge host rejects requests without a referrer
+  assert.equal(foreign.Referer, `${BASE}/`);
   assert.equal("Sec-Fetch-Site" in foreign, false);
   assert.equal("Upgrade-Insecure-Requests" in foreign, false);
   // The user agent is not a secret and the video hosts need it

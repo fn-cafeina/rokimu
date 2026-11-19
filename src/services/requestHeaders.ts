@@ -33,12 +33,14 @@ export function buildHeaders(input: {
     Accept: ACCEPT,
     "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
     Connection: "keep-alive",
+    // The bridge host (website.*) answers 403 to a bare request, so every host
+    // gets the source origin as referrer; the session stays source-only
+    Referer: `${baseUrl}/`,
   };
 
   if (!isSourceUrl(url, baseUrl)) return headers;
 
   headers.Cookie = session?.cookies ?? "";
-  headers.Referer = `${baseUrl}/`;
   headers["Upgrade-Insecure-Requests"] = "1";
   headers["Sec-Fetch-Dest"] = "document";
   headers["Sec-Fetch-Mode"] = "navigate";
