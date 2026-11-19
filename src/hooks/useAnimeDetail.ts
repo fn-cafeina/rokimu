@@ -2,6 +2,21 @@ import { useCallback, useEffect, useState } from "react";
 import { storage } from "../utils/storage";
 import { logger } from "../utils/logger";
 
+/** One remembered episode range per anime, pruned at boot like saved detail. */
+export const RANGE_KEY_PREFIX = "range_";
+
+const rangeKey = (slug: string) => `${RANGE_KEY_PREFIX}${slug}`;
+
+/** Boot sweep: a range for an anime nobody keeps only counts against the cap. */
+export async function prunePersistedRanges(keep: (slug: string) => boolean): Promise<void> {
+  const keys = await storage.getAllKeys();
+  const stale = keys
+    .filter((key) => key.startsWith(RANGE_KEY_PREFIX))
+    .map((key) => key.slice(RANGE_KEY_PREFIX.length))
+    .filter((slug) => !keep(slug));
+  await Promise.all(stale.map((slug) => storage.remove(rangeKey(slug))));
+}
+
 export function usePersistedRange(slug: string | undefined) {
   const [activeRangeIdx, setActiveRangeIdx] = useState(0);
   const [isRestoring, setIsRestoring] = useState(slug != null);
@@ -17,7 +32,7 @@ export function usePersistedRange(slug: string | undefined) {
   useEffect(() => {
     if (slug == null) return;
     storage
-      .get<number>(`range_${slug}`)
+      .get<number>(rangeKey(slug))
       .then((idx) => {
         setActiveRangeIdx(idx ?? 0);
         setIsRestoring(false);
@@ -33,7 +48,7 @@ export function usePersistedRange(slug: string | undefined) {
     (idx: number) => {
       setActiveRangeIdx(idx);
       if (slug != null) {
-        storage.set(`range_${slug}`, idx).catch((error) => {
+        storage.set(rangeKey(slug), idx).catch((error) => {
           logger.error("usePersistedRange", "Failed to persist range", error);
         });
       }

@@ -14,6 +14,7 @@ import {
 } from "@/stores/downloadsStore";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { isWorthKeepingOffline } from "@/hooks/useAnimeSnapshot";
+import { prunePersistedRanges } from "@/hooks/useAnimeDetail";
 import { sessionManager } from "@/services/session";
 import { resetToPortrait, isPlayerActive } from "@/services/playerUI";
 import { storage } from "@/utils/storage";
@@ -93,9 +94,10 @@ function RootInner() {
       useSettingsStore.getState().initialize(order ?? "asc");
       useUpdateStore.getState().initialize(updateCheckEnabled !== false);
       useDownloadsStore.getState().initialize(downloads ?? [], downloadConcurrency ?? DEFAULT_DOWNLOAD_CONCURRENCY);
-      // Stored detail outlives the cache, so the sweep waits for the lists that
-      // decide what is still worth keeping offline
+      // Stored detail and episode ranges outlive the cache, so the sweep waits
+      // for the lists that decide what is still worth keeping offline
       void pruneAnimeSnapshots(isWorthKeepingOffline);
+      void prunePersistedRanges(isWorthKeepingOffline);
       logger.info("lifecycle", "App boot complete");
       if (!cancelled) setReady(true);
 
