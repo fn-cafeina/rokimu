@@ -9,7 +9,9 @@ export function GridSkeleton({ rows = 3 }: { rows?: number }) {
   const cardHeight = cardWidth * 1.4;
 
   return (
-    <View className="gap-3 pt-4">
+    // pt-1 mirrors the grid's contentContainer paddingTop so the first row
+    // lands where the real cards do
+    <View className="gap-3 pt-1">
       {Array.from({ length: rows }).map((_, rowIdx) => (
         <View key={`row-${rowIdx}`} className="flex-row gap-3">
           {Array.from({ length: CARD_WIDTH_CONFIG.columns }).map((_, colIdx) => (
