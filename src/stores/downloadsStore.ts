@@ -9,7 +9,7 @@ import {
 import { storage } from "../utils/storage";
 import { logger } from "../utils/logger";
 import { persistWithRollback } from "../utils/history";
-import { downloadKey, type DownloadStatus, type QueuedEntry } from "../utils/downloadQueue";
+import { downloadKey, isWaiting, resumeTargets, type DownloadStatus, type QueuedEntry } from "../utils/downloadQueue";
 
 export { downloadKey };
 export type { DownloadStatus };
@@ -166,8 +166,8 @@ function pump(): void {
     const nextItem = queue.shift();
     if (nextItem == null) break;
     const key = downloadKey(nextItem.input.slug, nextItem.input.number, nextItem.input.language ?? null);
-    // Removed or finished while it waited: nothing to download
-    if (entries[key]?.status !== "queued") continue;
+    // Removed, finished or mismatched while it waited: nothing to download
+    if (!isWaiting(entries, key)) continue;
     void runDownload(nextItem.input, nextItem.resume);
   }
 }
@@ -178,7 +178,6 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
 
   initialize: (entries, concurrency) => {
     const next: Record<string, DownloadEntry> = {};
-    const resumable: QueuedDownload[] = [];
 
     for (const entry of entries) {
       const key = downloadKey(entry.slug, entry.number, entry.language);
@@ -187,23 +186,16 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
         logger.info("download", `Dropping ${key}: playlist missing`);
         continue;
       }
-      const normalized = entry.status === "downloading" ? { ...entry, status: "queued" as const } : entry;
-      next[key] = normalized;
-      if (normalized.status === "queued") {
-        // Interrupted by a shutdown, not by a decision: keep the files
-        resumable.push({
-          input: { slug: entry.slug, number: entry.number, title: entry.title, image: entry.image },
-          resume: true,
-        });
-      }
+      next[key] = entry.status === "downloading" ? { ...entry, status: "queued" } : entry;
     }
 
     set({ entries: next, concurrency: clampConcurrency(concurrency) });
-    // An interrupted queue resumes: segment files already on disk are skipped
-    for (const item of resumable) {
-      const key = downloadKey(item.input.slug, item.input.number, item.input.language ?? null);
+    // An interrupted queue resumes: segment files already on disk are skipped,
+    // and the language travels along so the worker finds the same entry
+    for (const target of resumeTargets(Object.values(next))) {
+      const key = downloadKey(target.slug, target.number, target.language);
       if (!queue.some((q) => downloadKey(q.input.slug, q.input.number, q.input.language ?? null) === key)) {
-        queue.push(item);
+        queue.push({ input: target, resume: true });
       }
     }
     pump();
