@@ -138,6 +138,10 @@ function PlayerContent() {
     }, 1000);
   }, [nextEpisode, clearNextEpisodeTimer, slug, resolveAndPlay, currentEpNumber]);
 
+  // Leaving the screen mid-countdown: without this the interval survives the
+  // unmount and auto-advances ten seconds later on a disposed player
+  useEffect(() => clearNextEpisodeTimer, [clearNextEpisodeTimer]);
+
   const handlePrev = useCallback(() => { if (prevEpisode) void resolveAndPlay(slug, prevEpisode); }, [prevEpisode, slug, resolveAndPlay]);
   const handleNext = useCallback(() => { if (nextEpisode) void resolveAndPlay(slug, nextEpisode); }, [nextEpisode, slug, resolveAndPlay]);
   const handleBack = useCallback(() => router.back(), []);
