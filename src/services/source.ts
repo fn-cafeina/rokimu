@@ -5,6 +5,7 @@ import { SourceError } from "../utils/errors";
 import { backoffDelay } from "../utils/math";
 import { sessionManager } from "./session";
 import { HtmlParser, cleanTitle, extractJson, isChallengeHtml } from "./parsers";
+import { buildHeaders, isSourceUrl } from "./requestHeaders";
 import { extractBest } from "./extractors";
 import type {
   AnimeDetail,
@@ -25,34 +26,19 @@ async function fetchWithSession(path: string, options: RequestInit = {}): Promis
   // The real response owns the verdict: stored cookies go out as-is, and a
   // 403/challenge below enters the wash-and-retry ladder
   const session = await sessionManager.getSession();
-  const rawCookies = session?.cookies ?? "";
   const baseUrl = SOURCE_CONFIG.baseUrl;
 
   const url = path.startsWith("http") ? path : `${baseUrl}${path}`;
   // Only the source origin speaks for the session: a rejection from a foreign
-  // video host is that host's verdict, never grounds for a wash. Cookies from
-  // foreign hosts must never merge into the source jar either — their own
-  // cf_clearance would pollute and break the session we send upstream.
-  const isSourceOrigin = url.startsWith(baseUrl);
+  // video host is that host's verdict, never grounds for a wash
+  const isSourceOrigin = isSourceUrl(url, baseUrl);
 
-  const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string>),
-    "User-Agent": session?.userAgent ?? "",
-    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
-    Connection: "keep-alive",
-  };
-  // The bridge page and the video hosts are third parties: the source jar, its
-  // cf_clearance included, belongs to the source origin and goes nowhere else
-  if (isSourceOrigin) {
-    headers.Cookie = rawCookies;
-    headers.Referer = baseUrl + "/";
-    headers["Upgrade-Insecure-Requests"] = "1";
-    headers["Sec-Fetch-Dest"] = "document";
-    headers["Sec-Fetch-Mode"] = "navigate";
-    headers["Sec-Fetch-Site"] = "same-origin";
-    headers["Sec-Fetch-User"] = "?1";
-  }
+  const headers = buildHeaders({
+    url,
+    baseUrl,
+    session,
+    extra: options.headers as Record<string, string>,
+  });
 
   for (let attempt = 0; attempt < TIMEOUTS.MAX_ATTEMPTS; attempt++) {
     let timedOut = false;
