@@ -38,8 +38,6 @@ export interface EpisodeDownloadProgress {
 export interface EpisodeDownloadResult {
   dirUri: string;
   playlistUri: string;
-  /** Folder language: the requested one, so the entry key and the disk agree. */
-  language: string | null;
   bytes: number;
   segmentsTotal: number;
 }
@@ -175,7 +173,7 @@ async function fetchBytes(url: string, headers: Record<string, string>, signal: 
   }
 }
 
-async function pickStream(target: EpisodeTarget): Promise<{ url: string; headers: Record<string, string>; language: string }> {
+async function pickStream(target: EpisodeTarget): Promise<{ url: string; headers: Record<string, string> }> {
   const servers = await source.getEpisodeServers(target.slug, target.number);
   if (servers.length === 0) throw new SourceError("No hay servidor disponible", "VIDEO_ERROR");
   // A requested language is not negotiable: downloading another audio track
@@ -187,7 +185,7 @@ async function pickStream(target: EpisodeTarget): Promise<{ url: string; headers
 
   const stream = await source.resolveStreamUrl(server.url);
   if (stream == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
-  return { url: stream.url, headers: stream.headers ?? {}, language: server.language };
+  return { url: stream.url, headers: stream.headers ?? {} };
 }
 
 async function downloadInit(
@@ -335,7 +333,6 @@ export async function downloadEpisode(
   return {
     dirUri: dir.uri,
     playlistUri: playlistFile.uri,
-    language,
     bytes: bytesDone,
     segmentsTotal,
   };
