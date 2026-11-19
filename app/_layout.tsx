@@ -1,7 +1,6 @@
 import "../global.css";
 import { WebViewWorker } from "@/components/WebViewWorker";
 import { useSettingsStore, EPISODE_ORDER_KEY } from "@/stores/settingsStore";
-import { useUserInitializationStore } from "@/stores/userIndex";
 import { useUpdateStore, UPDATE_CHECK_KEY } from "@/stores/updateStore";
 import { UpdateModal } from "@/components/UpdateModal";
 import { useHistoryStore, HISTORY_KEY } from "@/stores/historyStore";
@@ -94,7 +93,6 @@ function RootInner() {
       useSettingsStore.getState().initialize(order ?? "asc");
       useUpdateStore.getState().initialize(updateCheckEnabled !== false);
       useDownloadsStore.getState().initialize(downloads ?? [], downloadConcurrency ?? DEFAULT_DOWNLOAD_CONCURRENCY);
-      useUserInitializationStore.setState({ isInitialized: true });
       // Stored detail outlives the cache, so the sweep waits for the lists that
       // decide what is still worth keeping offline
       void pruneAnimeSnapshots(isWorthKeepingOffline);
