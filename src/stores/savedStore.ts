@@ -3,6 +3,7 @@ import type { Anime } from "../types";
 import { persistWithRollback } from "../utils/history";
 import { storage } from "../utils/storage";
 import { forgetAnimeSnapshot } from "../utils/animeSnapshot";
+import { hasDownloadFor } from "../utils/downloadQueue";
 import { useDownloadsStore } from "./downloadsStore";
 
 export const SAVED_KEY = "saved_animes";
@@ -36,12 +37,10 @@ export const useSavedStore = create<SavedState>((set, get) => ({
     );
 
     // Out of the library with nothing downloaded: the saved detail has no
-    // reason to stay and would only sit against the storage cap. A download
-    // keeps its episode list reachable offline.
+    // reason to stay and would only sit against the storage cap. A download,
+    // finished or still running, keeps its episode list reachable offline.
     if (existing) {
-      const hasDownloads = Object.values(useDownloadsStore.getState().entries).some(
-        (entry) => entry.slug === anime.url && entry.status === "done",
-      );
+      const hasDownloads = hasDownloadFor(Object.values(useDownloadsStore.getState().entries), anime.url);
       if (!hasDownloads) void forgetAnimeSnapshot(anime.url);
     }
   },

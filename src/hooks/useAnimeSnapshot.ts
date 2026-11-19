@@ -3,15 +3,14 @@ import { useDownloadsStore } from "../stores/downloadsStore";
 import { useSavedStore } from "../stores/savedStore";
 import type { AnimeDetail } from "../types";
 import { loadAnimeSnapshot, saveAnimeSnapshot } from "../utils/animeSnapshot";
+import { hasDownloadFor } from "../utils/downloadQueue";
 import { logger } from "../utils/logger";
 
 /** A library anime, or one with a downloaded episode, is worth having offline. */
 export function isWorthKeepingOffline(slug: string): boolean {
   const saved = useSavedStore.getState().saved.some((item) => item.url === slug);
   if (saved) return true;
-  return Object.values(useDownloadsStore.getState().entries).some(
-    (entry) => entry.slug === slug && entry.status === "done",
-  );
+  return hasDownloadFor(Object.values(useDownloadsStore.getState().entries), slug);
 }
 
 /**
@@ -23,9 +22,7 @@ export function useAnimeSnapshot(slug: string, detail: AnimeDetail | null): Anim
   const saved = useSavedStore((s) => s.saved);
   const entries = useDownloadsStore((s) => s.entries);
   const keep = useMemo(
-    () =>
-      saved.some((item) => item.url === slug) ||
-      Object.values(entries).some((entry) => entry.slug === slug && entry.status === "done"),
+    () => saved.some((item) => item.url === slug) || hasDownloadFor(Object.values(entries), slug),
     [saved, entries, slug],
   );
   // The slug travels with the payload so a copy for another anime is never shown
