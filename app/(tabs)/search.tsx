@@ -105,6 +105,7 @@ function SearchScreenContent() {
                 refreshing={isLoading}
                 onRefresh={hasQuery ? retrySearch : () => void fetchCatalog(true)}
                 tintColor={ACCENT_COLOR}
+                colors={[ACCENT_COLOR]}
               />
             }
             ListEmptyComponent={
