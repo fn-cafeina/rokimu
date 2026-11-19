@@ -2,6 +2,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PlayerControls } from "@/components/PlayerControls";
 import { orderEpisodes } from "@/hooks/episodeHelpers";
+import { WATCHED_THRESHOLD } from "@/hooks/episodeProgress";
 import { useAnimeData } from "@/hooks/useAnimeData";
 import { useEpisodeNavigation } from "@/hooks/useEpisodeNavigation";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
@@ -163,7 +164,7 @@ function PlayerContent() {
         lastSeekKey.current = seekKey;
         const match = findHistoryEntry(useHistoryStore.getState().lastViewed, slug, streamEpNumber);
         const hasSignificantProgress = match != null && (match.progress ?? 0) > 10;
-        const isCompleted = match != null && match.progress != null && match.duration != null && match.duration > 0 && match.progress / match.duration >= 0.9;
+        const isCompleted = match != null && match.progress != null && match.duration != null && match.duration > 0 && match.progress / match.duration >= WATCHED_THRESHOLD;
         if (match?.progress != null && hasSignificantProgress && !isCompleted) {
           try { player.currentTime = match.progress; } catch {}
         }
@@ -185,7 +186,7 @@ function PlayerContent() {
       const dur = player.duration;
       if (ct > 0 && dur > 0) {
         let progress = ct;
-        if (dur > 0 && progress / dur >= 0.9) progress = dur;
+        if (dur > 0 && progress / dur >= WATCHED_THRESHOLD) progress = dur;
         void addToHistory({ ...historyCtx.current, progress, duration: dur, timestamp: Date.now() });
       }
     } catch {}
