@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { HistoryItem } from "../types";
-import { persistWithRollback } from "../utils/history";
+import { logger } from "../utils/logger";
 import { storage } from "../utils/storage";
 
 export const HISTORY_KEY = "last_viewed";
@@ -21,17 +21,20 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
 
   addToHistory: async (item: HistoryItem) => {
     const newItem = { ...item, timestamp: Date.now() };
-    const previous = get().lastViewed;
-    const updated = [newItem, ...previous.filter(
+    const updated = [newItem, ...get().lastViewed.filter(
       (i) => i.url !== newItem.url || i.number !== newItem.number,
     )].slice(0, 50);
 
     set({ lastViewed: updated });
-    await persistWithRollback(
-      () => storage.set(HISTORY_KEY, updated),
-      () => set({ lastViewed: previous }),
-      "historyStore",
-    );
+    try {
+      await storage.set(HISTORY_KEY, updated);
+    } catch (error) {
+      // Progress is written every ten seconds and on every exit, so two calls
+      // can overlap. Reverting to the list captured before this one would drop
+      // an entry the other call already saved; memory keeps the newest value
+      // and the next successful write persists it.
+      logger.error("historyStore", "Failed to persist", error);
+    }
   },
 
 
