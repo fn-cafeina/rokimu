@@ -3,6 +3,7 @@ import { TIMEOUTS } from "../config/cache";
 import type { AppError } from "../types";
 import { SourceError } from "../utils/errors";
 import { logger } from "../utils/logger";
+import { withAuthRetry } from "../utils/retry";
 import { source } from "./source";
 import {
   buildLocalPlaylist,
@@ -173,8 +174,16 @@ async function fetchBytes(url: string, headers: Record<string, string>, signal: 
   }
 }
 
-async function pickStream(target: EpisodeTarget): Promise<{ url: string; headers: Record<string, string> }> {
-  const servers = await source.getEpisodeServers(target.slug, target.number);
+async function pickStream(
+  target: EpisodeTarget,
+  signal: AbortSignal,
+): Promise<{ url: string; headers: Record<string, string> }> {
+  // Downloads go through the same ladder as playback: a session that expired
+  // while the app sat in the background must not turn a download into an error
+  const servers = await withAuthRetry(
+    () => source.getEpisodeServers(target.slug, target.number, { signal }),
+    { signal, tag: "download" },
+  );
   if (servers.length === 0) throw new SourceError("No hay servidor disponible", "VIDEO_ERROR");
   // A requested language is not negotiable: downloading another audio track
   // under that label would be a silent lie to the user
@@ -183,7 +192,10 @@ async function pickStream(target: EpisodeTarget): Promise<{ url: string; headers
     throw new SourceError(`No hay servidor en ${target.language} para este episodio`, "VIDEO_ERROR");
   }
 
-  const stream = await source.resolveStreamUrl(server.url);
+  const stream = await withAuthRetry(
+    () => source.resolveStreamUrl(server.url, { signal }),
+    { signal, tag: "download" },
+  );
   if (stream == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
   return { url: stream.url, headers: stream.headers ?? {} };
 }
@@ -248,7 +260,7 @@ export async function downloadEpisode(
   signal: AbortSignal,
   options: { resume?: boolean } = {},
 ): Promise<EpisodeDownloadResult> {
-  const stream = await pickStream(target);
+  const stream = await pickStream(target, signal);
   logger.info("download", `Resolving playlist for ${target.slug} ep ${target.number}`);
   const body = await fetchText(stream.url, stream.headers, signal);
   const playlist = parseMediaPlaylist(body, stream.url);
