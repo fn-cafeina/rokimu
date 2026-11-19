@@ -9,6 +9,10 @@ import {
 import { storage } from "../utils/storage";
 import { logger } from "../utils/logger";
 import { persistWithRollback } from "../utils/history";
+import { downloadKey, type DownloadStatus, type QueuedEntry } from "../utils/downloadQueue";
+
+export { downloadKey };
+export type { DownloadStatus };
 
 export const DOWNLOADS_KEY = "downloads_index";
 export const DOWNLOAD_CONCURRENCY_KEY = "downloads_concurrency";
@@ -17,15 +21,7 @@ export const MIN_DOWNLOAD_CONCURRENCY = 1;
 export const MAX_DOWNLOAD_CONCURRENCY = 3;
 export const DEFAULT_DOWNLOAD_CONCURRENCY = 1;
 
-export type DownloadStatus = "queued" | "downloading" | "done" | "error";
-
-export interface DownloadEntry {
-  slug: string;
-  number: string;
-  title: string;
-  image: string;
-  language: string | null;
-  status: DownloadStatus;
+export interface DownloadEntry extends QueuedEntry {
   segmentsDone: number;
   segmentsTotal: number;
   bytes: number;
@@ -48,9 +44,6 @@ interface DownloadsState {
   setConcurrency: (value: number) => Promise<void>;
 }
 
-export function downloadKey(slug: string, number: string, language: string | null): string {
-  return `${slug}_${number}_${language ?? "default"}`;
-}
 
 /** Every entry of one episode, whatever language it belongs to. */
 export function entriesForEpisode(
