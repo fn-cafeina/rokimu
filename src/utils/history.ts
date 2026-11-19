@@ -14,17 +14,6 @@ export async function persistWithRollback(
   }
 }
 
-export function prependDedup<T>(list: T[], item: T, max: number, dedupKey?: keyof T): T[] {
-  const filtered = dedupKey != null
-    ? list.filter(i => i[dedupKey] !== item[dedupKey])
-    : list.filter(i => i !== item);
-  return [item, ...filtered].slice(0, max);
-}
-
-export function removeBy<T>(list: T[], predicate: (item: T) => boolean): T[] {
-  return list.filter(predicate);
-}
-
 export function makeHistoryEntry(params: {
   title: string; image: string; url: string; number: string;
   progress?: number | null; duration?: number | null;
