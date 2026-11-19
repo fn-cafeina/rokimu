@@ -1,4 +1,4 @@
-import type { AnimeDetail } from "../types";
+import type { AnimeDetail } from "@/types";
 import { isAnimeDetail } from "./detailShape";
 import { logger } from "./logger";
 import { storage } from "./storage";

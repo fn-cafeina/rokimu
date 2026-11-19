@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useSearchStore } from "../stores/searchStore";
-import { errorFor, isPendingFor } from "../utils/resource";
+import { useSearchStore } from "@/stores/searchStore";
+import { errorFor, isPendingFor } from "@/utils/resource";
 import { useDebounce } from "./useDebounce";
 
 // The source site rejects queries shorter than 3 characters

@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { storage } from "../utils/storage";
-import { logger } from "../utils/logger";
+import { storage } from "@/utils/storage";
+import { logger } from "@/utils/logger";
 
 export const EPISODE_ORDER_KEY = "episode_order";
 

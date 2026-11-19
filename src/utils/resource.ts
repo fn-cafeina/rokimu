@@ -1,4 +1,4 @@
-import type { AppError } from "../types";
+import type { AppError } from "@/types";
 import { isCancelled, toAppError } from "./errors";
 import { logger } from "./logger";
 

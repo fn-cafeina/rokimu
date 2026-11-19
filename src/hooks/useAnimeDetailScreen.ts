@@ -1,23 +1,23 @@
 import { useCallback, useMemo, useState } from "react";
 import { Alert } from "react-native";
-import type { AppError, Episode, VideoServer } from "../types";
-import { usePlayerStore } from "../stores/playerStore";
-import { useSettingsStore } from "../stores/settingsStore";
-import { useHistoryStore } from "../stores/historyStore";
+import type { AppError, Episode, VideoServer } from "@/types";
+import { usePlayerStore } from "@/stores/playerStore";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { useHistoryStore } from "@/stores/historyStore";
 import { useAnimeData } from "./useAnimeData";
 import { usePersistedRange } from "./useAnimeDetail";
 import { computeEpisodePagination } from "./episodeHelpers";
-import { errorFor, isLoadingFor } from "../utils/resource";
-import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "../utils/history";
-import { navigateToPlayer } from "../utils/navigation";
+import { errorFor, isLoadingFor } from "@/utils/resource";
+import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "@/utils/history";
+import { navigateToPlayer } from "@/utils/navigation";
 import {
   downloadKey,
   entriesForEpisode,
   useDownloadsStore,
   type DownloadEntry,
-} from "../stores/downloadsStore";
+} from "@/stores/downloadsStore";
 import { useNetworkStatus } from "./useNetworkStatus";
-import type { EpisodeSheetRow } from "../components/AnimeEpisodeModal";
+import type { EpisodeSheetRow } from "@/components/AnimeEpisodeModal";
 
 const NO_ENTRIES: Record<string, DownloadEntry> = {};
 

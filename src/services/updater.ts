@@ -1,7 +1,7 @@
 import { File, Paths } from "expo-file-system";
 import { startActivityAsync, ActivityAction } from "expo-intent-launcher";
 import { Platform } from "react-native";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
 
 const APK_FILENAME = "rokimu-update.apk";
 const DOWNLOAD_TIMEOUT_MS = 10 * 60 * 1000;

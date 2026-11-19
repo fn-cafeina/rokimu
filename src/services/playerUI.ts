@@ -1,7 +1,7 @@
 import { NavigationBar } from "expo-navigation-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { StatusBar } from "react-native";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
 
 // True while the player owns the screen orientation; foreground repairs must
 // not stomp its landscape lock

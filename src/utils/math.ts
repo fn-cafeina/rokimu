@@ -1,4 +1,4 @@
-import { TIMEOUTS } from "../config/cache";
+import { TIMEOUTS } from "@/config/cache";
 
 export function calcProgress(progress?: number | null, duration?: number | null): number {
   if (progress != null && duration != null && duration > 0) {

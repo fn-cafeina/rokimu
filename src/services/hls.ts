@@ -1,5 +1,5 @@
 import { cbc } from "@noble/ciphers/aes.js";
-import { SourceError } from "../utils/errors";
+import { SourceError } from "@/utils/errors";
 
 export interface ByteRange {
   length: number;

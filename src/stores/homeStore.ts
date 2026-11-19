@@ -1,10 +1,10 @@
 import { create } from "zustand";
-import { source } from "../services/source";
-import { loadCached } from "../utils/cache";
-import { withAuthRetry } from "../utils/retry";
-import { ResourceRunner, resourceInitialState, type ResourceState } from "../utils/resource";
-import { CACHE_PREFIXES, CACHE_TTL } from "../config/cache";
-import type { HomeData } from "../types";
+import { source } from "@/services/source";
+import { loadCached } from "@/utils/cache";
+import { withAuthRetry } from "@/utils/retry";
+import { ResourceRunner, resourceInitialState, type ResourceState } from "@/utils/resource";
+import { CACHE_PREFIXES, CACHE_TTL } from "@/config/cache";
+import type { HomeData } from "@/types";
 
 export const HOME_KEY = "home";
 

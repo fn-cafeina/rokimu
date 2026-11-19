@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useDownloadsStore } from "../stores/downloadsStore";
-import { useSavedStore } from "../stores/savedStore";
-import type { AnimeDetail } from "../types";
-import { loadAnimeSnapshot, saveAnimeSnapshot } from "../utils/animeSnapshot";
-import { hasDownloadFor } from "../utils/downloadQueue";
-import { logger } from "../utils/logger";
+import { useDownloadsStore } from "@/stores/downloadsStore";
+import { useSavedStore } from "@/stores/savedStore";
+import type { AnimeDetail } from "@/types";
+import { loadAnimeSnapshot, saveAnimeSnapshot } from "@/utils/animeSnapshot";
+import { hasDownloadFor } from "@/utils/downloadQueue";
+import { logger } from "@/utils/logger";
 
 /** A library anime, or one with a downloaded episode, is worth having offline. */
 export function isWorthKeepingOffline(slug: string): boolean {

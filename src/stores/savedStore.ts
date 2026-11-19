@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import type { Anime } from "../types";
-import { persistWithRollback } from "../utils/history";
-import { storage } from "../utils/storage";
-import { forgetAnimeSnapshot } from "../utils/animeSnapshot";
-import { hasDownloadFor } from "../utils/downloadQueue";
+import type { Anime } from "@/types";
+import { persistWithRollback } from "@/utils/history";
+import { storage } from "@/utils/storage";
+import { forgetAnimeSnapshot } from "@/utils/animeSnapshot";
+import { hasDownloadFor } from "@/utils/downloadQueue";
 import { useDownloadsStore } from "./downloadsStore";
 
 export const SAVED_KEY = "saved_animes";

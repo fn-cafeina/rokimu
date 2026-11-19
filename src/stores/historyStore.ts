@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import type { HistoryItem } from "../types";
-import { logger } from "../utils/logger";
-import { storage } from "../utils/storage";
+import type { HistoryItem } from "@/types";
+import { logger } from "@/utils/logger";
+import { storage } from "@/utils/storage";
 
 export const HISTORY_KEY = "last_viewed";
 

@@ -1,8 +1,8 @@
-import { TIMEOUTS } from "../config/cache";
-import { SOURCE_CONFIG, LANGUAGE_MAP } from "../config/source";
-import { logger } from "../utils/logger";
-import { SourceError } from "../utils/errors";
-import { backoffDelay } from "../utils/math";
+import { TIMEOUTS } from "@/config/cache";
+import { SOURCE_CONFIG, LANGUAGE_MAP } from "@/config/source";
+import { logger } from "@/utils/logger";
+import { SourceError } from "@/utils/errors";
+import { backoffDelay } from "@/utils/math";
 import { sessionManager } from "./session";
 import { HtmlParser, cleanTitle, extractJson, isChallengeHtml } from "./parsers";
 import { buildHeaders, isSourceUrl } from "./requestHeaders";
@@ -12,7 +12,7 @@ import type {
   HomeData,
   VideoServer,
   StreamUrlResult,
-} from "../types";
+} from "@/types";
 
 
 interface SessionResponse {

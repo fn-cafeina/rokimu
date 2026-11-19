@@ -1,8 +1,8 @@
-import { SOURCE_CONFIG } from "../config/source";
-import type { ISession } from "../types";
-import { logger } from "../utils/logger";
-import { SourceError } from "../utils/errors";
-import { storage } from "../utils/storage";
+import { SOURCE_CONFIG } from "@/config/source";
+import type { ISession } from "@/types";
+import { logger } from "@/utils/logger";
+import { SourceError } from "@/utils/errors";
+import { storage } from "@/utils/storage";
 import { mergeCookies } from "./cookies";
 import { webViewBridge } from "./webview";
 

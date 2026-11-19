@@ -1,11 +1,11 @@
 import { create } from "zustand";
-import { source } from "../services/source";
-import { loadCached } from "../utils/cache";
-import { withAuthRetry } from "../utils/retry";
-import { SourceError } from "../utils/errors";
-import { ResourceRunner, resourceInitialState, type ResourceState } from "../utils/resource";
-import { CACHE_PREFIXES, CACHE_TTL } from "../config/cache";
-import type { AnimeDetail } from "../types";
+import { source } from "@/services/source";
+import { loadCached } from "@/utils/cache";
+import { withAuthRetry } from "@/utils/retry";
+import { SourceError } from "@/utils/errors";
+import { ResourceRunner, resourceInitialState, type ResourceState } from "@/utils/resource";
+import { CACHE_PREFIXES, CACHE_TTL } from "@/config/cache";
+import type { AnimeDetail } from "@/types";
 
 interface DetailsState {
   resource: ResourceState<AnimeDetail>;

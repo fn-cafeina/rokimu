@@ -1,4 +1,4 @@
-import type { AppError, AppErrorType } from "../types";
+import type { AppError, AppErrorType } from "@/types";
 
 export class SourceError extends Error implements AppError {
   type: AppErrorType;

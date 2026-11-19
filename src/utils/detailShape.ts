@@ -1,4 +1,4 @@
-import type { AnimeDetail, AnimeRelations, Episode, RelatedAnime } from "../types";
+import type { AnimeDetail, AnimeRelations, Episode, RelatedAnime } from "@/types";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value != null;

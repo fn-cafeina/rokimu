@@ -1,13 +1,13 @@
 import { create } from "zustand";
-import { source, type RawSearchItem } from "../services/source";
-import { cleanTitle } from "../services/parsers";
-import { loadCached } from "../utils/cache";
-import { withAuthRetry } from "../utils/retry";
-import { ResourceRunner, resourceInitialState, type ResourceState } from "../utils/resource";
-import { logger } from "../utils/logger";
-import { CACHE_PREFIXES, CACHE_TTL } from "../config/cache";
-import { TMDB_IMAGE_BASE } from "../config/source";
-import type { Anime } from "../types";
+import { source, type RawSearchItem } from "@/services/source";
+import { cleanTitle } from "@/services/parsers";
+import { loadCached } from "@/utils/cache";
+import { withAuthRetry } from "@/utils/retry";
+import { ResourceRunner, resourceInitialState, type ResourceState } from "@/utils/resource";
+import { logger } from "@/utils/logger";
+import { CACHE_PREFIXES, CACHE_TTL } from "@/config/cache";
+import { TMDB_IMAGE_BASE } from "@/config/source";
+import type { Anime } from "@/types";
 
 // One cache entry per query.
 // The query itself is the key: collapsing punctuation merged distinct queries

@@ -1,23 +1,23 @@
 import Constants from "expo-constants";
 import NetInfo from "@react-native-community/netinfo";
 import { create } from "zustand";
-import { TIMEOUTS } from "../config/cache";
-import { storage } from "../utils/storage";
-import { logger } from "../utils/logger";
-import { SourceError } from "../utils/errors";
-import { EMPTY_CHECK, parseStoredCheck, shouldCheck, type StoredCheck } from "../utils/updateCheck";
+import { TIMEOUTS } from "@/config/cache";
+import { storage } from "@/utils/storage";
+import { logger } from "@/utils/logger";
+import { SourceError } from "@/utils/errors";
+import { EMPTY_CHECK, parseStoredCheck, shouldCheck, type StoredCheck } from "@/utils/updateCheck";
 import {
   ResourceRunner,
   resourceInitialState,
   type ResourceState,
-} from "../utils/resource";
+} from "@/utils/resource";
 import {
   downloadApkWithProgress,
   installApk,
   cleanupOldApk,
   openInstallPermissionSettings,
   type DownloadProgress,
-} from "../services/updater";
+} from "@/services/updater";
 
 export const UPDATE_CHECK_KEY = "update_check_enabled";
 const INSTALL_PERMISSION_KEY = "install_permission_granted";

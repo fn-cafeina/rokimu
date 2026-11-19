@@ -1,18 +1,18 @@
 import { create } from "zustand";
-import { source } from "../services/source";
-import { CACHE_PREFIXES, CACHE_TTL } from "../config/cache";
-import { loadCached, resolveStreamCached, invalidateCachedStream } from "../utils/cache";
-import { storage } from "../utils/storage";
-import { logger } from "../utils/logger";
-import { SourceError, isAuthError, isCancelled, toAppError } from "../utils/errors";
-import { withAuthRetry } from "../utils/retry";
+import { source } from "@/services/source";
+import { CACHE_PREFIXES, CACHE_TTL } from "@/config/cache";
+import { loadCached, resolveStreamCached, invalidateCachedStream } from "@/utils/cache";
+import { storage } from "@/utils/storage";
+import { logger } from "@/utils/logger";
+import { SourceError, isAuthError, isCancelled, toAppError } from "@/utils/errors";
+import { withAuthRetry } from "@/utils/retry";
 import {
   ResourceRunner,
   resourceInitialState,
   type LoadOutcome,
   type ResourceState,
-} from "../utils/resource";
-import type { AppError, StreamUrlResult, VideoServer } from "../types";
+} from "@/utils/resource";
+import type { AppError, StreamUrlResult, VideoServer } from "@/types";
 
 export const STREAM_KEY = "stream";
 

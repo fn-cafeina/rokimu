@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { useDetailsStore } from "../stores/detailsStore";
-import { deriveView, errorFor, isLoadingFor, type ResourceView } from "../utils/resource";
+import { useDetailsStore } from "@/stores/detailsStore";
+import { deriveView, errorFor, isLoadingFor, type ResourceView } from "@/utils/resource";
 import { useAnimeSnapshot } from "./useAnimeSnapshot";
 
 export function useAnimeData(slug: string) {

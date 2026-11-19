@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { storage } from "../utils/storage";
-import { logger } from "../utils/logger";
+import { storage } from "@/utils/storage";
+import { logger } from "@/utils/logger";
 
 /** One remembered episode range per anime, pruned at boot like saved detail. */
 export const RANGE_KEY_PREFIX = "range_";

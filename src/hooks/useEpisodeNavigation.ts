@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import type { VideoPlayer } from "expo-video";
-import { usePlayerStore } from "../stores/playerStore";
-import { useHistoryStore } from "../stores/historyStore";
-import { downloadedForEpisode, useDownloadsStore } from "../stores/downloadsStore";
-import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "../utils/history";
+import { usePlayerStore } from "@/stores/playerStore";
+import { useHistoryStore } from "@/stores/historyStore";
+import { downloadedForEpisode, useDownloadsStore } from "@/stores/downloadsStore";
+import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "@/utils/history";
 
 export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, animeImage: string) {
   const lastLanguage = usePlayerStore((s) => s.lastLanguage);

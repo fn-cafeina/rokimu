@@ -5,10 +5,10 @@ import {
   isEpisodeDownloaded,
   toDownloadError,
   type EpisodeTarget,
-} from "../services/downloader";
-import { storage } from "../utils/storage";
-import { logger } from "../utils/logger";
-import { downloadKey, isWaiting, resumeTargets, type DownloadStatus, type QueuedEntry } from "../utils/downloadQueue";
+} from "@/services/downloader";
+import { storage } from "@/utils/storage";
+import { logger } from "@/utils/logger";
+import { downloadKey, isWaiting, resumeTargets, type DownloadStatus, type QueuedEntry } from "@/utils/downloadQueue";
 
 export { downloadKey };
 export type { DownloadStatus };

@@ -1,7 +1,7 @@
 import { logger } from "./logger";
 import { isAuthError, toAppError } from "./errors";
 import { backoffDelay } from "./math";
-import { refreshSession } from "../services/session";
+import { refreshSession } from "@/services/session";
 
 interface WithAuthRetryOptions {
   /** Optional caller signal for cooperative abort between attempts */

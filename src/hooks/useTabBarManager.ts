@@ -1,6 +1,6 @@
 import { useCallback, useRef } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-import { useUIStore } from "../stores/uiStore";
+import { useUIStore } from "@/stores/uiStore";
 
 export function useTabBarManager(options: { threshold?: number; autoReset?: boolean } = {}) {
   const { threshold = 8, autoReset = true } = options;

@@ -1,4 +1,4 @@
-import type { HistoryItem } from "../types";
+import type { HistoryItem } from "@/types";
 import { logger } from "./logger";
 
 export async function persistWithRollback(

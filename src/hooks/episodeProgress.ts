@@ -1,6 +1,6 @@
-import type { Episode, HistoryItem } from "../types";
-import { calcProgress } from "../utils/math";
-import { findHistoryEntry } from "../utils/history";
+import type { Episode, HistoryItem } from "@/types";
+import { calcProgress } from "@/utils/math";
+import { findHistoryEntry } from "@/utils/history";
 
 /** Share of an episode that counts as watched, matching the row strike. */
 export const WATCHED_THRESHOLD = 0.9;

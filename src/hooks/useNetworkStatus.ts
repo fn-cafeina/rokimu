@@ -1,6 +1,6 @@
 import NetInfo, { type NetInfoState } from "@react-native-community/netinfo";
 import { useCallback, useEffect, useState } from "react";
-import { logger } from "../utils/logger";
+import { logger } from "@/utils/logger";
 
 export type ConnectionType = "wifi" | "cellular" | "none" | "unknown" | null;
 

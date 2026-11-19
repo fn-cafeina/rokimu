@@ -1,6 +1,6 @@
 import { gcm } from "@noble/ciphers/aes.js";
 import { bytesToUtf8 } from "@noble/ciphers/utils.js";
-import { SourceError, isCancelled } from "../utils/errors";
+import { SourceError, isCancelled } from "@/utils/errors";
 
 interface PlaybackData {
   algorithm: string;

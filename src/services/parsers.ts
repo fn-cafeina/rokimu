@@ -1,6 +1,6 @@
-import type { Anime, AnimeRelations, Episode } from "../types";
-import { TMDB_IMAGE_BASE } from "../config/source";
-import { logger } from "../utils/logger";
+import type { Anime, AnimeRelations, Episode } from "@/types";
+import { TMDB_IMAGE_BASE } from "@/config/source";
+import { logger } from "@/utils/logger";
 
 export function sanitizeTitle(title: string): string {
   return title

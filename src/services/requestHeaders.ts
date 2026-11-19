@@ -1,4 +1,4 @@
-import type { ISession } from "../types";
+import type { ISession } from "@/types";
 
 const ACCEPT =
   "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8";

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import type { Episode, HistoryItem } from "../types";
+import type { Episode, HistoryItem } from "@/types";
 import { collectEpisodeProgress, isWatched, pickCtaEpisode } from "./episodeProgress";
 
 const SLUG = "naruto";

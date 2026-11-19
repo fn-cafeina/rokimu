@@ -1,4 +1,4 @@
-import type { Episode, EpisodeRange } from "../types";
+import type { Episode, EpisodeRange } from "@/types";
 
 export function orderEpisodes(episodes: Episode[]): Episode[] {
   return [...episodes].sort((a, b) => {

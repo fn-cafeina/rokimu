@@ -1,9 +1,9 @@
-import type { CacheEntry, StreamUrlResult } from "../types";
-import { CACHE_PREFIXES, CACHE_TTL, LIMITS } from "../config/cache";
+import type { CacheEntry, StreamUrlResult } from "@/types";
+import { CACHE_PREFIXES, CACHE_TTL, LIMITS } from "@/config/cache";
 import { storage } from "./storage";
 import { logger } from "./logger";
 import { isAuthError, isCancelled, CancelledError, SourceError } from "./errors";
-import { source } from "../services/source";
+import { source } from "@/services/source";
 import { ANIME_SNAPSHOT_PREFIX } from "./animeSnapshot";
 
 /**
