@@ -131,7 +131,6 @@ async function runDownload(input: DownloadInput, resume: boolean): Promise<void>
     );
     updateEntry(key, {
       status: "done",
-      language: result.language,
       bytes: result.bytes,
       segmentsTotal: result.segmentsTotal,
       segmentsDone: result.segmentsTotal,

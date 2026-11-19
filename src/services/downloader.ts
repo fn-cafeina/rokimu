@@ -21,7 +21,7 @@ export const PLAYLIST_FILE = "index.m3u8";
 export interface EpisodeTarget {
   slug: string;
   number: string;
-  /** Preferred server language; falls back to the first server. */
+  /** Server language. Without one, the first server is used and the folder is "default". */
   language?: string | null;
 }
 
@@ -34,7 +34,8 @@ export interface EpisodeDownloadProgress {
 export interface EpisodeDownloadResult {
   dirUri: string;
   playlistUri: string;
-  language: string;
+  /** Folder language: the requested one, so the entry key and the disk agree. */
+  language: string | null;
   bytes: number;
   segmentsTotal: number;
 }
@@ -111,9 +112,12 @@ async function fetchBytes(url: string, headers: Record<string, string>, signal: 
 async function pickStream(target: EpisodeTarget): Promise<{ url: string; headers: Record<string, string>; language: string }> {
   const servers = await source.getEpisodeServers(target.slug, target.number);
   if (servers.length === 0) throw new SourceError("No hay servidor disponible", "VIDEO_ERROR");
-  const server =
-    (target.language != null ? servers.find((s) => s.language === target.language) : null) ?? servers[0];
-  if (server == null) throw new SourceError("No hay servidor disponible", "VIDEO_ERROR");
+  // A requested language is not negotiable: downloading another audio track
+  // under that label would be a silent lie to the user
+  const server = target.language != null ? servers.find((s) => s.language === target.language) : servers[0];
+  if (server == null) {
+    throw new SourceError(`No hay servidor en ${target.language} para este episodio`, "VIDEO_ERROR");
+  }
 
   const stream = await source.resolveStreamUrl(server.url);
   if (stream == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
@@ -188,10 +192,14 @@ export async function downloadEpisode(
     throw new SourceError("El playlist no tiene segmentos", "VIDEO_ERROR");
   }
 
-  const dir = episodeDirectory(target.slug, target.number, stream.language);
+  // The folder takes the language the caller asked for, which is the same value
+  // the entry key is built from. Falling back to another language here left the
+  // key, the folder and the delete path pointing at different places.
+  const language = target.language ?? null;
+  const dir = episodeDirectory(target.slug, target.number, language);
   // Only an interrupted run resumes. Anything else starts from an empty folder,
   // so segments from a dead attempt can never mix into the new playlist.
-  if (options.resume !== true) deleteEpisodeDownload(target.slug, target.number, stream.language);
+  if (options.resume !== true) deleteEpisodeDownload(target.slug, target.number, language);
   dir.create({ intermediates: true, idempotent: true });
 
   const init = playlist.initSegment != null
@@ -261,7 +269,7 @@ export async function downloadEpisode(
   return {
     dirUri: dir.uri,
     playlistUri: playlistFile.uri,
-    language: stream.language,
+    language,
     bytes: bytesDone,
     segmentsTotal,
   };
