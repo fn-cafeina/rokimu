@@ -119,7 +119,7 @@ export const AnimeDetailsHeader = memo(
               style={{ backgroundColor: ACCENT_COLOR }}
             >
               <Text className="text-sm font-semibold text-neutral-950">
-                {`${continuing ? "Continuar" : "Ver"} Episodio ${ctaEpisode.number}`}
+                {continuing ? `Continuar Episodio ${ctaEpisode.number}` : "Ver primer episodio"}
               </Text>
             </AnimatedPressable>
           </View>
