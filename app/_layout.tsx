@@ -124,7 +124,10 @@ function RootInner() {
           statusBarStyle: "light",
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false, orientation: "portrait" }} />
+        {/* animation none: app/index.tsx redirects / to the tabs group, and the
+            default slide_from_right made that boot redirect look like a sideways
+            entry animation */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, orientation: "portrait", animation: "none" }} />
         <Stack.Screen name="anime/[slug]" options={{ headerShown: false, orientation: "portrait" }} />
         {/* player owns the screen orientation via setupImmersiveMode; declaring
             landscape here keeps RNScreens from re-applying UNSPECIFIED over the
