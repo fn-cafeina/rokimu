@@ -1,27 +1,11 @@
 import "../global.css";
-import { WebViewWorker } from "@/components/WebViewWorker";
-import { useSettingsStore, EPISODE_ORDER_KEY } from "@/stores/settingsStore";
-import { useUpdateStore, UPDATE_CHECK_KEY } from "@/stores/updateStore";
 import { UpdateModal } from "@/components/UpdateModal";
-import { useHistoryStore, HISTORY_KEY } from "@/stores/historyStore";
-import { useSavedStore, SAVED_KEY } from "@/stores/savedStore";
-import {
-  useDownloadsStore,
-  DOWNLOADS_KEY,
-  DOWNLOAD_CONCURRENCY_KEY,
-  DEFAULT_DOWNLOAD_CONCURRENCY,
-  type DownloadEntry,
-} from "@/stores/downloadsStore";
+import { WebViewWorker } from "@/components/WebViewWorker";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { isWorthKeepingOffline } from "@/hooks/useAnimeSnapshot";
-import { prunePersistedRanges } from "@/hooks/useAnimeDetail";
-import { sessionManager } from "@/services/session";
-import { resetToPortrait, isPlayerActive } from "@/services/playerUI";
-import { storage } from "@/utils/storage";
+import { bootApp } from "@/services/boot";
+import { isPlayerActive, resetToPortrait } from "@/services/playerUI";
+import { useUpdateStore } from "@/stores/updateStore";
 import { logger } from "@/utils/logger";
-import { pruneExpiredCache } from "@/utils/cache";
-import { pruneAnimeSnapshots } from "@/utils/animeSnapshot";
-import type { Anime, HistoryItem } from "@/types";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
@@ -29,17 +13,6 @@ import { AppState, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 const RECONNECT_UPDATE_DELAY = 2000;
-const UPDATE_CHECK_ATTEMPTS = 3;
-const UPDATE_CHECK_RETRY_DELAY = 2000;
-
-function runUpdateCheckWithRetry(attempt = 1): void {
-  void useUpdateStore.getState().checkForUpdates().then((ok) => {
-    const { updateCheckEnabled } = useUpdateStore.getState();
-    if (!ok && updateCheckEnabled !== false && attempt < UPDATE_CHECK_ATTEMPTS) {
-      setTimeout(() => runUpdateCheckWithRetry(attempt + 1), UPDATE_CHECK_RETRY_DELAY * attempt);
-    }
-  });
-}
 
 function RootInner() {
   const [ready, setReady] = useState(false);
@@ -74,41 +47,11 @@ function RootInner() {
 
   useEffect(() => {
     let cancelled = false;
-    const init = async () => {
-      await resetToPortrait();
-      // Fire and forget: the sweep is IO over every stored key, nothing waits on it
-      void pruneExpiredCache();
-      await sessionManager.initialize();
-      const [history, saved, order, updateCheckEnabled] = await Promise.all([
-        storage.get<HistoryItem[]>(HISTORY_KEY),
-        storage.get<Anime[]>(SAVED_KEY),
-        storage.get<"asc" | "desc">(EPISODE_ORDER_KEY),
-        storage.get<boolean>(UPDATE_CHECK_KEY),
-      ]);
-      const [downloads, downloadConcurrency] = await Promise.all([
-        storage.get<DownloadEntry[]>(DOWNLOADS_KEY),
-        storage.get<number>(DOWNLOAD_CONCURRENCY_KEY),
-      ]);
-      useHistoryStore.getState().initialize(history ?? []);
-      useSavedStore.getState().initialize(saved ?? []);
-      useSettingsStore.getState().initialize(order ?? "asc");
-      useUpdateStore.getState().initialize(updateCheckEnabled !== false);
-      useDownloadsStore.getState().initialize(downloads ?? [], downloadConcurrency ?? DEFAULT_DOWNLOAD_CONCURRENCY);
-      // Stored detail and episode ranges outlive the cache, so the sweep waits
-      // for the lists that decide what is still worth keeping offline
-      void pruneAnimeSnapshots(isWorthKeepingOffline);
-      void prunePersistedRanges(isWorthKeepingOffline);
-      logger.info("lifecycle", "App boot complete");
-      if (!cancelled) setReady(true);
-
-      if (updateCheckEnabled !== false) {
-        runUpdateCheckWithRetry();
-      }
-    };
-    init().catch((error) => {
-      logger.error("lifecycle", "Initialization failed", error);
-      if (!cancelled) setReady(true);
-    });
+    bootApp()
+      .catch((error) => logger.error("lifecycle", "Initialization failed", error))
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
     return () => {
       cancelled = true;
     };
