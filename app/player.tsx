@@ -52,6 +52,9 @@ function PlayerContent() {
     // Exact seeks force re-decoding from the previous keyframe; a small tolerance lets
     // ExoPlayer snap to a nearby keyframe, making ±10s skips near-instant
     instance.seekTolerance = { toleranceBefore: 1, toleranceAfter: 1 };
+    // Drives the progress bar; polling the player from JS re-rendered the whole
+    // screen four times a second for the same value
+    instance.timeUpdateEventInterval = 0.5;
   });
 
   useEffect(() => {
@@ -84,10 +87,10 @@ function PlayerContent() {
   const nextEpisode = useMemo(() => (currentIdx < 0 || currentIdx >= episodes.length - 1 ? null : episodes[currentIdx + 1]), [episodes, currentIdx]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPlayState({ currentTime: player.currentTime, duration: player.duration, isPlaying: player.playing });
-    }, 250);
-    return () => clearInterval(interval);
+    const sub = player.addListener("timeUpdate", ({ currentTime }) => {
+      setPlayState((prev) => ({ ...prev, currentTime, duration: player.duration }));
+    });
+    return () => { sub.remove(); };
   }, [player]);
 
   const [nextEpisodeCountdown, setNextEpisodeCountdown] = useState<number | null>(null);
@@ -208,6 +211,7 @@ function PlayerContent() {
   useEffect(() => {
     const sub = player.addListener("playingChange", ({ isPlaying: playing }) => {
       if (playing) hasPlayedRef.current = true;
+      setPlayState((prev) => ({ ...prev, isPlaying: playing }));
     });
     return () => { sub.remove(); };
   }, [player]);
