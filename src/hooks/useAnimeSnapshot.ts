@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDownloadsStore } from "../stores/downloadsStore";
 import { useSavedStore } from "../stores/savedStore";
 import type { AnimeDetail } from "../types";
@@ -19,12 +19,11 @@ export function isWorthKeepingOffline(slug: string): boolean {
  * timeout, and rewritten on every successful load.
  */
 export function useAnimeSnapshot(slug: string, detail: AnimeDetail | null): AnimeDetail | null {
-  const saved = useSavedStore((s) => s.saved);
-  const entries = useDownloadsStore((s) => s.entries);
-  const keep = useMemo(
-    () => saved.some((item) => item.url === slug) || hasDownloadFor(Object.values(entries), slug),
-    [saved, entries, slug],
-  );
+  // Booleans, not the lists: a segment tick replaces the entries object and
+  // would repaint every screen that renders this hook
+  const saved = useSavedStore((s) => s.saved.some((item) => item.url === slug));
+  const downloaded = useDownloadsStore((s) => hasDownloadFor(Object.values(s.entries), slug));
+  const keep = saved || downloaded;
   // The slug travels with the payload so a copy for another anime is never shown
   const [loaded, setLoaded] = useState<{ slug: string; detail: AnimeDetail } | null>(null);
 

@@ -19,6 +19,8 @@ import {
 import { useNetworkStatus } from "./useNetworkStatus";
 import type { EpisodeSheetRow } from "../components/AnimeEpisodeModal";
 
+const NO_ENTRIES: Record<string, DownloadEntry> = {};
+
 export function useAnimeDetailScreen(slug: string) {
   const { anime, view, isLoading: isAnimeLoading, error, hasLoaded, refresh } = useAnimeData(slug);
   const resolveStream = usePlayerStore((s) => s.resolveStream);
@@ -29,7 +31,9 @@ export function useAnimeDetailScreen(slug: string) {
   const addToHistory = useHistoryStore((s) => s.addToHistory);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   const { isInternetReachable } = useNetworkStatus();
-  const entries = useDownloadsStore((s) => s.entries);
+  // The list only needs live progress while the sheet is open; outside it, a
+  // segment tick would repaint the whole detail screen for nothing
+  const entries = useDownloadsStore((s) => (selectedEpisode != null ? s.entries : NO_ENTRIES));
   const enqueue = useDownloadsStore((s) => s.enqueue);
   const cancel = useDownloadsStore((s) => s.cancel);
   const remove = useDownloadsStore((s) => s.remove);
