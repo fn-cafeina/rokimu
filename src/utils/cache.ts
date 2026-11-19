@@ -133,13 +133,15 @@ export function invalidateCachedStream(server: { url: string; id: string }): Pro
  */
 export async function resolveStreamCached(
   server: { url: string; id: string },
-  options: { force?: boolean } = {},
+  options: { force?: boolean; signal?: AbortSignal } = {},
 ): Promise<StreamUrlResult | null> {
   if (!options.force) {
     const cached = await getCachedStream(server);
     if (cached != null) return cached;
   }
-  const fresh = await source.resolveStreamUrl(server.url);
+  // The bridge and the extractor honour the caller signal, so leaving the
+  // player cancels the chain instead of letting it finish in the background
+  const fresh = await source.resolveStreamUrl(server.url, { signal: options.signal });
   if (fresh != null) void setCachedStream(server, fresh);
   return fresh;
 }

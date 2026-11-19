@@ -108,7 +108,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         withAuthRetry(
           async (attempt) => {
             try {
-              const fresh = await resolveStreamCached(server, { force: attempt > 0 });
+              const fresh = await resolveStreamCached(server, { force: attempt > 0, signal });
               if (fresh == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
               return fresh;
             } catch (error) {
@@ -116,7 +116,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
               logger.warn("stream", `Chain dead (${toAppError(error).type}), regenerating servers once`);
               const regenerated = await regenerateChain(ctx, signal);
               lastStreamServer = regenerated;
-              const fresh = await resolveStreamCached(regenerated);
+              const fresh = await resolveStreamCached(regenerated, { signal });
               if (fresh == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
               return fresh;
             }
