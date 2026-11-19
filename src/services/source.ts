@@ -14,7 +14,14 @@ import type {
 } from "../types";
 
 
-async function fetchWithSession(path: string, options: RequestInit = {}): Promise<Response> {
+interface SessionResponse {
+  ok: boolean;
+  status: number;
+  /** Body read under the same timeout as the request itself. */
+  body: string;
+}
+
+async function fetchWithSession(path: string, options: RequestInit = {}): Promise<SessionResponse> {
   // The real response owns the verdict: stored cookies go out as-is, and a
   // 403/challenge below enters the wash-and-retry ladder
   const session = await sessionManager.getSession();
@@ -81,6 +88,10 @@ async function fetchWithSession(path: string, options: RequestInit = {}): Promis
         await sessionManager.mergeSetCookies(setCookies);
       }
 
+      // The body is read here, with the timer still armed: a host that sends
+      // headers and then stops left every caller waiting forever
+      const body = await res.text();
+
       if (!res.ok) {
         logger.info("fetch", `HTTP ${res.status} for ${url}`);
 
@@ -105,19 +116,13 @@ async function fetchWithSession(path: string, options: RequestInit = {}): Promis
         // pages; route them into the session refresh ladder instead of
         // reporting a network error. Foreign hosts run their own challenges
         // that our wash cannot clear, so they are not session failures.
-        if (isSourceOrigin) {
-          try {
-            if (isChallengeHtml(await res.clone().text())) {
-              logger.info("fetch", `Challenge body on HTTP ${res.status}, entering ladder`);
-              throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
-            }
-          } catch (e: unknown) {
-            if (e instanceof SourceError) throw e;
-          }
+        if (isSourceOrigin && isChallengeHtml(body)) {
+          logger.info("fetch", `Challenge body on HTTP ${res.status}, entering ladder`);
+          throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
         }
       }
       logger.debug("fetch", `OK ${res.status} for ${url}`);
-      return res;
+      return { ok: res.ok, status: res.status, body };
     } catch (error) {
       if (error instanceof SourceError) {
         throw error;
@@ -149,9 +154,8 @@ const htmlParser = new HtmlParser();
 
 async function getHomeData(options?: { signal?: AbortSignal }): Promise<HomeData> {
   const homeEndpoint = SOURCE_CONFIG.homeEndpoint;
-  const res = await fetchWithSession(homeEndpoint, options ?? {});
-  if (!res.ok) throw new SourceError(`HTTP Error: ${res.status}`, "NETWORK_ERROR");
-  const html = await res.text();
+  const { ok, status, body: html } = await fetchWithSession(homeEndpoint, options ?? {});
+  if (!ok) throw new SourceError(`HTTP Error: ${status}`, "NETWORK_ERROR");
   const recent = htmlParser.parseCards(html);
   if (recent.length === 0) {
     if (isChallengeHtml(html)) throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
@@ -170,9 +174,11 @@ export interface RawSearchItem {
 // Raw search payload; the memory and storage caches both come from this one
 // endpoint call per query
 async function searchRaw(query: string, options?: { signal?: AbortSignal }): Promise<RawSearchItem[]> {
-  const res = await fetchWithSession(`/api/anime/search?q=${encodeURIComponent(query)}`, options ?? {});
-  if (!res.ok) throw new SourceError(`HTTP Error: ${res.status}`, "NETWORK_ERROR");
-  const text = await res.text();
+  const { ok, status, body: text } = await fetchWithSession(
+    `/api/anime/search?q=${encodeURIComponent(query)}`,
+    options ?? {},
+  );
+  if (!ok) throw new SourceError(`HTTP Error: ${status}`, "NETWORK_ERROR");
   let json: { data?: unknown };
   try {
     json = JSON.parse(text) as { data?: unknown };
@@ -186,10 +192,9 @@ async function searchRaw(query: string, options?: { signal?: AbortSignal }): Pro
 }
 
 async function getDetails(slug: string, options?: { signal?: AbortSignal }): Promise<AnimeDetail | null> {
-  const res = await fetchWithSession(`/anime/${slug}`, options ?? {});
-  if (res.status === 404) return null;
-  if (!res.ok) throw new SourceError(`HTTP Error: ${res.status}`, "NETWORK_ERROR");
-  const html = await res.text();
+  const { ok, status, body: html } = await fetchWithSession(`/anime/${slug}`, options ?? {});
+  if (status === 404) return null;
+  if (!ok) throw new SourceError(`HTTP Error: ${status}`, "NETWORK_ERROR");
   const detail = parseAnimeDetail(html, slug);
   if (isChallengeHtml(html) || (!detail.title && !detail.image && !detail.synopsis)) {
     throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
@@ -227,9 +232,8 @@ function parseAnimeDetail(html: string, slug: string): AnimeDetail {
 }
 
 async function getEpisodeServers(slug: string, number: string, options?: { signal?: AbortSignal }): Promise<VideoServer[]> {
-  const res = await fetchWithSession(`/ver/${slug}/${number}`, options ?? {});
-  if (!res.ok) throw new SourceError(`HTTP Error: ${res.status}`, "NETWORK_ERROR");
-  const html = await res.text();
+  const { ok, status, body: html } = await fetchWithSession(`/ver/${slug}/${number}`, options ?? {});
+  if (!ok) throw new SourceError(`HTTP Error: ${status}`, "NETWORK_ERROR");
   // Challenges can arrive as HTTP 200; without this the parse below reports
   // "No Delta servers" and the real cause hides behind an UNKNOWN error
   if (isChallengeHtml(html)) throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
@@ -273,9 +277,8 @@ async function resolveStreamUrl(videoUrl: string, options?: { signal?: AbortSign
   logger.debug("fetch", `Bridge URL: ${videoUrl.slice(0, 80)}`);
 
   logger.debug("fetch", "Fetching bridge page via fetchWithSession");
-  const res = await fetchWithSession(videoUrl, options ?? {});
-  if (!res.ok) throw new SourceError(`HTTP Error: ${res.status}`, "VIDEO_ERROR");
-  const html = await res.text();
+  const { ok, status, body: html } = await fetchWithSession(videoUrl, options ?? {});
+  if (!ok) throw new SourceError(`HTTP Error: ${status}`, "VIDEO_ERROR");
   const m = html.match(/<iframe[^>]*src="([^"]+)"[^>]*>/);
   if (!m) throw new SourceError("No iframe in bridge page", "PARSER_ERROR");
   const iframeUrl = m[1]!;
