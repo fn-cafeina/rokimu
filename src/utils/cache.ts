@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { logger } from "./logger";
 import { isAuthError, isCancelled, CancelledError, SourceError } from "./errors";
 import { source } from "../services/source";
+import { ANIME_SNAPSHOT_PREFIX } from "./animeSnapshot";
 
 /**
  * Read-through cache with one contract: return the payload, or throw.
@@ -85,7 +86,7 @@ export async function loadCached<T>(
  * 6MB AsyncStorage cap, so drop them before live writes start failing.
  */
 export async function pruneExpiredCache(): Promise<void> {
-  const keys = await storage.getAllKeys();
+  const keys = (await storage.getAllKeys()).filter(isCacheKey);
   const now = Date.now();
   await Promise.all(
     keys.map(async (key) => {
@@ -95,6 +96,15 @@ export async function pruneExpiredCache(): Promise<void> {
       }
     }),
   );
+}
+
+/**
+ * Only the cache namespaces carry an expiration. Everything else (saved detail,
+ * downloads, history) is data, and parsing it at every launch costs boot time.
+ */
+function isCacheKey(key: string): boolean {
+  if (key.startsWith(ANIME_SNAPSHOT_PREFIX)) return false;
+  return Object.values(CACHE_PREFIXES).some((prefix) => key === prefix || key.startsWith(`${prefix}_`));
 }
 
 // Shared resolved-stream cache used by resolveStreamCached
