@@ -111,6 +111,11 @@ function updateEntry(
 
 async function runDownload(input: DownloadInput, resume: boolean): Promise<void> {
   const key = downloadKey(input.slug, input.number, input.language ?? null);
+  const target = {
+    slug: input.slug,
+    number: input.number,
+    language: useDownloadsStore.getState().entries[key]?.language ?? null,
+  };
   const controller = new AbortController();
   controllers.set(key, controller);
   activeWorkers += 1;
@@ -118,7 +123,7 @@ async function runDownload(input: DownloadInput, resume: boolean): Promise<void>
 
   try {
     const result = await downloadEpisode(
-      { slug: input.slug, number: input.number, language: useDownloadsStore.getState().entries[key]?.language ?? null },
+      target,
       (progress) => {
         updateEntry(key, {
           segmentsDone: progress.segmentsDone,
@@ -148,6 +153,15 @@ async function runDownload(input: DownloadInput, resume: boolean): Promise<void>
   } finally {
     controllers.delete(key);
     activeWorkers -= 1;
+    // The cancel path deletes the folder while segments are still landing, so
+    // a cancelled worker cleans up after itself once it has stopped writing
+    if (controller.signal.aborted) {
+      try {
+        deleteEpisodeDownload(target.slug, target.number, target.language);
+      } catch (error) {
+        logger.warn("download", `Failed to delete files for ${key}`, error);
+      }
+    }
     persist(useDownloadsStore.getState().entries);
     pump();
   }
