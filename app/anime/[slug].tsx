@@ -15,6 +15,7 @@ import { EpisodeDownloadButton } from "@/components/ui/EpisodeDownloadButton";
 import { calcProgress } from "@/utils/math";
 import { TAB_BAR_OFFSET } from "@/utils/layout";
 import { orderEpisodes } from "@/hooks/episodeHelpers";
+import { WATCHED_THRESHOLD, collectEpisodeProgress, pickCtaEpisode } from "@/hooks/episodeProgress";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { ACCENT_COLOR } from "@/config/source";
@@ -35,22 +36,16 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   // Subscribed so returning from the player repaints the episode progress bars
   const lastViewed = useHistoryStore((s) => s.lastViewed);
 
-  const { resumeEpisode, firstEpisode, watchedCount } = useMemo(() => {
-    const episodes = anime?.episodes ?? [];
-    const ordered = orderEpisodes(episodes);
-    const withProgress = ordered
-      .map((episode) => ({ episode, entry: findHistoryEntry(lastViewed, slug as string, episode.number) }))
-      .filter(({ entry }) => entry != null && (entry.progress ?? 0) > 0 && (entry.duration ?? 0) > 0);
-    // Most recently played episode with real progress, not the highest one
-    const latest = withProgress.reduce<typeof withProgress[number] | null>(
-      (best, current) => (best == null || current.entry!.timestamp > best.entry!.timestamp ? current : best),
-      null,
-    );
-    const watched = withProgress.filter(({ entry }) => calcProgress(entry!.progress, entry!.duration) >= 0.9);
+  const { ctaEpisode, continuing, watchedCount } = useMemo(() => {
+    const ordered = orderEpisodes(anime?.episodes ?? []);
+    const progress = collectEpisodeProgress(ordered, lastViewed, slug as string);
+    const cta = pickCtaEpisode(ordered, progress);
     return {
-      resumeEpisode: latest?.episode ?? null,
-      firstEpisode: ordered[0] ?? null,
-      watchedCount: watched.length,
+      // Nothing played yet opens the first episode; something played with
+      // nothing left to watch hides the CTA instead of offering a rewatch
+      ctaEpisode: cta?.episode ?? (progress.length === 0 ? ordered[0] ?? null : null),
+      continuing: cta != null,
+      watchedCount: progress.filter((item) => item.ratio >= WATCHED_THRESHOLD).length,
     };
   }, [anime?.episodes, lastViewed, slug]);
 
@@ -84,8 +79,8 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                   setIsExpanded={setIsExpanded}
                   isAscending={isAscending}
                   toggleSort={() => void setEpisodeOrder(isAscending ? "desc" : "asc")}
-                  resumeEpisode={resumeEpisode}
-                  firstEpisode={firstEpisode}
+                  ctaEpisode={ctaEpisode}
+                  continuing={continuing}
                   onResume={handleEpisodePress}
                   watchedCount={watchedCount}
                 />

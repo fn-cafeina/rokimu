@@ -17,9 +17,10 @@ interface AnimeDetailsHeaderProps {
   setIsExpanded: (v: boolean) => void;
   isAscending: boolean;
   toggleSort: () => void;
-  /** Episode to resume; null when the user has no progress on this anime. */
-  resumeEpisode: Episode | null;
-  firstEpisode: Episode | null;
+  /** Episode the detail CTA opens; null hides the button. */
+  ctaEpisode: Episode | null;
+  /** True when the CTA continues a series already started. */
+  continuing: boolean;
   onResume: (episode: Episode) => void;
   watchedCount: number;
 }
@@ -37,8 +38,8 @@ export const AnimeDetailsHeader = memo(
     setIsExpanded,
     isAscending,
     toggleSort,
-    resumeEpisode,
-    firstEpisode,
+    ctaEpisode,
+    continuing,
     onResume,
     watchedCount,
   }: AnimeDetailsHeaderProps) => {
@@ -49,7 +50,6 @@ export const AnimeDetailsHeader = memo(
 
     const totalEpisodes = anime?.episodes.length ?? 0;
     const progressPct = totalEpisodes > 0 ? Math.min(100, Math.round((watchedCount / totalEpisodes) * 100)) : 0;
-    const ctaEpisode = resumeEpisode ?? firstEpisode;
 
     const relatedItems = useMemo(() => {
       if (relations == null) return null;
@@ -119,9 +119,7 @@ export const AnimeDetailsHeader = memo(
               style={{ backgroundColor: ACCENT_COLOR }}
             >
               <Text className="text-sm font-semibold text-neutral-950">
-                {resumeEpisode != null
-                  ? `Continuar Episodio ${resumeEpisode.number}`
-                  : `Ver Episodio ${ctaEpisode.number}`}
+                {`${continuing ? "Continuar" : "Ver"} Episodio ${ctaEpisode.number}`}
               </Text>
             </AnimatedPressable>
           </View>
