@@ -98,14 +98,16 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                     const historyEntry = findHistoryEntry(lastViewed, slug as string, item.number);
                     const hasProgress = historyEntry != null && (historyEntry.progress ?? 0) > 0 && (historyEntry.duration ?? 0) > 0;
                     const pct = hasProgress ? calcProgress(historyEntry.progress, historyEntry.duration) : 0;
-                    const isWatched = pct >= 0.9;
+                    const isWatched = pct >= WATCHED_THRESHOLD;
+                    // A finished episode fills the bar; the row itself stays plain,
+                    // so the bar is the only thing that reports the progress
                     const barProgress = isWatched ? historyEntry!.duration : historyEntry?.progress;
 
                     return (
                       <AnimatedPressable key={item.id} onPress={() => handleEpisodePress(item)}>
                         <View className="rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden">
                           <View className="flex-row items-center justify-between p-4">
-                            <Text className={`font-semibold ${isWatched ? "text-neutral-400 line-through" : "text-white"}`}>Episodio {item.number}</Text>
+                            <Text className="font-semibold text-white">Episodio {item.number}</Text>
                             <View className="flex-row items-center gap-4">
                               <EpisodeDownloadButton
                                 slug={slug as string}
