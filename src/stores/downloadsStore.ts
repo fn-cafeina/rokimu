@@ -228,12 +228,22 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
   },
 
   cancel: (key) => {
+    const entry = get().entries[key];
     controllers.get(key)?.abort();
     const index = queue.findIndex((item) => downloadKey(item.input.slug, item.input.number, item.input.language ?? null) === key);
     if (index >= 0) queue.splice(index, 1);
     const rest = withoutKey(get().entries, key);
     set({ entries: rest });
     persist(rest);
+    // Leaving the segments behind would hide them from the index and keep the
+    // bytes on disk forever; a cancelled episode is not worth keeping
+    if (entry != null) {
+      try {
+        deleteEpisodeDownload(entry.slug, entry.number, entry.language);
+      } catch (error) {
+        logger.warn("download", `Failed to delete files for ${key}`, error);
+      }
+    }
   },
 
   remove: async (key) => {
