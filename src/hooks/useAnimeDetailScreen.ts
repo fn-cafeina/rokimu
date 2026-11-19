@@ -21,7 +21,7 @@ import { useNetworkStatus } from "./useNetworkStatus";
 const NO_ENTRIES: Record<string, DownloadEntry> = {};
 
 export function useAnimeDetailScreen(slug: string) {
-  const { anime, view, isLoading: isAnimeLoading, error, hasLoaded, refresh } = useAnimeData(slug);
+  const { anime, view, isLoading: isAnimeLoading, isRefreshing, error, hasLoaded, refresh } = useAnimeData(slug);
   const resolveStream = usePlayerStore((s) => s.resolveStream);
   const serversResource = usePlayerStore((s) => s.servers);
   const fetchServers = usePlayerStore((s) => s.fetchServers);
@@ -202,6 +202,7 @@ export function useAnimeDetailScreen(slug: string) {
     anime,
     view,
     isAnimeLoading,
+    isRefreshing,
     error,
     hasLoaded,
     refresh,

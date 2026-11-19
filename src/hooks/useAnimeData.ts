@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDetailsStore } from "@/stores/detailsStore";
 import { deriveView, errorFor, isLoadingFor, type ResourceView } from "@/utils/resource";
 import { useAnimeSnapshot } from "./useAnimeSnapshot";
@@ -8,6 +8,9 @@ export function useAnimeData(slug: string) {
   const fetchDetails = useDetailsStore((s) => s.fetchDetails);
   // One auto-load per slug per screen mount; failures retry only on demand
   const attemptedSlugRef = useRef<string | null>(null);
+  // A pull is the only refresh the user started, so it is the only one the
+  // spinner should report; the auto refetch on re-entry runs behind content
+  const [pulled, setPulled] = useState(false);
 
   const live = resource.data != null && resource.dataKey === slug ? resource.data : null;
   const snapshot = useAnimeSnapshot(slug, live);
@@ -25,12 +28,18 @@ export function useAnimeData(slug: string) {
     void fetchDetails(slug);
   }, [slug, fetchDetails]);
 
+  const isLoading = isLoadingFor(resource, slug);
+
   return {
     anime,
     view,
-    isLoading: isLoadingFor(resource, slug),
+    isLoading,
+    isRefreshing: isLoading && pulled,
     error: errorFor(resource, slug),
     hasLoaded: anime != null,
-    refresh: () => void fetchDetails(slug, true),
+    refresh: () => {
+      setPulled(true);
+      void fetchDetails(slug, true);
+    },
   };
 }

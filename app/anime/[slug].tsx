@@ -27,9 +27,9 @@ import { useCrossfade } from "@/hooks/useCrossfade";
 const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   const { slug } = useLocalSearchParams();
   const {
-    anime, view, isAnimeLoading, error, rows, serverLoading, serverError, serverOffline, retryServers, setEpisodeOrder,
+    anime, view, isRefreshing, error, rows, serverLoading, serverError, serverOffline, retryServers, setEpisodeOrder,
     isExpanded, setIsExpanded, selectedEpisode, setSelectedEpisode,
-    hasLoaded, activeRangeIdx, setActiveRangeIdx, isRestoring,
+    activeRangeIdx, setActiveRangeIdx, isRestoring,
     ranges, visibleEpisodes, isAscending, handleEpisodePress, handleDownloadPress, refresh,
   } = useAnimeDetailScreen(slug as string);
 
@@ -69,7 +69,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
               <ScrollView
                 contentContainerStyle={{ paddingBottom: TAB_BAR_OFFSET }}
                 showsVerticalScrollIndicator={false}
-                refreshControl={<RefreshControl refreshing={hasLoaded && isAnimeLoading} onRefresh={refresh} tintColor={ACCENT_COLOR} />}
+                refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={ACCENT_COLOR} colors={[ACCENT_COLOR]} />}
               >
                 <DetailTopBar anime={anime} onBack={navigateBack} />
                 <AnimeDetailsHeader
