@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Alert } from "react-native";
-import type { AppError, Episode, VideoServer } from "@/types";
+import type { AppError, Episode, EpisodeSheetRow, VideoServer } from "@/types";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useHistoryStore } from "@/stores/historyStore";
@@ -17,7 +17,6 @@ import {
   type DownloadEntry,
 } from "@/stores/downloadsStore";
 import { useNetworkStatus } from "./useNetworkStatus";
-import type { EpisodeSheetRow } from "@/components/AnimeEpisodeModal";
 
 const NO_ENTRIES: Record<string, DownloadEntry> = {};
 

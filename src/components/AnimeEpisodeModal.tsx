@@ -2,23 +2,11 @@ import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { AppError } from "@/types";
+import type { AppError, EpisodeSheetRow } from "@/types";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ACCENT_COLOR } from "@/config/source";
-
-export interface EpisodeSheetRow {
-  key: string;
-  language: string;
-  /** Right-aligned status: Descargado, 42%, En cola */
-  hint: string;
-  icon: "download" | "trash" | "stop";
-  /** Row tap: play, from disk or from the network. */
-  onSelect: () => void;
-  /** Icon tap: download, delete or stop this language. */
-  onAction: () => void;
-}
 
 interface AnimeEpisodeModalProps {
   visible: boolean;

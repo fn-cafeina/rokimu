@@ -83,3 +83,15 @@ export interface EpisodeRange {
   end: number;
 }
 
+export interface EpisodeSheetRow {
+  key: string;
+  language: string;
+  /** Right-aligned status: Descargado, 42%, En cola */
+  hint: string;
+  icon: "download" | "trash" | "stop";
+  /** Row tap: play, from disk or from the network. */
+  onSelect: () => void;
+  /** Icon tap: download, delete or stop this language. */
+  onAction: () => void;
+}
+
