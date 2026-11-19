@@ -63,7 +63,7 @@ export function EpisodeDownloadButton({ slug, number, onRequestDownload }: Episo
   } else {
     const color = status === "error" ? "#f87171" : status === "done" ? ACCENT_COLOR : status === "queued" ? MUTED_ICON : "#FFFFFF";
     const name = status === "queued" ? "clock" : status === "done" ? "check-circle" : status === "error" ? "alert-circle" : "download";
-    glyph = <Feather name={name} size={16} color={color} />;
+    glyph = <Feather name={name} size={18} color={color} />;
   }
 
   return (

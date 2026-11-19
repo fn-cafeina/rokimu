@@ -107,7 +107,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                       <AnimatedPressable key={item.id} onPress={() => handleEpisodePress(item)}>
                         <View className="rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden">
                           <View className="flex-row items-center justify-between p-4">
-                            <Text className="font-semibold text-white">Episodio {item.number}</Text>
+                            <Text className="text-base font-semibold text-white">Episodio {item.number}</Text>
                             <View className="flex-row items-center gap-4">
                               <EpisodeDownloadButton
                                 slug={slug as string}

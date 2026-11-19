@@ -28,7 +28,7 @@ export function DetailTopBar({ anime, onBack }: DetailTopBarProps) {
         hitSlop={8}
         className="min-h-12 min-w-12 items-center justify-center rounded-full"
       >
-        <Feather name="arrow-left" size={24} color="#FFFFFF" />
+        <Feather name="arrow-left" size={20} color="#FFFFFF" />
       </AnimatedPressable>
       <View className="flex-1" />
       <AnimatedPressable
@@ -48,7 +48,7 @@ export function DetailTopBar({ anime, onBack }: DetailTopBarProps) {
         hapticFeedback={true}
         className="min-h-12 min-w-12 items-center justify-center rounded-full"
       >
-        <Feather name="bookmark" size={24} color={isSaved ? ACCENT_COLOR : "#FFFFFF"} />
+        <Feather name="bookmark" size={20} color={isSaved ? ACCENT_COLOR : "#FFFFFF"} />
       </AnimatedPressable>
     </View>
   );

@@ -27,7 +27,7 @@ export function ErrorState({ onRetry, error, title = "Error al cargar" }: ErrorS
       <Text className="mt-2 text-lg font-bold text-neutral-500">
         {title}
       </Text>
-      <Text className="mt-2 max-w-[300px] text-center text-sm text-neutral-600">
+      <Text className="mt-2 max-w-[300px] text-center text-xs text-neutral-600">
         {SUBTITLES[error?.type ?? "UNKNOWN"]}
       </Text>
       <AnimatedPressable className="mt-4 flex-row items-center px-6 py-3 rounded-xl bg-accent/15" onPress={onRetry}>
