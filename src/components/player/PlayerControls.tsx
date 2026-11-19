@@ -1,6 +1,6 @@
 import { ACCENT_COLOR } from "@/config/theme";
 import { NEXT_EPISODE_COUNTDOWN_SECONDS } from "@/config/player";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useAutoHide } from "@/hooks/useAutoHide";
 import { Feather } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";

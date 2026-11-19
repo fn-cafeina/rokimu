@@ -1,6 +1,6 @@
-import { AnimeCard } from "@/components/AnimeCard";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { GridSkeleton } from "@/components/skeletons/GridSkeleton";
+import { AnimeCard } from "@/components/anime/AnimeCard";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { GridSkeleton } from "@/components/search/GridSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import type { Anime } from "@/types";

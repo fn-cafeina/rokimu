@@ -1,7 +1,7 @@
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { NEXT_EPISODE_COUNTDOWN_SECONDS } from "@/config/player";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { PlayerControls } from "@/components/PlayerControls";
+import { PlayerControls } from "@/components/player/PlayerControls";
 import { orderEpisodes } from "@/hooks/episodeHelpers";
 import { WATCHED_THRESHOLD } from "@/hooks/episodeProgress";
 import { useAnimeData } from "@/hooks/useAnimeData";

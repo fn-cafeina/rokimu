@@ -4,7 +4,7 @@ import { ACCENT_COLOR } from "@/config/theme";
 import { Feather } from "@expo/vector-icons";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 interface DetailTopBarProps {
   anime: Anime | null;

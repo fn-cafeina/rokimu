@@ -1,5 +1,5 @@
 import { ACCENT_COLOR } from "@/config/theme";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useUpdateStore, grantInstallPermissionAndDownload } from "@/stores/updateStore";
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";

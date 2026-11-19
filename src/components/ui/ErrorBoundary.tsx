@@ -2,7 +2,7 @@ import { MUTED_ICON } from "@/config/theme";
 import { Feather } from "@expo/vector-icons";
 import React, { type ErrorInfo, type ReactNode, Component } from "react";
 import { Text, View } from "react-native";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { logger } from "@/utils/logger";
 
 interface ErrorBoundaryProps {

@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useRef } from "react";
 import { FlatList, Text, View } from "react-native";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import type { EpisodeRange } from "@/types";
 
 const RANGE_BADGE_WIDTH = 90;

@@ -2,7 +2,7 @@ import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
 import type { AppError } from "@/types";
 import { Feather } from "@expo/vector-icons";
 import { Text, View } from "react-native";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 interface ErrorStateProps {
   onRetry: () => void;

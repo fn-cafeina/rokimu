@@ -1,5 +1,5 @@
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { FloatingTabBar } from '@/components/FloatingTabBar';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { FloatingTabBar } from '@/components/app/FloatingTabBar';
 import { Tabs } from 'expo-router';
 
 // Biblioteca is the landing tab; the tabs group is the app's root screen

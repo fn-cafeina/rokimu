@@ -5,7 +5,7 @@ import React, { memo, useMemo } from "react";
 import { ScrollView, Text, View } from "react-native";
 import type { AnimeDetail, AnimeRelations, Episode, RelatedAnime } from "@/types";
 import { router } from "expo-router";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ImageWithLoader } from "@/components/ui/ImageWithLoader";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { COVER_ASPECT_RATIO } from "@/utils/layout";

@@ -1,6 +1,6 @@
 import "../global.css";
-import { UpdateModal } from "@/components/UpdateModal";
-import { WebViewWorker } from "@/components/WebViewWorker";
+import { UpdateModal } from "@/components/app/UpdateModal";
+import { WebViewWorker } from "@/components/app/WebViewWorker";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { bootApp } from "@/services/boot";
 import { isPlayerActive, resetToPortrait } from "@/services/playerUI";

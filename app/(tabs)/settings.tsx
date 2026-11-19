@@ -1,7 +1,7 @@
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
 import { CACHE_PREFIXES } from "@/config/cache";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { useSettingsStore } from "@/stores/settingsStore";
 import {
   useDownloadsStore,

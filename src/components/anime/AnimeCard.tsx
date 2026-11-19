@@ -2,7 +2,7 @@ import React, { memo, useCallback } from "react";
 import { View, Text } from "react-native";
 import type { Anime, HistoryItem } from "@/types";
 import { navigateToAnime } from "@/utils/navigation";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ImageWithLoader } from "@/components/ui/ImageWithLoader";
 
 interface AnimeCardProps {

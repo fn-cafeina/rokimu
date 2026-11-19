@@ -11,7 +11,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUIStore } from "@/stores/uiStore";
 import { useUpdateStore } from "@/stores/updateStore";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
 type FloatingTabBarProps = BottomTabBarProps;
 

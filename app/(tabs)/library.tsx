@@ -1,5 +1,5 @@
-import { AnimeCard } from "@/components/AnimeCard";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AnimeCard } from "@/components/anime/AnimeCard";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { useTabBarManager } from "@/hooks/useTabBarManager";

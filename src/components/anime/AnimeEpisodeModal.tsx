@@ -4,7 +4,7 @@ import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { AppError, EpisodeSheetRow } from "@/types";
 import Animated, { FadeIn } from "react-native-reanimated";
-import { AnimatedPressable } from "@/components/AnimatedPressable";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ACCENT_COLOR } from "@/config/theme";
 
