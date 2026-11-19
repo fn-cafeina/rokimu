@@ -8,7 +8,6 @@ import {
 } from "../services/downloader";
 import { storage } from "../utils/storage";
 import { logger } from "../utils/logger";
-import { persistWithRollback } from "../utils/history";
 import { downloadKey, isWaiting, resumeTargets, type DownloadStatus, type QueuedEntry } from "../utils/downloadQueue";
 
 export { downloadKey };
@@ -173,6 +172,14 @@ function withoutKey(entries: Record<string, DownloadEntry>, key: string): Record
   return next;
 }
 
+async function persistRemoval(entries: Record<string, DownloadEntry>): Promise<void> {
+  try {
+    await storage.set(DOWNLOADS_KEY, Object.values(entries));
+  } catch (error) {
+    logger.error("downloadsStore", "Failed to persist the removal", error);
+  }
+}
+
 function pump(): void {
   const { concurrency, entries } = useDownloadsStore.getState();
   while (activeWorkers < concurrency && queue.length > 0) {
@@ -263,19 +270,17 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
     const entry = get().entries[key];
     if (entry == null) return;
     controllers.get(key)?.abort();
-    const previous = get().entries;
-    const rest = withoutKey(previous, key);
+    const rest = withoutKey(get().entries, key);
     set({ entries: rest });
     try {
       deleteEpisodeDownload(entry.slug, entry.number, entry.language);
     } catch (error) {
       logger.warn("download", `Failed to delete files for ${key}`, error);
     }
-    await persistWithRollback(
-      () => storage.set(DOWNLOADS_KEY, Object.values(rest)),
-      () => set({ entries: previous }),
-      "downloadsStore",
-    );
+    // The files are gone: restoring the entry on a failed write would offer a
+    // download that cannot play. Memory keeps the removal and the next
+    // successful write persists it.
+    await persistRemoval(rest);
   },
 
   removeEpisode: async (slug, number) => {
@@ -297,11 +302,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
       }
     }
     set({ entries: rest });
-    await persistWithRollback(
-      () => storage.set(DOWNLOADS_KEY, Object.values(rest)),
-      () => set({ entries: previous }),
-      "downloadsStore",
-    );
+    await persistRemoval(rest);
   },
 
   setConcurrency: async (value) => {
