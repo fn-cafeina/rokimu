@@ -219,7 +219,8 @@ function parseAnimeDetail(html: string, slug: string): AnimeDetail {
   const genres = htmlParser.extractGenresFromJsonLd(html);
 
   return {
-    title: cleanTitle(title ?? meta.title ?? ""),
+    // The h1 parser yields "" when it misses, so an empty string has to fall through
+    title: cleanTitle(title !== "" ? title : (meta.title ?? "")),
     image,
     synopsis,
     banner: meta.banner ?? image,
