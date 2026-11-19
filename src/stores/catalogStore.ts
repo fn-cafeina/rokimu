@@ -6,14 +6,14 @@ import { ResourceRunner, resourceInitialState, type ResourceState } from "@/util
 import { CACHE_PREFIXES, CACHE_TTL } from "@/config/cache";
 import type { HomeData } from "@/types";
 
-export const HOME_KEY = "home";
+export const CATALOG_KEY = "home";
 
-interface HomeState {
+interface CatalogState {
   resource: ResourceState<HomeData>;
-  fetchHome: (force?: boolean) => Promise<void>;
+  fetchCatalog: (force?: boolean) => Promise<void>;
 }
 
-export const useHomeStore = create<HomeState>((set, get) => {
+export const useCatalogStore = create<CatalogState>((set, get) => {
   const runner = new ResourceRunner<HomeData>({
     tag: "home",
     get: () => get().resource,
@@ -23,8 +23,8 @@ export const useHomeStore = create<HomeState>((set, get) => {
   return {
     resource: resourceInitialState<HomeData>(),
 
-    fetchHome: async (force = false) => {
-      await runner.load(HOME_KEY, (signal) =>
+    fetchCatalog: async (force = false) => {
+      await runner.load(CATALOG_KEY, (signal) =>
         withAuthRetry(
           (attempt) =>
             loadCached(

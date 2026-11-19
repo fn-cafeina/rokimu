@@ -6,7 +6,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import type { Anime } from "@/types";
 import { useSearchScreen } from "@/hooks/useSearchScreen";
 import { useTabBarManager } from "@/hooks/useTabBarManager";
-import { HOME_KEY, useHomeStore } from "@/stores/homeStore";
+import { CATALOG_KEY, useCatalogStore } from "@/stores/catalogStore";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
 import { deriveView } from "@/utils/resource";
 import { TAB_BAR_OFFSET, calcCardWidth } from "@/utils/layout";
@@ -22,10 +22,10 @@ function SearchScreenContent() {
   const { searchTerm, searchAnimes, isLoading, isPending, error, hasQuery, handleTextChange, resetSearch, retrySearch } = useSearchScreen();
 
   // The catalog is the discover feed when nothing is typed: /directorio, no query
-  const fetchHome = useHomeStore((s) => s.fetchHome);
-  const homeResource = useHomeStore((s) => s.resource);
+  const fetchCatalog = useCatalogStore((s) => s.fetchCatalog);
+  const homeResource = useCatalogStore((s) => s.resource);
   const catalog = homeResource.data?.recent ?? EMPTY_CATALOG;
-  const catalogView = deriveView(homeResource, HOME_KEY);
+  const catalogView = deriveView(homeResource, CATALOG_KEY);
   const catalogError = homeResource.status === "error" ? homeResource.error : null;
 
   const insets = useSafeAreaInsets();
@@ -35,8 +35,8 @@ function SearchScreenContent() {
   const listRef = useRef<FlatList<Anime>>(null);
 
   useEffect(() => {
-    void fetchHome();
-  }, [fetchHome]);
+    void fetchCatalog();
+  }, [fetchCatalog]);
 
   useFocusEffect(
     useCallback(() => {
@@ -83,7 +83,7 @@ function SearchScreenContent() {
           hasQuery ? (
             <ErrorState title="No se pudo buscar" error={error} onRetry={retrySearch} />
           ) : (
-            <ErrorState title="No se pudo cargar el catálogo" error={catalogError} onRetry={() => void fetchHome(true)} />
+            <ErrorState title="No se pudo cargar el catálogo" error={catalogError} onRetry={() => void fetchCatalog(true)} />
           )
         )}
         {!gridLoading && !gridFailed && (
@@ -103,7 +103,7 @@ function SearchScreenContent() {
             refreshControl={
               <RefreshControl
                 refreshing={isLoading}
-                onRefresh={hasQuery ? retrySearch : () => void fetchHome(true)}
+                onRefresh={hasQuery ? retrySearch : () => void fetchCatalog(true)}
                 tintColor={ACCENT_COLOR}
               />
             }
