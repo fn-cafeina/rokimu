@@ -1,18 +1,4 @@
 import type { HistoryItem } from "@/types";
-import { logger } from "./logger";
-
-export async function persistWithRollback(
-  persist: () => Promise<void>,
-  rollback: () => void,
-  tag: string,
-): Promise<void> {
-  try {
-    await persist();
-  } catch (error) {
-    rollback();
-    logger.error(tag, "Failed to persist", error);
-  }
-}
 
 export function makeHistoryEntry(params: {
   title: string; image: string; url: string; number: string;

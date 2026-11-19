@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Anime } from "@/types";
-import { persistWithRollback } from "@/utils/history";
+import { persistWithRollback } from "@/utils/persist";
 import { storage } from "@/utils/storage";
 import { forgetAnimeSnapshot } from "@/utils/animeSnapshot";
 import { hasDownloadFor } from "@/utils/downloadQueue";
