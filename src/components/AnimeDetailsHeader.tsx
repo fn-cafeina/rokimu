@@ -1,4 +1,4 @@
-import { ACCENT_COLOR } from "@/config/source";
+import { ACCENT_COLOR } from "@/config/theme";
 import { FlashList } from "@shopify/flash-list";
 import { Feather } from "@expo/vector-icons";
 import React, { memo, useMemo } from "react";

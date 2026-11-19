@@ -18,7 +18,7 @@ import { orderEpisodes } from "@/hooks/episodeHelpers";
 import { WATCHED_THRESHOLD, collectEpisodeProgress, pickCtaEpisode } from "@/hooks/episodeProgress";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
-import { ACCENT_COLOR } from "@/config/source";
+import { ACCENT_COLOR } from "@/config/theme";
 import { memo, useMemo } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated from "react-native-reanimated";

@@ -6,7 +6,7 @@ import type { AppError, EpisodeSheetRow } from "@/types";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { ACCENT_COLOR } from "@/config/source";
+import { ACCENT_COLOR } from "@/config/theme";
 
 interface AnimeEpisodeModalProps {
   visible: boolean;

@@ -1,7 +1,7 @@
 import { ActivityIndicator, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
-import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
+import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
 import {
   activeEntryForEpisode,
   downloadKey,

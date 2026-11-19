@@ -1,7 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 import { calcProgress } from "@/utils/math";
-import { ACCENT_COLOR } from "@/config/source";
+import { ACCENT_COLOR } from "@/config/theme";
 
 interface ProgressBarProps {
   progress?: number;

@@ -1,7 +1,3 @@
-// Must match --color-accent in global.css
-export const ACCENT_COLOR = "#A855F7";
-export const MUTED_ICON = "#737373";
-
 export const SOURCE_CONFIG = {
   baseUrl: "https://www.animelatinohd.com",
   get sessionWashUrl() { return SOURCE_CONFIG.baseUrl + "/"; },

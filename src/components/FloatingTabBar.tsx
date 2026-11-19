@@ -1,4 +1,4 @@
-import { ACCENT_COLOR } from "@/config/source";
+import { ACCENT_COLOR } from "@/config/theme";
 import { Feather } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 import React from "react";

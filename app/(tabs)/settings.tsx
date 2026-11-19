@@ -1,4 +1,4 @@
-import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
+import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
 import { CACHE_PREFIXES } from "@/config/cache";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { AnimatedPressable } from "@/components/AnimatedPressable";

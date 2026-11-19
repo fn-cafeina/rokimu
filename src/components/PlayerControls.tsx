@@ -1,4 +1,4 @@
-import { ACCENT_COLOR } from "@/config/source";
+import { ACCENT_COLOR } from "@/config/theme";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { useAutoHide } from "@/hooks/useAutoHide";
 import { Feather } from "@expo/vector-icons";

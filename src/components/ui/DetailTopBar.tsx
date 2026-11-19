@@ -1,6 +1,6 @@
 import type { Anime } from "@/types";
 import { useSavedStore } from "@/stores/savedStore";
-import { ACCENT_COLOR } from "@/config/source";
+import { ACCENT_COLOR } from "@/config/theme";
 import { Feather } from "@expo/vector-icons";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

@@ -1,4 +1,4 @@
-import { MUTED_ICON } from "@/config/source";
+import { MUTED_ICON } from "@/config/theme";
 import { Feather } from "@expo/vector-icons";
 import React, { type ErrorInfo, type ReactNode, Component } from "react";
 import { Text, View } from "react-native";

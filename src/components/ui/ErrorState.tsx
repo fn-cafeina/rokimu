@@ -1,4 +1,4 @@
-import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
+import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
 import type { AppError } from "@/types";
 import { Feather } from "@expo/vector-icons";
 import { Text, View } from "react-native";

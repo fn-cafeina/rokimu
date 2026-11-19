@@ -7,7 +7,7 @@ import type { Anime } from "@/types";
 import { useSearchScreen } from "@/hooks/useSearchScreen";
 import { useTabBarManager } from "@/hooks/useTabBarManager";
 import { HOME_KEY, useHomeStore } from "@/stores/homeStore";
-import { ACCENT_COLOR, MUTED_ICON } from "@/config/source";
+import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
 import { deriveView } from "@/utils/resource";
 import { TAB_BAR_OFFSET, calcCardWidth } from "@/utils/layout";
 import { Feather } from "@expo/vector-icons";
