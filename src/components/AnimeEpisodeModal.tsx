@@ -28,6 +28,8 @@ interface AnimeEpisodeModalProps {
   isLoading: boolean;
   /** Real fetch failure for this episode; never conflated with "no servers" */
   error?: AppError | null;
+  /** No network: the sheet could not even ask for servers */
+  isOffline?: boolean;
   onRetry?: () => void;
 }
 
@@ -44,7 +46,7 @@ const ACTION_ICON: Record<EpisodeSheetRow["icon"], React.ComponentProps<typeof F
 };
 
 export const AnimeEpisodeModal = ({
-  visible, onClose, title, rows, isLoading, error, onRetry
+  visible, onClose, title, rows, isLoading, error, isOffline, onRetry
 }: AnimeEpisodeModalProps) => {
   const insets = useSafeAreaInsets();
 
@@ -116,8 +118,12 @@ export const AnimeEpisodeModal = ({
               )}
             </View>
           ) : rows.length === 0 ? (
-            <View className="h-48 justify-center items-center">
-              <Text className="text-neutral-400 text-xs">No hay servidor disponible</Text>
+            <View className="h-48 justify-center items-center px-6">
+              <Text className="text-neutral-400 text-xs text-center">
+                {isOffline
+                  ? "Sin conexión. Conectate para ver los servidores."
+                  : "No hay servidor disponible"}
+              </Text>
             </View>
           ) : null}
         </View>

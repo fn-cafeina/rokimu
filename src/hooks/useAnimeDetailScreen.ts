@@ -209,6 +209,7 @@ export function useAnimeDetailScreen(slug: string) {
     rows,
     serverLoading,
     serverError,
+    serverOffline: isInternetReachable === false,
     retryServers,
     episodeOrder,
     setEpisodeOrder,

@@ -27,7 +27,7 @@ import { useCrossfade } from "@/hooks/useCrossfade";
 const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   const { slug } = useLocalSearchParams();
   const {
-    anime, view, isAnimeLoading, error, rows, serverLoading, serverError, retryServers, setEpisodeOrder,
+    anime, view, isAnimeLoading, error, rows, serverLoading, serverError, serverOffline, retryServers, setEpisodeOrder,
     isExpanded, setIsExpanded, selectedEpisode, setSelectedEpisode,
     hasLoaded, activeRangeIdx, setActiveRangeIdx, isRestoring,
     ranges, visibleEpisodes, isAscending, handleEpisodePress, handleDownloadPress, refresh,
@@ -133,6 +133,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                 rows={rows}
                 isLoading={serverLoading}
                 error={serverError}
+                isOffline={serverOffline}
                 onRetry={retryServers}
               />
             </View>
