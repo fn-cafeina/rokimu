@@ -14,11 +14,13 @@ import {
   type DownloadEntry,
 } from "@/stores/downloadsStore";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { isWorthKeepingOffline } from "@/hooks/useAnimeSnapshot";
 import { sessionManager } from "@/services/session";
 import { resetToPortrait, isPlayerActive } from "@/services/playerUI";
 import { storage } from "@/utils/storage";
 import { logger } from "@/utils/logger";
 import { pruneExpiredCache } from "@/utils/cache";
+import { pruneAnimeSnapshots } from "@/utils/animeSnapshot";
 import type { Anime, HistoryItem } from "@/types";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -93,6 +95,9 @@ function RootInner() {
       useUpdateStore.getState().initialize(updateCheckEnabled !== false);
       useDownloadsStore.getState().initialize(downloads ?? [], downloadConcurrency ?? DEFAULT_DOWNLOAD_CONCURRENCY);
       useUserInitializationStore.setState({ isInitialized: true });
+      // Stored detail outlives the cache, so the sweep waits for the lists that
+      // decide what is still worth keeping offline
+      void pruneAnimeSnapshots(isWorthKeepingOffline);
       logger.info("lifecycle", "App boot complete");
       if (!cancelled) setReady(true);
 
