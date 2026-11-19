@@ -1,4 +1,5 @@
 import { ACCENT_COLOR } from "@/config/theme";
+import { NEXT_EPISODE_COUNTDOWN_SECONDS } from "@/config/player";
 import { AnimatedPressable } from "@/components/AnimatedPressable";
 import { useAutoHide } from "@/hooks/useAutoHide";
 import { Feather } from "@expo/vector-icons";
@@ -6,8 +7,6 @@ import Slider from "@react-native-community/slider";
 import type { VideoPlayer } from "expo-video";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Animated, Pressable, Text, View } from "react-native";
-
-const NEXT_EPISODE_COUNTDOWN_SECONDS = 10;
 
 interface PlayerControlsProps {
   player: VideoPlayer;

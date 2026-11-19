@@ -1,4 +1,5 @@
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { NEXT_EPISODE_COUNTDOWN_SECONDS } from "@/config/player";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PlayerControls } from "@/components/PlayerControls";
 import { orderEpisodes } from "@/hooks/episodeHelpers";
@@ -16,8 +17,6 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-const NEXT_EPISODE_COUNTDOWN_SECONDS = 10;
 
 function PlayerContent() {
   const params = useLocalSearchParams<{ slug?: string; number?: string; title?: string; image?: string }>();
