@@ -1,4 +1,5 @@
 import { Directory, File, Paths } from "expo-file-system";
+import { TIMEOUTS } from "../config/cache";
 import type { AppError } from "../types";
 import { SourceError } from "../utils/errors";
 import { logger } from "../utils/logger";
@@ -14,6 +15,9 @@ import {
 
 // A single segment request at a time leaves a fast wifi link idle
 const SEGMENT_CONCURRENCY = 8;
+// A transfer that stops moving is aborted: a dead socket otherwise holds one
+// worker forever and, with concurrency 1, the whole queue behind it
+const STALL_TIMEOUT_MS = 45_000;
 
 export const DOWNLOADS_DIR = "downloads";
 export const PLAYLIST_FILE = "index.m3u8";
@@ -82,6 +86,46 @@ function rangeHeaders(range: { length: number; offset: number } | null): Record<
   return { Range: `bytes=${range.offset}-${range.offset + range.length - 1}` };
 }
 
+interface RequestGuard {
+  signal: AbortSignal;
+  /** Restarts the stall timer: called whenever bytes move. */
+  touch: () => void;
+  release: () => void;
+}
+
+/** Ties a per-request abort to the caller signal and to a stall timer. */
+function guardRequest(signal: AbortSignal, timeoutMs: number): RequestGuard {
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  if (signal.aborted) controller.abort();
+  else signal.addEventListener("abort", onAbort, { once: true });
+
+  let timer: ReturnType<typeof setTimeout>;
+  const touch = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => controller.abort(), timeoutMs);
+  };
+  touch();
+
+  return {
+    signal: controller.signal,
+    touch,
+    release: () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+    },
+  };
+}
+
+/** A guard abort is a timeout, not a user cancellation, and says so. */
+function settleRequestError(error: unknown, signal: AbortSignal): unknown {
+  if (signal.aborted) return error;
+  if ((error as { name?: string } | null)?.name === "AbortError") {
+    return new SourceError("La descarga se quedó sin respuesta", "TIMEOUT");
+  }
+  return error;
+}
+
 async function downloadTo(
   url: string,
   target: File,
@@ -89,24 +133,46 @@ async function downloadTo(
   signal: AbortSignal,
   range: { length: number; offset: number } | null = null,
 ): Promise<void> {
-  await File.downloadFileAsync(url, target, {
-    idempotent: true,
-    headers: { ...headers, ...rangeHeaders(range) },
-    signal,
-  });
+  const guard = guardRequest(signal, STALL_TIMEOUT_MS);
+  try {
+    await File.downloadFileAsync(url, target, {
+      idempotent: true,
+      headers: { ...headers, ...rangeHeaders(range) },
+      signal: guard.signal,
+      onProgress: () => guard.touch(),
+    });
+  } catch (error) {
+    throw settleRequestError(error, signal);
+  } finally {
+    guard.release();
+  }
 }
 
 async function fetchText(url: string, headers: Record<string, string>, signal: AbortSignal): Promise<string> {
-  const res = await fetch(url, { headers, signal });
-  if (!res.ok) throw new SourceError(`HTTP ${res.status} al descargar el playlist`, "VIDEO_ERROR");
-  return res.text();
+  const guard = guardRequest(signal, TIMEOUTS.REQUEST_TIMEOUT);
+  try {
+    const res = await fetch(url, { headers, signal: guard.signal });
+    if (!res.ok) throw new SourceError(`HTTP ${res.status} al descargar el playlist`, "VIDEO_ERROR");
+    return await res.text();
+  } catch (error) {
+    throw settleRequestError(error, signal);
+  } finally {
+    guard.release();
+  }
 }
 
 async function fetchBytes(url: string, headers: Record<string, string>, signal: AbortSignal): Promise<Uint8Array> {
-  const res = await fetch(url, { headers, signal });
-  if (!res.ok) throw new SourceError(`HTTP ${res.status} al descargar la clave`, "VIDEO_ERROR");
-  const buffer = await res.arrayBuffer();
-  return new Uint8Array(buffer);
+  const guard = guardRequest(signal, TIMEOUTS.REQUEST_TIMEOUT);
+  try {
+    const res = await fetch(url, { headers, signal: guard.signal });
+    if (!res.ok) throw new SourceError(`HTTP ${res.status} al descargar la clave`, "VIDEO_ERROR");
+    const buffer = await res.arrayBuffer();
+    return new Uint8Array(buffer);
+  } catch (error) {
+    throw settleRequestError(error, signal);
+  } finally {
+    guard.release();
+  }
 }
 
 async function pickStream(target: EpisodeTarget): Promise<{ url: string; headers: Record<string, string>; language: string }> {
