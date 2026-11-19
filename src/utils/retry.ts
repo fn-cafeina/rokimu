@@ -12,6 +12,8 @@ interface WithAuthRetryOptions {
   maxRetries?: number;
   /** Tag for logs; errors propagate to the caller regardless */
   tag: string;
+  /** Session refresh; overridable so the ladder can be exercised without a WebView */
+  refresh?: () => Promise<void>;
 }
 
 /**
@@ -25,6 +27,7 @@ export async function withAuthRetry<T>(
   options: WithAuthRetryOptions,
 ): Promise<T> {
   const { signal, isAborted, maxRetries = 1, tag } = options;
+  const refresh = options.refresh ?? refreshSession;
 
   let lastError: unknown;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -48,7 +51,7 @@ export async function withAuthRetry<T>(
       }
       logger.info(tag, `Auth error, refreshing session and retrying (${attempt + 1}/${maxRetries})...`);
       try {
-        await refreshSession();
+        await refresh();
       } catch (refreshError) {
         logger.warn(tag, "Session refresh threw, next attempt decides", refreshError);
       }
