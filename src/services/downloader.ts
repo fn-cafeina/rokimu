@@ -3,6 +3,7 @@ import { TIMEOUTS } from "@/config/cache";
 import type { AppError } from "@/types";
 import { SourceError, isCancelled } from "@/utils/errors";
 import { segmentConcurrency } from "@/utils/cdn";
+import { isRetryable, statusOf } from "@/utils/httpError";
 import { backoffDelay } from "@/utils/math";
 import { logger } from "@/utils/logger";
 import { withAuthRetry } from "@/utils/retry";
@@ -134,25 +135,6 @@ function settleRequestError(error: unknown, signal: AbortSignal): unknown {
   return error;
 }
 
-/** The native downloader reports the HTTP status only inside its error message. */
-function statusOf(error: unknown): number | null {
-  const message = error instanceof Error ? error.message : "";
-  const match = /status: (\d{3})/.exec(message);
-  return match?.[1] != null ? parseInt(match[1], 10) : null;
-}
-
-/**
- * Network failures arrive as native exception names, not as HTTP statuses: a
- * connect timeout or a reset connection is worth another attempt, a refused
- * certificate is not.
- */
-function isTransient(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : "";
-  return /SocketTimeoutException|ConnectException|SSLException|UnknownHostException|failed to connect|Unable to resolve host|Connection reset|connection abort|stream was reset/i.test(
-    message,
-  );
-}
-
 async function downloadTo(
   url: string,
   target: File,
@@ -186,8 +168,7 @@ async function downloadTo(
       const status = statusOf(error);
       // The CDN refuses bursts with 429, and a dropped socket drops one segment:
       // neither is worth losing the whole episode over
-      const retryable = status === 429 || (status != null && status >= 500) || isTransient(error);
-      if (!retryable || attempt >= DOWNLOAD_ATTEMPTS - 1 || signal.aborted) throw settled;
+      if (!isRetryable(error) || attempt >= DOWNLOAD_ATTEMPTS - 1 || signal.aborted) throw settled;
       const wait = status === 429 ? 2_000 * (attempt + 1) : backoffDelay(attempt);
       const reason = status != null ? `HTTP ${status}` : "Network error";
       logger.warn("download", `${reason} from the CDN, retrying in ${wait}ms (${attempt + 1}/${DOWNLOAD_ATTEMPTS})`);
