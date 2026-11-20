@@ -146,17 +146,23 @@ async function downloadTo(
   headers: Record<string, string>,
   signal: AbortSignal,
   range: { length: number; offset: number } | null = null,
-): Promise<void> {
+): Promise<File> {
   for (let attempt = 0; ; attempt++) {
     const guard = guardRequest(signal, STALL_TIMEOUT_MS);
     try {
-      await File.downloadFileAsync(url, target, {
+      // The native downloader decides where the bytes land: its answer is the
+      // only path worth reading back. Trusting the path we asked for raced with
+      // a file the native side had already moved or dropped.
+      const written = await File.downloadFileAsync(url, target, {
         idempotent: true,
         headers: { ...headers, ...rangeHeaders(range) },
         signal: guard.signal,
         onProgress: () => guard.touch(),
       });
-      return;
+      if (!written.exists || written.size === 0) {
+        throw new SourceError("La descarga quedó vacía", "VIDEO_ERROR");
+      }
+      return written;
     } catch (error) {
       const settled = settleRequestError(error, signal);
       const status = statusOf(error);
@@ -258,10 +264,12 @@ async function downloadInit(
 ): Promise<{ file: string; bytes: number }> {
   const name = `init${extensionOf(init.uri, ".mp4")}`;
   const file = new File(dir, name);
-  if (!(file.exists && file.size > 0)) {
-    await downloadTo(init.uri, file, headers, signal, init.range);
+  if (file.exists && file.size > 0) {
+    return { file: name, bytes: file.size };
   }
-  return { file: name, bytes: file.size };
+  // The playlist must point at the name on disk, not the one we asked for
+  const written = await downloadTo(init.uri, file, headers, signal, init.range);
+  return { file: written.name, bytes: written.size };
 }
 
 async function downloadSegment(
@@ -283,17 +291,17 @@ async function downloadSegment(
   // Landing in a .part file keeps a half-written or still-encrypted segment
   // from ever looking complete to the resume check
   const part = new File(dir, `${name}.part`);
-  await downloadTo(segment.uri, part, headers, signal, segment.range);
+  const written = await downloadTo(segment.uri, part, headers, signal, segment.range);
 
   const key = segment.key;
   if (key != null) {
     const keyBytes = await getKey(key.uri);
     const iv = key.iv ?? sequenceIv(segment.sequence);
-    const plain = decryptSegment(await part.bytes(), keyBytes, iv);
+    const plain = decryptSegment(await written.bytes(), keyBytes, iv);
     await file.write(plain);
-    part.delete();
+    if (written.exists) written.delete();
   } else {
-    await part.move(file);
+    await written.move(file);
   }
 
   return file.size;
