@@ -15,7 +15,7 @@ import { storage } from "@/utils/storage";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Alert, Linking, Switch, Text, View } from "react-native";
+import { Alert, Linking, ScrollView, Switch, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -138,7 +138,8 @@ export default function SettingsScreen() {
 
   return (
     <View className="flex-1 bg-black" style={{ paddingTop: insets.top + 16 }}>
-      <View className="px-5 pb-6">
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
+      <View className="pb-6">
         <SectionTitle>Conexión</SectionTitle>
         <View className="mb-3" />
         <AnimatedPressable
@@ -170,15 +171,18 @@ export default function SettingsScreen() {
         <View className="mt-8">
           <SectionTitle>Reproducción</SectionTitle>
           <View className="mb-3" />
-          <View className="flex-row items-center px-5 py-4 rounded-xl border border-neutral-800 bg-neutral-900">
-            <Feather name="play" size={18} color={MUTED_ICON} style={{ marginRight: 12 }} />
-            <View className="flex-1">
-              <Text className="text-base font-medium text-white">Servidor preferido</Text>
-              <Text className="mt-1 text-xs font-semibold tracking-wide text-neutral-400">
-                Se prueba primero; si falla, el siguiente
-              </Text>
+          <View className="rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
+            <View className="flex-row items-center">
+              <Feather name="play" size={18} color={MUTED_ICON} style={{ marginRight: 12 }} />
+              <View className="flex-1">
+                <Text className="text-base font-medium text-white">Servidor preferido</Text>
+              </View>
             </View>
-            <View className="flex-row gap-1.5">
+            <Text className="mt-2 text-xs font-semibold tracking-wide text-neutral-400">
+              Se intenta primero al reproducir o descargar. Si no responde, se prueba el
+              siguiente servidor disponible del mismo idioma.
+            </Text>
+            <View className="mt-3 flex-row rounded-lg border border-neutral-800 bg-black p-1">
               {(
                 [
                   { label: "Auto", value: null },
@@ -194,14 +198,12 @@ export default function SettingsScreen() {
                     accessibilityState={{ selected: active }}
                     onPress={() => void setPreferredServer(option.value)}
                     hapticFeedback={true}
-                    className={`px-3 py-1.5 rounded-full border ${
-                      active
-                        ? "border-accent bg-accent/15"
-                        : "border-neutral-700 bg-transparent"
+                    className={`flex-1 items-center justify-center py-2 rounded-md ${
+                      active ? "bg-accent/20" : "bg-transparent"
                     }`}
                   >
                     <Text
-                      className={`text-xs font-semibold ${active ? "text-accent" : "text-neutral-400"}`}
+                      className={`text-sm font-semibold ${active ? "text-accent" : "text-neutral-400"}`}
                     >
                       {option.label}
                     </Text>
@@ -343,6 +345,7 @@ export default function SettingsScreen() {
           </View>
         </View>
       </View>
+      </ScrollView>
     </View>
   );
 }
