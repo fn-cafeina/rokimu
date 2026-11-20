@@ -25,24 +25,6 @@ Rokimu needs a development build. It does not run in Expo Go: the
 - Tailwind CSS v4 through [uniwind](https://uniwind.dev/)
 - expo-router, Zustand 5, expo-video, Reanimated 4
 
-## How it works
-
-- **Transport.** Source requests run inside a hidden WebView worker, so the
-  page's own cookie jar (HttpOnly included) answers and the app never reads a
-  cookie. `fetchWithSession` is the native path for the same origin; a 403 or a
-  Cloudflare challenge enters the wash-and-retry ladder. Foreign video hosts
-  never trigger a session wash.
-- **Streams.** Delta (shown as Coral) resolves through its Byse AES-GCM API,
-  Epsilon (shown as Jade) through a LuluStream embed. The preferred server in
-  Settings only reorders the ladder: playback plays the chosen server or
-  fails, it does not substitute another.
-- **Downloads.** The playlist is rewritten to a local `index.m3u8`; segments
-  keep their encryption and the player decrypts them. The segment pool size
-  follows the CDN host that serves the bytes, because one CDN rate-limits
-  above four requests.
-- **Update check.** The app compares its version with the latest release and
-  installs the APK through `REQUEST_INSTALL_PACKAGES`.
-
 ## Development
 
 | Command | What it does |
