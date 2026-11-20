@@ -10,7 +10,6 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { source } from "./source";
 import {
   buildLocalPlaylist,
-  decryptSegment,
   parseMediaPlaylist,
   sequenceIv,
   type HlsInitSegment,
@@ -21,7 +20,9 @@ import {
 // Every segment is decrypted in pure JS (AES-128 CBC) and crosses the bridge
 // twice, so a parallel burst starves the UI thread on a dev build. One at a
 // time keeps the download going without owning the frame budget.
-const SEGMENT_CONCURRENCY = 2;
+// Pure I/O now that the player decrypts natively: three requests keep a fast
+// link busy without the eight-way burst that tripped the CDN rate limit
+const SEGMENT_CONCURRENCY = 3;
 // One segment is retried on 429/5xx before the worker gives up
 const DOWNLOAD_ATTEMPTS = 3;
 // A transfer that stops moving is aborted: a dead socket otherwise holds one
@@ -30,6 +31,10 @@ const STALL_TIMEOUT_MS = 45_000;
 
 export const DOWNLOADS_DIR = "downloads";
 export const PLAYLIST_FILE = "index.m3u8";
+// Marks a folder as written in the current format: segments stay encrypted and
+// the local playlist carries their key. Older folders were decrypted in place.
+const FORMAT_MARKER = "format";
+const FORMAT_VERSION = "aes-key-v1";
 
 export interface EpisodeTarget {
   slug: string;
@@ -172,7 +177,12 @@ async function downloadTo(
         onProgress: () => guard.touch(),
       });
       if (!written.exists || written.size === 0) {
-        throw new SourceError("La descarga quedó vacía", "VIDEO_ERROR");
+        // An empty landing is the CDN dropping the body, not a dead segment
+        if (attempt >= DOWNLOAD_ATTEMPTS - 1) throw new SourceError("La descarga quedó vacía", "VIDEO_ERROR");
+        const wait = backoffDelay(attempt);
+        logger.warn("download", `Empty download, retrying in ${wait}ms (${attempt + 1}/${DOWNLOAD_ATTEMPTS})`);
+        await new Promise((resolve) => setTimeout(resolve, wait));
+        continue;
       }
       return written;
     } catch (error) {
@@ -290,7 +300,6 @@ async function downloadInit(
 interface SegmentStats {
   count: number;
   downloadMs: number;
-  decryptMs: number;
   writeMs: number;
 }
 
@@ -299,7 +308,6 @@ async function downloadSegment(
   index: number,
   dir: Directory,
   headers: Record<string, string>,
-  getKey: (uri: string) => Promise<Uint8Array>,
   signal: AbortSignal,
   stats: SegmentStats,
 ): Promise<number> {
@@ -311,35 +319,26 @@ async function downloadSegment(
     return file.size;
   }
 
-  // Landing in a .part file keeps a half-written or still-encrypted segment
-  // from ever looking complete to the resume check
+  // Landing in a .part file keeps a half-written segment from ever looking
+  // complete to the resume check
   const part = new File(dir, `${name}.part`);
   const downloadStarted = Date.now();
   const written = await downloadTo(segment.uri, part, headers, signal, segment.range);
   stats.downloadMs += Date.now() - downloadStarted;
   stats.count += 1;
 
-  const key = segment.key;
-  if (key != null) {
-    const keyBytes = await getKey(key.uri);
-    const iv = key.iv ?? sequenceIv(segment.sequence);
-    const decryptStarted = Date.now();
-    const plain = decryptSegment(await written.bytes(), keyBytes, iv);
-    stats.decryptMs += Date.now() - decryptStarted;
-    const writeStarted = Date.now();
-    await file.write(plain);
-    stats.writeMs += Date.now() - writeStarted;
-    if (written.exists) written.delete();
-  } else {
-    await written.move(file);
-  }
+  // Bytes land on disk as the CDN served them: an encrypted segment stays
+  // encrypted and the player decrypts it natively at playback time
+  const writeStarted = Date.now();
+  await written.move(file);
+  stats.writeMs += Date.now() - writeStarted;
 
   return file.size;
 }
 
 /**
- * Downloads one episode as a self-contained HLS folder: init segment,
- * decrypted segments and a rewritten playlist pointing at local file names.
+ * Downloads one episode as a self-contained HLS folder: init segment, raw
+ * segments and a rewritten playlist pointing at local files and local keys.
  * ExoPlayer then plays the folder offline through `expo-video`.
  */
 export async function downloadEpisode(
@@ -358,10 +357,15 @@ export async function downloadEpisode(
   // key, the folder and the delete path pointing at different places.
   const language = target.language ?? null;
   const dir = episodeDirectory(target.slug, target.number, language);
-  // Only an interrupted run resumes. Anything else starts from an empty folder,
-  // so segments from a dead attempt can never mix into the new playlist.
-  if (options.resume !== true) deleteEpisodeDownload(target.slug, target.number, language);
+  // A folder without the marker holds segments from the older format, where the
+  // downloader wrote them decrypted: mixing those with encrypted ones and a key
+  // line would hand the player garbage
+  const marker = new File(dir, FORMAT_MARKER);
+  if (options.resume !== true || (dir.exists && !marker.exists)) {
+    deleteEpisodeDownload(target.slug, target.number, language);
+  }
   dir.create({ intermediates: true, idempotent: true });
+  await marker.write(FORMAT_VERSION);
 
   const init = playlist.initSegment != null
     ? await downloadInit(playlist.initSegment, dir, stream.headers, signal)
@@ -373,7 +377,8 @@ export async function downloadEpisode(
   logger.debug("download", `${target.slug} ep ${target.number}: ${segmentsTotal} segments queued, ${SEGMENT_CONCURRENCY} workers`);
   onProgress({ segmentsDone, segmentsTotal, bytesDone });
 
-  // Rotation keys are fetched once even when several segments need them
+  // Rotation keys are fetched once even when several segments need them, and
+  // land next to the segments so the local playlist can point at them
   const keyRequests = new Map<string, Promise<Uint8Array>>();
   const getKey = (uri: string): Promise<Uint8Array> => {
     let request = keyRequests.get(uri);
@@ -386,33 +391,41 @@ export async function downloadEpisode(
     }
     return request;
   };
+  const keyFiles = new Map<string, string>();
+  for (const segment of playlist.segments) {
+    const keyUri = segment.key?.uri;
+    if (keyUri == null || keyFiles.has(keyUri)) continue;
+    const name = `key_${keyFiles.size}.bin`;
+    await new File(dir, name).write(await getKey(keyUri));
+    keyFiles.set(keyUri, name);
+  }
 
   // Segments are independent files: several requests in flight keep a fast
   // link busy, which a strict one-at-a-time loop never does.
   let nextIndex = 0;
   let failure: unknown = null;
-  const stats: SegmentStats = { count: 0, downloadMs: 0, decryptMs: 0, writeMs: 0 };
+  const stats: SegmentStats = { count: 0, downloadMs: 0, writeMs: 0 };
   const worker = async (): Promise<void> => {
     while (failure == null && !signal.aborted) {
       const index = nextIndex++;
       const segment = playlist.segments[index];
       if (segment == null) return;
-      // A decrypted segment blocks the JS thread; yield between segments so
-      // renders and touches get their turn instead of queueing behind the loop
+      // Yields between segments so renders and touches get their turn instead
+      // of queueing behind the request loop
       await new Promise((resolve) => setTimeout(resolve, 0));
       try {
-        const bytes = await downloadSegment(segment, index, dir, stream.headers, getKey, signal, stats);
+        const bytes = await downloadSegment(segment, index, dir, stream.headers, signal, stats);
         segmentsDone += 1;
         bytesDone += bytes;
         onProgress({ segmentsDone, segmentsTotal, bytesDone });
         // One line per 25 iterations, not per download: a resumed run skips
         // segments and would otherwise stay silent for minutes
         if (index === 0 || index % 25 === 0) {
-          // Which phase is eating the wall clock: network, AES in JS, or the write back
+          // Which phase is eating the wall clock: network or the write back
           const perSegment = Math.max(1, stats.count);
           logger.debug(
             "download",
-            `${index + 1}/${segmentsTotal} (${segmentsDone} written), avg per written segment: network ${Math.round(stats.downloadMs / perSegment)}ms, decrypt ${Math.round(stats.decryptMs / perSegment)}ms, write ${Math.round(stats.writeMs / perSegment)}ms`,
+            `${index + 1}/${segmentsTotal} (${segmentsDone} written), avg per written segment: network ${Math.round(stats.downloadMs / perSegment)}ms, write ${Math.round(stats.writeMs / perSegment)}ms`,
           );
         }
       } catch (error) {
@@ -429,6 +442,9 @@ export async function downloadEpisode(
   const localSegments = playlist.segments.map((segment, index) => ({
     duration: segment.duration,
     file: segmentFileName(index, segment.uri),
+    // The local playlist renumbers the sequence, so the IV has to be explicit
+    keyFile: segment.key != null ? keyFiles.get(segment.key.uri) ?? null : null,
+    iv: segment.key != null ? segment.key.iv ?? sequenceIv(segment.sequence) : null,
   }));
 
   const playlistFile = new File(dir, PLAYLIST_FILE);

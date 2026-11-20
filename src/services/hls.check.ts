@@ -130,7 +130,7 @@ seg.m4s
       { duration: 9.5, file: "seg_00000.ts" },
       { duration: 10, file: "seg_00001.ts" },
     ],
-    initFile: "init.mp4",
+    initFile: "init.mp4"
   });
   assert.match(text, /^#EXTM3U/);
   assert.match(text, /#EXT-X-TARGETDURATION:10/);
@@ -138,6 +138,23 @@ seg.m4s
   assert.match(text, /#EXTINF:9.5,\nseg_00000\.ts/);
   assert.match(text, /#EXT-X-ENDLIST/);
   assert.doesNotMatch(text, /#EXT-X-KEY|https?:\/\//);
+}
+
+// Encrypted segments keep their key and an explicit IV, so the player decrypts
+// natively instead of the downloader paying for AES in JS
+{
+  const iv = sequenceIv(3);
+  const text = buildLocalPlaylist({
+    targetDuration: 6,
+    segments: [
+      { duration: 6, file: "seg_00000.ts", keyFile: "key_0.bin", iv },
+      { duration: 6, file: "seg_00001.ts", keyFile: "key_0.bin", iv },
+      { duration: 6, file: "seg_00002.ts" },
+    ],
+  });
+  assert.match(text, /#EXT-X-KEY:METHOD=AES-128,URI="key_0\.bin",IV=0x0{30}03\n#EXTINF:6,\nseg_00000\.ts/);
+  assert.match(text, /seg_00001\.ts\n#EXT-X-KEY:METHOD=NONE\n#EXTINF:6,\nseg_00002\.ts/);
+  assert.doesNotMatch(text, /https?:\/\//);
 }
 
 console.log("hls.check.ts OK");

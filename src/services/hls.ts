@@ -215,9 +215,21 @@ export function decryptSegment(payload: Uint8Array, key: Uint8Array, iv: Uint8Ar
 export interface LocalPlaylistSegment {
   duration: number;
   file: string;
+  /** Local key file when the segment is still AES-128 encrypted on disk */
+  keyFile?: string | null;
+  /** Explicit IV: the local playlist renumbers the media sequence from 0 */
+  iv?: Uint8Array | null;
 }
 
-/** Rewrites the playlist against local file names, with nothing left to fetch. */
+function hexIv(iv: Uint8Array): string {
+  return Array.from(iv, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Rewrites the playlist against local file names, with nothing left to fetch.
+ * Encrypted segments keep their key, so the player decrypts natively instead of
+ * the downloader decrypting in JS and copying megabytes through the bridge.
+ */
 export function buildLocalPlaylist(input: {
   targetDuration: number;
   segments: LocalPlaylistSegment[];
@@ -231,7 +243,16 @@ export function buildLocalPlaylist(input: {
     "#EXT-X-PLAYLIST-TYPE:VOD",
   ];
   if (input.initFile != null) lines.push(`#EXT-X-MAP:URI="${input.initFile}"`);
+  let encrypted = false;
   for (const segment of input.segments) {
+    if (segment.keyFile != null) {
+      const iv = segment.iv ?? new Uint8Array(16);
+      lines.push(`#EXT-X-KEY:METHOD=AES-128,URI="${segment.keyFile}",IV=0x${hexIv(iv)}`);
+      encrypted = true;
+    } else if (encrypted) {
+      lines.push("#EXT-X-KEY:METHOD=NONE");
+      encrypted = false;
+    }
     lines.push(`#EXTINF:${segment.duration},`, segment.file);
   }
   lines.push("#EXT-X-ENDLIST", "");
