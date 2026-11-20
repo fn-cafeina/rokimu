@@ -1,6 +1,7 @@
 import { gcm } from "@noble/ciphers/aes.js";
 import { bytesToUtf8 } from "@noble/ciphers/utils.js";
 import { SourceError, isCancelled } from "@/utils/errors";
+import { SOURCE_CONFIG } from "@/config/source";
 
 interface PlaybackData {
   algorithm: string;
@@ -110,6 +111,96 @@ function bestStream(streams: HlsStream[]): HlsStream | null {
   });
 }
 
+/**
+ * Dean Edwards packer: eval(function(p,a,c,k,e,d){...}('payload', radix,
+ * count, 'k|k|...'.split('|'), 0, {})). The LuluStream player page hides its
+ * jwplayer sources inside one of these.
+ */
+export function unpackPacked(page: string): string {
+  const start = page.indexOf("eval(function(p,a,c,k,e,d)");
+  if (start < 0) return "";
+  const argsStart = page.indexOf("}(", start);
+  if (argsStart < 0) return "";
+  let i = argsStart + 2;
+  const args: (string | number)[] = [];
+  while (i < page.length && args.length < 4) {
+    const ch = page[i];
+    if (ch === " " || ch === ",") {
+      i++;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      const q = ch;
+      let value = "";
+      i++;
+      while (i < page.length) {
+        const c = page[i];
+        if (c === "\\") {
+          value += page[i + 1] ?? "";
+          i += 2;
+          continue;
+        }
+        if (c === q) {
+          i++;
+          break;
+        }
+        value += c;
+        i++;
+      }
+      args.push(value);
+      continue;
+    }
+    let digits = "";
+    while (i < page.length && /[0-9]/.test(page[i]!)) {
+      digits += page[i];
+      i++;
+    }
+    if (digits !== "") args.push(parseInt(digits, 10));
+    else i++;
+  }
+  const [code, radix, count, wordList] = args as [string, number, number, string];
+  if (typeof code !== "string" || typeof wordList !== "string") return "";
+  const words = wordList.split("|");
+  let packed = code;
+  for (let n = count - 1; n >= 0; n--) {
+    const word = words[n];
+    if (word) packed = packed.replace(new RegExp(`\\b${n.toString(radix)}\\b`, "g"), word);
+  }
+  return packed;
+}
+
+/**
+ * LuluStream (Epsilon): the iframe page is a jwplayer embed whose sources
+ * live inside a packed script; the source URL is a plain master playlist on
+ * their CDN that answers 302 without the player's UA and Referer.
+ */
+async function extractLuluStream(
+  iframeUrl: string,
+  options?: { signal?: AbortSignal; userAgent?: string },
+): Promise<ByseResult | null> {
+  const ua = options?.userAgent ?? "";
+  const page = await fetch(iframeUrl, {
+    headers: { "User-Agent": ua, Referer: `${SOURCE_CONFIG.baseUrl}/` },
+    signal: options?.signal,
+  }).then((r) => {
+    if (!r.ok) throw new SourceError(`Lulu page HTTP ${r.status}`, "VIDEO_ERROR");
+    return r.text();
+  });
+
+  const source = unpackPacked(page).match(/sources:\s*\[\s*\{\s*file:\s*"([^"]+)"/)?.[1];
+  if (source == null) throw new SourceError("No source in Lulu player", "PARSER_ERROR");
+
+  const headers = { "User-Agent": ua, Accept: "*/*", Referer: "https://lplaygo.com/" };
+  const master = await fetch(source, { headers, signal: options?.signal }).then((r) => {
+    if (!r.ok) throw new SourceError(`Master playlist HTTP ${r.status}`, "VIDEO_ERROR");
+    return r.text();
+  });
+
+  const best = bestStream(parseMaster(master, source));
+  if (!best) return null;
+  return { url: best.url, headers };
+}
+
 export async function extractBest(
   iframeUrl: string,
   options?: { signal?: AbortSignal; userAgent?: string },
@@ -118,6 +209,11 @@ export async function extractBest(
   const host = u.hostname;
   const id = u.pathname.split("/").filter(Boolean).pop();
   if (id == null) return null;
+
+  // Epsilon rides a LuluStream embed; only Delta speaks the Byse API
+  if (host.includes("lplaygo")) {
+    return extractLuluStream(iframeUrl, options);
+  }
 
   const fetchHeaders: Record<string, string> = {
     "User-Agent": options?.userAgent ?? "",
