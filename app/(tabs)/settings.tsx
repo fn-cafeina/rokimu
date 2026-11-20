@@ -138,7 +138,7 @@ export default function SettingsScreen() {
 
   return (
     <View className="flex-1 bg-black" style={{ paddingTop: insets.top + 16 }}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 104 }}>
       <View className="pb-6">
         <SectionTitle>Conexión</SectionTitle>
         <View className="mb-3" />
@@ -167,99 +167,6 @@ export default function SettingsScreen() {
             </Text>
           </View>
         </AnimatedPressable>
-
-        <View className="mt-8">
-          <SectionTitle>Reproducción</SectionTitle>
-          <View className="mb-3" />
-          <View className="rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
-            <View className="flex-row items-center">
-              <Feather name="play" size={18} color={MUTED_ICON} style={{ marginRight: 12 }} />
-              <View className="flex-1">
-                <Text className="text-base font-medium text-white">Servidor preferido</Text>
-              </View>
-            </View>
-            <Text className="mt-2 text-xs font-semibold tracking-wide text-neutral-400">
-              Se intenta primero al reproducir o descargar. Si no responde, se prueba el
-              siguiente servidor disponible del mismo idioma.
-            </Text>
-            <View className="mt-3 flex-row rounded-lg border border-neutral-800 bg-black p-1">
-              {(
-                [
-                  { label: "Auto", value: null },
-                  { label: "Delta", value: "Delta" },
-                  { label: "Epsilon", value: "Epsilon" },
-                ] as const
-              ).map((option) => {
-                const active = preferredServer === option.value;
-                return (
-                  <AnimatedPressable
-                    key={option.label}
-                    accessibilityLabel={`Servidor preferido ${option.label}`}
-                    accessibilityState={{ selected: active }}
-                    onPress={() => void setPreferredServer(option.value)}
-                    hapticFeedback={true}
-                    className={`flex-1 items-center justify-center py-2 rounded-md ${
-                      active ? "bg-accent/20" : "bg-transparent"
-                    }`}
-                  >
-                    <Text
-                      className={`text-sm font-semibold ${active ? "text-accent" : "text-neutral-400"}`}
-                    >
-                      {option.label}
-                    </Text>
-                  </AnimatedPressable>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-
-        <View className="mt-8">
-          <SectionTitle>Descargas</SectionTitle>
-          <View className="mb-3" />
-          <View className="flex-row items-center px-5 py-4 rounded-xl border border-neutral-800 bg-neutral-900">
-            <Feather name="layers" size={18} color={MUTED_ICON} style={{ marginRight: 12 }} />
-            <View className="flex-1">
-              <Text className="text-base font-medium text-white">Simultáneas</Text>
-              <Text className="mt-1 text-xs font-semibold tracking-wide text-neutral-400">
-                Episodios a la vez
-              </Text>
-            </View>
-            <View className="flex-row items-center">
-              <AnimatedPressable
-                accessibilityLabel="Disminuir descargas simultáneas"
-                accessibilityState={{ disabled: concurrency <= MIN_DOWNLOAD_CONCURRENCY }}
-                disabled={concurrency <= MIN_DOWNLOAD_CONCURRENCY}
-                hitSlop={6}
-                hapticFeedback={true}
-                onPress={() => void setConcurrency(concurrency - 1)}
-                className="min-h-8 min-w-8 items-center justify-center"
-              >
-                <Feather
-                  name="minus"
-                  size={18}
-                  color={concurrency <= MIN_DOWNLOAD_CONCURRENCY ? "#404040" : MUTED_ICON}
-                />
-              </AnimatedPressable>
-              <Text className="w-8 text-center text-base font-semibold text-white">{concurrency}</Text>
-              <AnimatedPressable
-                accessibilityLabel="Aumentar descargas simultáneas"
-                accessibilityState={{ disabled: concurrency >= MAX_DOWNLOAD_CONCURRENCY }}
-                disabled={concurrency >= MAX_DOWNLOAD_CONCURRENCY}
-                hitSlop={6}
-                hapticFeedback={true}
-                onPress={() => void setConcurrency(concurrency + 1)}
-                className="min-h-8 min-w-8 items-center justify-center"
-              >
-                <Feather
-                  name="plus"
-                  size={18}
-                  color={concurrency >= MAX_DOWNLOAD_CONCURRENCY ? "#404040" : MUTED_ICON}
-                />
-              </AnimatedPressable>
-            </View>
-          </View>
-        </View>
 
         <View className="mt-8">
           <SectionTitle>Actualizaciones</SectionTitle>
@@ -330,6 +237,98 @@ export default function SettingsScreen() {
                 </AnimatedPressable>
               )}
             </AnimatedPressable>
+          </View>
+        </View>
+
+        <View className="mt-8">
+          <SectionTitle>Descargas</SectionTitle>
+          <View className="mb-3" />
+          <View className="flex-row items-center px-5 py-4 rounded-xl border border-neutral-800 bg-neutral-900">
+            <Feather name="layers" size={18} color={MUTED_ICON} style={{ marginRight: 12 }} />
+            <View className="flex-1">
+              <Text className="text-base font-medium text-white">Simultáneas</Text>
+              <Text className="mt-1 text-xs font-semibold tracking-wide text-neutral-400">
+                Episodios a la vez
+              </Text>
+            </View>
+            <View className="flex-row items-center">
+              <AnimatedPressable
+                accessibilityLabel="Disminuir descargas simultáneas"
+                accessibilityState={{ disabled: concurrency <= MIN_DOWNLOAD_CONCURRENCY }}
+                disabled={concurrency <= MIN_DOWNLOAD_CONCURRENCY}
+                hitSlop={6}
+                hapticFeedback={true}
+                onPress={() => void setConcurrency(concurrency - 1)}
+                className="min-h-8 min-w-8 items-center justify-center"
+              >
+                <Feather
+                  name="minus"
+                  size={18}
+                  color={concurrency <= MIN_DOWNLOAD_CONCURRENCY ? "#404040" : MUTED_ICON}
+                />
+              </AnimatedPressable>
+              <Text className="w-8 text-center text-base font-semibold text-white">{concurrency}</Text>
+              <AnimatedPressable
+                accessibilityLabel="Aumentar descargas simultáneas"
+                accessibilityState={{ disabled: concurrency >= MAX_DOWNLOAD_CONCURRENCY }}
+                disabled={concurrency >= MAX_DOWNLOAD_CONCURRENCY}
+                hitSlop={6}
+                hapticFeedback={true}
+                onPress={() => void setConcurrency(concurrency + 1)}
+                className="min-h-8 min-w-8 items-center justify-center"
+              >
+                <Feather
+                  name="plus"
+                  size={18}
+                  color={concurrency >= MAX_DOWNLOAD_CONCURRENCY ? "#404040" : MUTED_ICON}
+                />
+              </AnimatedPressable>
+            </View>
+          </View>
+        </View>
+
+        <View className="mt-8">
+          <SectionTitle>Reproducción</SectionTitle>
+          <View className="mb-3" />
+          <View className="rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
+            <View className="flex-row items-center">
+              <Feather name="play" size={18} color={MUTED_ICON} style={{ marginRight: 12 }} />
+              <View className="flex-1">
+                <Text className="text-base font-medium text-white">Servidor preferido</Text>
+                <Text className="mt-1 text-xs font-semibold tracking-wide text-neutral-400">
+                  Se prueba primero al reproducir o descargar
+                </Text>
+              </View>
+            </View>
+            <View className="mt-3 flex-row rounded-lg border border-neutral-800 bg-black p-1">
+              {(
+                [
+                  { label: "Auto", value: null },
+                  { label: "Delta", value: "Delta" },
+                  { label: "Epsilon", value: "Epsilon" },
+                ] as const
+              ).map((option) => {
+                const active = preferredServer === option.value;
+                return (
+                  <AnimatedPressable
+                    key={option.label}
+                    accessibilityLabel={`Servidor preferido ${option.label}`}
+                    accessibilityState={{ selected: active }}
+                    onPress={() => void setPreferredServer(option.value)}
+                    hapticFeedback={true}
+                    className={`flex-1 items-center justify-center py-2 rounded-md ${
+                      active ? "bg-accent/20" : "bg-transparent"
+                    }`}
+                  >
+                    <Text
+                      className={`text-sm font-semibold ${active ? "text-accent" : "text-neutral-400"}`}
+                    >
+                      {option.label}
+                    </Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
           </View>
         </View>
 
