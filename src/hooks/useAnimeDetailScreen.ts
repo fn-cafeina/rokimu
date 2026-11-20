@@ -175,13 +175,17 @@ export function useAnimeDetailScreen(slug: string) {
       }
     }
 
-    // The sheet lists servers in play order: the user's preference first, site
-    // order after — the old hard-coded Delta-first bias is gone
+    // The sheet lists one server per language, in play order: the user's
+    // preferred server first, site order after. A second server of the same
+    // language would just duplicate the row.
+    const listed = new Set<string>();
     for (const server of orderServers(servers, useSettingsStore.getState().preferredServer)) {
-      if (server.language != null && claimed.has(server.language)) continue;
+      const language = server.language ?? "Desconocido";
+      if (claimed.has(language) || listed.has(language)) continue;
+      listed.add(language);
       out.push({
         key: `server-${server.id}`,
-        language: server.language ?? "Desconocido",
+        language,
         hint: "Sin descargar",
         icon: "download",
         onSelect: () => {
