@@ -2,6 +2,7 @@ import { Directory, File, Paths } from "expo-file-system";
 import { TIMEOUTS } from "@/config/cache";
 import type { AppError } from "@/types";
 import { SourceError, isCancelled } from "@/utils/errors";
+import { backoffDelay } from "@/utils/math";
 import { logger } from "@/utils/logger";
 import { withAuthRetry } from "@/utils/retry";
 import { orderServers } from "@/utils/serverOrder";
@@ -17,8 +18,11 @@ import {
   type HlsSegment,
 } from "./hls";
 
-// A single segment request at a time leaves a fast wifi link idle
-const SEGMENT_CONCURRENCY = 8;
+// Eight parallel requests to one CDN tripped its burst limit: every segment
+// came back 429 and the whole episode died on the first refusal
+const SEGMENT_CONCURRENCY = 3;
+// One segment is retried on 429/5xx before the worker gives up
+const DOWNLOAD_ATTEMPTS = 3;
 // A transfer that stops moving is aborted: a dead socket otherwise holds one
 // worker forever and, with concurrency 1, the whole queue behind it
 const STALL_TIMEOUT_MS = 45_000;
@@ -128,6 +132,13 @@ function settleRequestError(error: unknown, signal: AbortSignal): unknown {
   return error;
 }
 
+/** The native downloader reports the HTTP status only inside its error message. */
+function statusOf(error: unknown): number | null {
+  const message = error instanceof Error ? error.message : "";
+  const match = /status: (\d{3})/.exec(message);
+  return match?.[1] != null ? parseInt(match[1], 10) : null;
+}
+
 async function downloadTo(
   url: string,
   target: File,
@@ -135,18 +146,28 @@ async function downloadTo(
   signal: AbortSignal,
   range: { length: number; offset: number } | null = null,
 ): Promise<void> {
-  const guard = guardRequest(signal, STALL_TIMEOUT_MS);
-  try {
-    await File.downloadFileAsync(url, target, {
-      idempotent: true,
-      headers: { ...headers, ...rangeHeaders(range) },
-      signal: guard.signal,
-      onProgress: () => guard.touch(),
-    });
-  } catch (error) {
-    throw settleRequestError(error, signal);
-  } finally {
-    guard.release();
+  for (let attempt = 0; ; attempt++) {
+    const guard = guardRequest(signal, STALL_TIMEOUT_MS);
+    try {
+      await File.downloadFileAsync(url, target, {
+        idempotent: true,
+        headers: { ...headers, ...rangeHeaders(range) },
+        signal: guard.signal,
+        onProgress: () => guard.touch(),
+      });
+      return;
+    } catch (error) {
+      const settled = settleRequestError(error, signal);
+      const status = statusOf(error);
+      // The CDN refuses bursts with 429: one refusal must not kill the episode
+      const retryable = status === 429 || (status != null && status >= 500);
+      if (!retryable || attempt >= DOWNLOAD_ATTEMPTS - 1 || signal.aborted) throw settled;
+      const wait = status === 429 ? 2_000 * (attempt + 1) : backoffDelay(attempt);
+      logger.warn("download", `HTTP ${status} from the CDN, retrying in ${wait}ms (${attempt + 1}/${DOWNLOAD_ATTEMPTS})`);
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    } finally {
+      guard.release();
+    }
   }
 }
 
