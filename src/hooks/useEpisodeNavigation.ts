@@ -4,6 +4,8 @@ import { usePlayerStore } from "@/stores/playerStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { downloadedForEpisode, useDownloadsStore } from "@/stores/downloadsStore";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "@/utils/history";
+import { orderServers } from "@/utils/serverOrder";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, animeImage: string) {
   const lastLanguage = usePlayerStore((s) => s.lastLanguage);
@@ -62,7 +64,7 @@ export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, an
           return;
         }
 
-        const servers = serversOutcome.data;
+        const servers = orderServers(serversOutcome.data, useSettingsStore.getState().preferredServer);
         const server =
           lastLanguage != null
             ? servers.find((s) => s.language === lastLanguage) ?? servers[0]

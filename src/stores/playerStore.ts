@@ -6,6 +6,8 @@ import { storage } from "@/utils/storage";
 import { logger } from "@/utils/logger";
 import { SourceError, isAuthError, isCancelled, toAppError } from "@/utils/errors";
 import { withAuthRetry } from "@/utils/retry";
+import { orderServers } from "@/utils/serverOrder";
+import { useSettingsStore } from "@/stores/settingsStore";
 import {
   ResourceRunner,
   resourceInitialState,
@@ -76,8 +78,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     // The failed server just proved its chain dead: one retry against it is a
     // retry against the same corpse, so it sits out this round
     const alive = failed != null ? servers.filter((s) => s.id !== failed.id) : servers;
+    const ordered = orderServers(alive, useSettingsStore.getState().preferredServer);
     const language = get().lastLanguage;
-    const server = (language != null ? alive.find((s) => s.language === language) : null) ?? alive[0];
+    const server = (language != null ? ordered.find((s) => s.language === language) : null) ?? ordered[0];
     if (server == null) throw new SourceError("No hay servidor disponible", "VIDEO_ERROR");
     return server;
   };

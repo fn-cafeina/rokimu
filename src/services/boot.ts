@@ -1,7 +1,7 @@
 import { useDownloadsStore, DOWNLOADS_KEY, DOWNLOAD_CONCURRENCY_KEY, DEFAULT_DOWNLOAD_CONCURRENCY, type DownloadEntry } from "@/stores/downloadsStore";
 import { useHistoryStore, HISTORY_KEY } from "@/stores/historyStore";
 import { useSavedStore, SAVED_KEY } from "@/stores/savedStore";
-import { useSettingsStore, EPISODE_ORDER_KEY } from "@/stores/settingsStore";
+import { useSettingsStore, EPISODE_ORDER_KEY, PREFERRED_SERVER_KEY } from "@/stores/settingsStore";
 import { useUpdateStore, UPDATE_CHECK_KEY } from "@/stores/updateStore";
 import { isWorthKeepingOffline } from "@/hooks/useAnimeSnapshot";
 import { prunePersistedRanges } from "@/hooks/useAnimeDetail";
@@ -34,10 +34,11 @@ export async function bootApp(): Promise<void> {
   // Fire and forget: the sweep is IO over every stored key, nothing waits on it
   void pruneExpiredCache();
   await sessionManager.initialize();
-  const [history, saved, order, updateCheckEnabled] = await Promise.all([
+  const [history, saved, order, preferredServer, updateCheckEnabled] = await Promise.all([
     storage.get<HistoryItem[]>(HISTORY_KEY),
     storage.get<Anime[]>(SAVED_KEY),
     storage.get<"asc" | "desc">(EPISODE_ORDER_KEY),
+    storage.get<"Delta" | "Epsilon" | null>(PREFERRED_SERVER_KEY),
     storage.get<boolean>(UPDATE_CHECK_KEY),
   ]);
   const [downloads, downloadConcurrency] = await Promise.all([
@@ -46,7 +47,7 @@ export async function bootApp(): Promise<void> {
   ]);
   useHistoryStore.getState().initialize(history ?? []);
   useSavedStore.getState().initialize(saved ?? []);
-  useSettingsStore.getState().initialize(order ?? "asc");
+  useSettingsStore.getState().initialize(order ?? "asc", preferredServer);
   useUpdateStore.getState().initialize(updateCheckEnabled !== false);
   useDownloadsStore.getState().initialize(downloads ?? [], downloadConcurrency ?? DEFAULT_DOWNLOAD_CONCURRENCY);
   // Stored detail and episode ranges outlive the cache, so the sweep waits

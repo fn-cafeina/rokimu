@@ -4,6 +4,8 @@ import type { AppError } from "@/types";
 import { SourceError, isCancelled } from "@/utils/errors";
 import { logger } from "@/utils/logger";
 import { withAuthRetry } from "@/utils/retry";
+import { orderServers } from "@/utils/serverOrder";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { source } from "./source";
 import {
   buildLocalPlaylist,
@@ -186,11 +188,14 @@ async function pickStream(
     { signal, tag: "download" },
   );
   if (servers.length === 0) throw new SourceError("No hay servidor disponible", "VIDEO_ERROR");
+  // The user's preferred server jumps the queue so a dead default never costs
+  // its timeout; the rest keep the site's order for the fallback ladder
+  const ordered = orderServers(servers, useSettingsStore.getState().preferredServer);
   // A requested language is not negotiable: downloading another audio track
   // under that label would be a silent lie to the user. Without one, every
   // server is a candidate in the order the site lists them.
   const candidates =
-    target.language != null ? servers.filter((s) => s.language === target.language) : servers;
+    target.language != null ? ordered.filter((s) => s.language === target.language) : ordered;
   if (candidates.length === 0) {
     throw new SourceError(`No hay servidor en ${target.language} para este episodio`, "VIDEO_ERROR");
   }

@@ -44,6 +44,9 @@ export default function SettingsScreen() {
   const concurrency = useDownloadsStore((s) => s.concurrency);
   const setConcurrency = useDownloadsStore((s) => s.setConcurrency);
 
+  const preferredServer = useSettingsStore((s) => s.preferredServer);
+  const setPreferredServer = useSettingsStore((s) => s.setPreferredServer);
+
   const appVersion = currentVersion ?? "—";
 
   const spin = useSharedValue(0);
@@ -163,6 +166,51 @@ export default function SettingsScreen() {
             </Text>
           </View>
         </AnimatedPressable>
+
+        <View className="mt-8">
+          <SectionTitle>Reproducción</SectionTitle>
+          <View className="mb-3" />
+          <View className="flex-row items-center px-5 py-4 rounded-xl border border-neutral-800 bg-neutral-900">
+            <Feather name="play" size={18} color={MUTED_ICON} style={{ marginRight: 12 }} />
+            <View className="flex-1">
+              <Text className="text-base font-medium text-white">Servidor preferido</Text>
+              <Text className="mt-1 text-xs font-semibold tracking-wide text-neutral-400">
+                Se prueba primero; si falla, el siguiente
+              </Text>
+            </View>
+            <View className="flex-row gap-1.5">
+              {(
+                [
+                  { label: "Auto", value: null },
+                  { label: "Delta", value: "Delta" },
+                  { label: "Epsilon", value: "Epsilon" },
+                ] as const
+              ).map((option) => {
+                const active = preferredServer === option.value;
+                return (
+                  <AnimatedPressable
+                    key={option.label}
+                    accessibilityLabel={`Servidor preferido ${option.label}`}
+                    accessibilityState={{ selected: active }}
+                    onPress={() => void setPreferredServer(option.value)}
+                    hapticFeedback={true}
+                    className={`px-3 py-1.5 rounded-full border ${
+                      active
+                        ? "border-accent bg-accent/15"
+                        : "border-neutral-700 bg-transparent"
+                    }`}
+                  >
+                    <Text
+                      className={`text-xs font-semibold ${active ? "text-accent" : "text-neutral-400"}`}
+                    >
+                      {option.label}
+                    </Text>
+                  </AnimatedPressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
 
         <View className="mt-8">
           <SectionTitle>Descargas</SectionTitle>
