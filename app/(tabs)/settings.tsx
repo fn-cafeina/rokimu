@@ -18,6 +18,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Alert, Linking, ScrollView, Switch, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
+import { useTabBarManager } from "@/hooks/useTabBarManager";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -46,6 +48,13 @@ export default function SettingsScreen() {
 
   const preferredServer = useSettingsStore((s) => s.preferredServer);
   const setPreferredServer = useSettingsStore((s) => s.setPreferredServer);
+
+  const { handleScroll, reset } = useTabBarManager({ threshold: 8 });
+  useFocusEffect(
+    useCallback(() => {
+      reset();
+    }, [reset]),
+  );
 
   const appVersion = currentVersion ?? "—";
 
@@ -138,7 +147,12 @@ export default function SettingsScreen() {
 
   return (
     <View className="flex-1 bg-black" style={{ paddingTop: insets.top + 16 }}>
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 104 }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 104 }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
       <View className="pb-6">
         <SectionTitle>Conexión</SectionTitle>
         <View className="mb-3" />
