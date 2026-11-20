@@ -370,6 +370,7 @@ export async function downloadEpisode(
   const segmentsTotal = playlist.segments.length + (init != null ? 1 : 0);
   let segmentsDone = init != null ? 1 : 0;
   let bytesDone = init?.bytes ?? 0;
+  logger.debug("download", `${target.slug} ep ${target.number}: ${segmentsTotal} segments queued, ${SEGMENT_CONCURRENCY} workers`);
   onProgress({ segmentsDone, segmentsTotal, bytesDone });
 
   // Rotation keys are fetched once even when several segments need them
@@ -404,12 +405,14 @@ export async function downloadEpisode(
         segmentsDone += 1;
         bytesDone += bytes;
         onProgress({ segmentsDone, segmentsTotal, bytesDone });
-        // First segment reports immediately: waiting for 25 was minutes of silence
-        if (stats.count === 1 || stats.count % 25 === 0) {
+        // One line per 25 iterations, not per download: a resumed run skips
+        // segments and would otherwise stay silent for minutes
+        if (index === 0 || index % 25 === 0) {
           // Which phase is eating the wall clock: network, AES in JS, or the write back
+          const perSegment = Math.max(1, stats.count);
           logger.debug(
             "download",
-            `${segmentsDone}/${segmentsTotal} segments, avg per segment: network ${Math.round(stats.downloadMs / stats.count)}ms, decrypt ${Math.round(stats.decryptMs / stats.count)}ms, write ${Math.round(stats.writeMs / stats.count)}ms`,
+            `${index + 1}/${segmentsTotal} (${segmentsDone} written), avg per written segment: network ${Math.round(stats.downloadMs / perSegment)}ms, decrypt ${Math.round(stats.decryptMs / perSegment)}ms, write ${Math.round(stats.writeMs / perSegment)}ms`,
           );
         }
       } catch (error) {
