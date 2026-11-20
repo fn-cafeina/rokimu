@@ -140,6 +140,18 @@ function statusOf(error: unknown): number | null {
   return match?.[1] != null ? parseInt(match[1], 10) : null;
 }
 
+/**
+ * Network failures arrive as native exception names, not as HTTP statuses: a
+ * connect timeout or a reset connection is worth another attempt, a refused
+ * certificate is not.
+ */
+function isTransient(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : "";
+  return /SocketTimeoutException|ConnectException|SSLException|UnknownHostException|failed to connect|Unable to resolve host|Connection reset|connection abort|stream was reset/i.test(
+    message,
+  );
+}
+
 async function downloadTo(
   url: string,
   target: File,
@@ -166,11 +178,13 @@ async function downloadTo(
     } catch (error) {
       const settled = settleRequestError(error, signal);
       const status = statusOf(error);
-      // The CDN refuses bursts with 429: one refusal must not kill the episode
-      const retryable = status === 429 || (status != null && status >= 500);
+      // The CDN refuses bursts with 429, and a dropped socket drops one segment:
+      // neither is worth losing the whole episode over
+      const retryable = status === 429 || (status != null && status >= 500) || isTransient(error);
       if (!retryable || attempt >= DOWNLOAD_ATTEMPTS - 1 || signal.aborted) throw settled;
       const wait = status === 429 ? 2_000 * (attempt + 1) : backoffDelay(attempt);
-      logger.warn("download", `HTTP ${status} from the CDN, retrying in ${wait}ms (${attempt + 1}/${DOWNLOAD_ATTEMPTS})`);
+      const reason = status != null ? `HTTP ${status}` : "Network error";
+      logger.warn("download", `${reason} from the CDN, retrying in ${wait}ms (${attempt + 1}/${DOWNLOAD_ATTEMPTS})`);
       await new Promise((resolve) => setTimeout(resolve, wait));
     } finally {
       guard.release();
