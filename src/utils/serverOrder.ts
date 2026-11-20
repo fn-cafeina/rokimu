@@ -1,10 +1,18 @@
 import type { VideoServer } from "@/types";
 
+/**
+ * The first word of a title: the site appends suffixes ("Delta 2", "Epsilon HD")
+ * and a rename there must not silently disable the user's preference.
+ */
+function family(value: string): string {
+  return value.trim().toLowerCase().split(/[^a-z0-9]+/).filter(Boolean)[0] ?? "";
+}
+
 function sameTitle(title: string, name: string | null): boolean {
   if (name == null) return false;
   // The site owns these names: a stray space or case change must not silently
   // disable the user's preference
-  return title.trim().toLowerCase() === name.trim().toLowerCase();
+  return family(title) === family(name);
 }
 
 /**

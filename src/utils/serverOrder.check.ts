@@ -32,6 +32,16 @@ assertEqual(orderServers(servers, "Gamma"), servers, "unknown preference keeps s
 
 // Site-side noise in the name must not disable the preference
 assertEqual(orderServers(servers, "  epsilon ").map((s) => s.id), ["2", "1", "3"], "case and spaces ignored");
+assertEqual(
+  orderServers([{ id: "4", title: "Epsilon 2", url: "d", language: "Latino" }, servers[0]!], "Epsilon").map((s) => s.id),
+  ["4", "1"],
+  "a suffix after the name keeps the preference"
+);
+assertEqual(
+  orderServers([{ id: "5", title: "Deltanime", url: "e", language: "Latino" }, servers[0]!], "Delta").map((s) => s.id),
+  ["1", "5"],
+  "a different name sharing the prefix is not the preference"
+);
 
 // A refreshed list resolves the same server, never a substitute
 assertEqual(findServer(servers, { id: "9", title: "Delta", url: "z", language: "Latino" }), servers[2], "id miss falls to name and language");
