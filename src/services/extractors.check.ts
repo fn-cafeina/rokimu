@@ -92,5 +92,19 @@ assertEqual(
   "unpacks a packed LuluStream player",
 );
 assertEqual(unpackPacked("<p>no packer here</p>"), "", "a page without a packer unpacks to empty");
+assertEqual(
+  unpackPacked(`<script>${packedPage.replace("function(p,a,c,k,e,d)", "function ( p,a,c,k,e,d )")}</script>`).match(
+    /sources:\s*\[\s*\{\s*file:\s*"([^"]+)"/,
+  )?.[1],
+  "https://cdn.example/hls/master.m3u8",
+  "whitespace inside the packer signature still unpacks",
+);
+// Base 62 carries RegExp metacharacters into the replacement: fail instead of
+// rewriting the wrong text
+assertEqual(
+  unpackPacked(packedPage.replace("',36,", "',62,")),
+  "",
+  "a base past 36 unpacks to empty",
+);
 
 console.log("extractors ok");

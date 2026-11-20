@@ -116,11 +116,22 @@ function bestStream(streams: HlsStream[]): HlsStream | null {
  * count, 'k|k|...'.split('|'), 0, {})). The LuluStream player page hides its
  * jwplayer sources inside one of these.
  */
+/**
+ * Dean Edwards packer: eval(function(p,a,c,k,e,d){...}('payload', radix,
+ * count, 'k|k|...'.split('|'), 0, {})). The LuluStream player page hides its
+ * jwplayer sources inside one of these.
+ *
+ * shortcut: the canonical packer shape only, base up to 36, word-boundary
+ * replacement; a page packing with the ``e`` decoder (base 62/64) unpacks to
+ * empty, which surfaces as a parser error. Upgrade when a Lulu page stops
+ * resolving.
+ */
 export function unpackPacked(page: string): string {
-  const start = page.indexOf("eval(function(p,a,c,k,e,d)");
+  const start = page.search(/eval\s*\(\s*function\s*\(\s*p\s*,\s*a\s*,\s*c\s*,\s*k\s*,\s*e\s*,\s*d\s*\)/);
   if (start < 0) return "";
-  const argsStart = page.indexOf("}(", start);
-  if (argsStart < 0) return "";
+  const argsMatch = /\}\s*\(/.exec(page.slice(start));
+  if (argsMatch == null) return "";
+  const argsStart = start + argsMatch.index;
   let i = argsStart + 2;
   const args: (string | number)[] = [];
   while (i < page.length && args.length < 4) {
@@ -160,9 +171,13 @@ export function unpackPacked(page: string): string {
   }
   const [code, radix, count, wordList] = args as [string, number, number, string];
   if (typeof code !== "string" || typeof wordList !== "string") return "";
+  // Past base 36 the digit alphabet carries RegExp metacharacters, so the
+  // replacement below would rewrite the wrong text instead of failing
+  if (typeof radix !== "number" || radix < 2 || radix > 36) return "";
   const words = wordList.split("|");
+  const last = Math.min(typeof count === "number" ? count : words.length, words.length);
   let packed = code;
-  for (let n = count - 1; n >= 0; n--) {
+  for (let n = last - 1; n >= 0; n--) {
     const word = words[n];
     if (word) packed = packed.replace(new RegExp(`\\b${n.toString(radix)}\\b`, "g"), word);
   }
