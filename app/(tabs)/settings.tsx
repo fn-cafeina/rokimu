@@ -300,7 +300,7 @@ export default function SettingsScreen() {
               <View className="flex-1">
                 <Text className="text-base font-medium text-white">Servidor preferido</Text>
                 <Text className="mt-1 text-xs font-semibold tracking-wide text-neutral-400">
-                  Se prueba primero al reproducir o descargar
+                  Coral suele ir más rápido
                 </Text>
               </View>
             </View>
@@ -308,8 +308,8 @@ export default function SettingsScreen() {
               {(
                 [
                   { label: "Auto", value: null },
-                  { label: "Delta", value: "Delta" },
-                  { label: "Epsilon", value: "Epsilon" },
+                  { label: "Coral", value: "Delta" },
+                  { label: "Jade", value: "Epsilon" },
                 ] as const
               ).map((option) => {
                 const active = preferredServer === option.value;
