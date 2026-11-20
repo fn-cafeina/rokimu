@@ -34,6 +34,8 @@ Expo 58 + React Native 0.88. **Android-only** (no iOS/web). File-based routing v
 | `src/services/source.ts` | HTTP fetcher with session |
 | `src/services/parsers.ts` | HTML / RSC parser |
 | `src/services/extractors.ts` | Byse AES-GCM decrypt |
+| `src/services/hls.ts` | HLS stream handling |
+| `src/services/downloader.ts` | Episode downloads |
 | `src/utils/cache.ts` | Cache utilities |
 
 ## ESLint (type-aware)

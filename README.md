@@ -81,9 +81,9 @@ and the two must match.
 - `src/components/`: UI shared between screens
 - `src/hooks/`: screen and data hooks
 - `src/stores/`: Zustand stores
-- `src/services/`: HTTP client, HTML parsers, session handling, updater
-- `src/config/`: source URLs, cache prefixes and TTLs
-- `src/utils/`: cache, storage, logger, navigation
+- `src/services/`: HTTP client, HTML parsers, session handling, HLS streams, downloader, updater
+- `src/config/`: source URLs, cache prefixes and TTLs, player config, theme
+- `src/utils/`: cache, storage, persistence, download queue, retry, logger, navigation
 - `plugins/`: Expo config plugins
 
 ## Legal
