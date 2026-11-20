@@ -13,7 +13,7 @@ assertEqual(
   "tnmr subdomain is throttled",
 );
 assertEqual(
-  segmentConcurrency(["https://cdn1011.cdn-tnmr.org/hls2/03/seg-0.ts"]),
+  segmentConcurrency(["https://cdn-tnmr.org/hls2/03/seg-0.ts"]),
   4,
   "cdn-tnmr subdomain is throttled",
 );
