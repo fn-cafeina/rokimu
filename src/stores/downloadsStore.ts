@@ -121,9 +121,15 @@ async function runDownload(input: DownloadInput, resume: boolean): Promise<void>
   updateEntry(key, { status: "downloading", error: null, segmentsDone: 0, segmentsTotal: 0, bytes: 0 });
 
   try {
+    // Progress lands in the store: one update per segment re-rendered every
+    // list watching the download, so it is throttled to a readable rate
+    let lastProgressAt = 0;
     const result = await downloadEpisode(
       target,
       (progress) => {
+        const now = Date.now();
+        if (now - lastProgressAt < 250) return;
+        lastProgressAt = now;
         updateEntry(key, {
           segmentsDone: progress.segmentsDone,
           segmentsTotal: progress.segmentsTotal,
