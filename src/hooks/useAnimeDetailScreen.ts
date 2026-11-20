@@ -9,6 +9,7 @@ import { usePersistedRange } from "./useAnimeDetail";
 import { computeEpisodePagination } from "./episodeHelpers";
 import { errorFor, isLoadingFor } from "@/utils/resource";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "@/utils/history";
+import { orderServers } from "@/utils/serverOrder";
 import { navigateToPlayer } from "@/utils/navigation";
 import {
   downloadKey,
@@ -174,8 +175,9 @@ export function useAnimeDetailScreen(slug: string) {
       }
     }
 
-    const delta = servers.filter((s) => s.title.toLowerCase().includes("delta"));
-    for (const server of delta.length > 0 ? delta : servers) {
+    // The sheet lists servers in play order: the user's preference first, site
+    // order after — the old hard-coded Delta-first bias is gone
+    for (const server of orderServers(servers, useSettingsStore.getState().preferredServer)) {
       if (server.language != null && claimed.has(server.language)) continue;
       out.push({
         key: `server-${server.id}`,
