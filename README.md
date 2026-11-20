@@ -16,9 +16,8 @@ bunx expo prebuild --platform android
 bun run android
 ```
 
-Rokimu needs a development build. It does not run in Expo Go: the installer
-config plugin and the `REQUEST_INSTALL_PACKAGES` permission are applied at
-prebuild time.
+Rokimu needs a development build. It does not run in Expo Go: the
+`REQUEST_INSTALL_PACKAGES` permission is applied at prebuild time.
 
 ## Stack
 
