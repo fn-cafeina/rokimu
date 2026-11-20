@@ -17,6 +17,9 @@ export const WebViewWorker = () => {
     webViewBridge.registerNavigation((uri: string) => {
       vRef.current?.injectJavaScript(`window.location.href = ${JSON.stringify(uri)};`);
     });
+    webViewBridge.registerInjector((js: string) => {
+      vRef.current?.injectJavaScript(js);
+    });
   }, []);
 
   const handleMessage = useCallback((e: WebViewMessageEvent) => {
@@ -26,6 +29,11 @@ export const WebViewWorker = () => {
 
     if (result.type === "LOG") {
       logger.info("session", `[WebView Log] ${result.data}`);
+      return;
+    }
+
+    if (result.type === "HTTP") {
+      webViewBridge.handleHttp(result.data);
       return;
     }
 
@@ -44,6 +52,10 @@ export const WebViewWorker = () => {
         source={{ uri: WORKER_URL }}
         injectedJavaScript={GLOBAL_BOOTSTRAP}
         onMessage={handleMessage}
+        // A navigation in flight cannot answer injected requests; the flag
+        // makes them fail fast instead of racing the page swap
+        onLoadStart={() => webViewBridge.setLoaded(false)}
+        onLoadEnd={() => webViewBridge.setLoaded(true)}
         javaScriptEnabled={true}
         domStorageEnabled={true}
       />
