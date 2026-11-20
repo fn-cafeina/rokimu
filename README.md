@@ -4,8 +4,8 @@
 
 Anime for Android, without the clutter.
 
-[![Latest release](https://img.shields.io/github/v/release/fn-cafeina/rokimu?labelColor=0d1117)](https://github.com/fn-cafeina/rokimu/releases)
-[![License](https://img.shields.io/github/license/fn-cafeina/rokimu?labelColor=0d1117)](LICENSE)
+[![Download APK](https://img.shields.io/github/v/release/fn-cafeina/rokimu?label=Download%20APK&style=for-the-badge&labelColor=0d1117&color=2ea44f)](https://github.com/fn-cafeina/rokimu/releases/latest)
+[![License](https://img.shields.io/github/license/fn-cafeina/rokimu?style=for-the-badge&labelColor=0d1117)](LICENSE)
 
 Rokimu is a small client for watching anime on a phone. No feed of
 recommendations, no comments, no profile. You look something up, you watch it,
@@ -17,9 +17,9 @@ it remembers where you stopped, and it keeps what you download.
 
 ## Download
 
-Grab the `.apk` from the [latest release](https://github.com/fn-cafeina/rokimu/releases),
-allow installs from your browser when Android asks, and open the file. Builds
-cover both 32- and 64-bit ARM phones.
+[Download the latest APK](https://github.com/fn-cafeina/rokimu/releases/latest), allow
+installs from your browser when Android asks, and open the file. Builds cover
+both 32- and 64-bit ARM phones.
 
 After that the app updates itself: Settings holds the check and the install.
 
