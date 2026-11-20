@@ -6,8 +6,7 @@ import { storage } from "@/utils/storage";
 import { logger } from "@/utils/logger";
 import { SourceError, isAuthError, isCancelled, toAppError } from "@/utils/errors";
 import { withAuthRetry } from "@/utils/retry";
-import { orderServers } from "@/utils/serverOrder";
-import { useSettingsStore } from "@/stores/settingsStore";
+import { findServer } from "@/utils/serverOrder";
 import {
   ResourceRunner,
   resourceInitialState,
@@ -59,30 +58,48 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     lastServersKey = null;
   };
 
-  // A dead video chain (expired bridge, dropped host) is a logical failure,
-  // not the user's: refresh the episode's servers and pick again before any
-  // error reaches the screen. Runs once per load; AUTH keeps its own ladder.
-  const regenerateChain = async (
-    ctx: { slug: string; number: string },
-    signal: AbortSignal,
-    failed: VideoServer | null,
-  ): Promise<VideoServer> => {
-    dropPlaybackArtifacts();
+  // Bridge URLs expire with the session: a dead chain means the cached list is
+  // as stale as the URL it carries
+  const refreshServers = async (ctx: { slug: string; number: string }, signal: AbortSignal): Promise<VideoServer[]> => {
     const cacheKey = `${CACHE_PREFIXES.SERVERS}_${ctx.slug}_${ctx.number}`;
     lastServersKey = cacheKey;
-    const servers = await loadCached(
+    return loadCached(
       cacheKey,
       (sig) => source.getEpisodeServers(ctx.slug, ctx.number, { signal: sig }),
       { ttl: CACHE_TTL.SERVERS, signal, force: true },
     );
-    // The failed server just proved its chain dead: one retry against it is a
-    // retry against the same corpse, so it sits out this round
-    const alive = failed != null ? servers.filter((s) => s.id !== failed.id) : servers;
-    const ordered = orderServers(alive, useSettingsStore.getState().preferredServer);
-    const language = get().lastLanguage;
-    const server = (language != null ? ordered.find((s) => s.language === language) : null) ?? ordered[0];
-    if (server == null) throw new SourceError("No hay servidor disponible", "VIDEO_ERROR");
-    return server;
+  };
+
+  /**
+   * Playback plays the server the user chose, or fails. A dead chain is an
+   * expired bridge URL, so the same server gets one more try with a freshly
+   * fetched URL — never a different server: switching here would hand the user
+   * a source and an audio track they did not pick. The error screen's picker is
+   * the only path to another server.
+   */
+  const resolveChosen = async (
+    ctx: { slug: string; number: string },
+    signal: AbortSignal,
+    chosen: VideoServer,
+    force: boolean,
+  ): Promise<StreamUrlResult> => {
+    lastStreamServer = chosen;
+    try {
+      const resolved = await resolveStreamCached(chosen, { force, signal });
+      if (resolved == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
+      lastStreamServer = chosen;
+      return resolved;
+    } catch (error) {
+      if (isAuthError(error) || isCancelled(error)) throw error;
+      logger.warn("stream", `Chain dead on ${chosen.title} (${chosen.language}): ${toAppError(error).type}`);
+      dropPlaybackArtifacts();
+      const same = findServer(await refreshServers(ctx, signal), chosen);
+      if (same == null) throw error;
+      lastStreamServer = same;
+      const retried = await resolveStreamCached(same, { force: true, signal });
+      if (retried == null) throw error;
+      return retried;
+    }
   };
 
   return {
@@ -110,26 +127,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     resolveStream: async (server: VideoServer, ctx: { slug: string; number: string }) => {
       set({ lastLanguage: server.language, streamEpisodeNumber: ctx.number });
-      lastStreamServer = server;
       const outcome = await streamRunner.load(STREAM_KEY, (signal) =>
-        withAuthRetry(
-          async (attempt) => {
-            try {
-              const fresh = await resolveStreamCached(server, { force: attempt > 0, signal });
-              if (fresh == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
-              return fresh;
-            } catch (error) {
-              if (isAuthError(error) || isCancelled(error)) throw error;
-              logger.warn("stream", `Chain dead (${toAppError(error).type}), regenerating servers once`);
-              const regenerated = await regenerateChain(ctx, signal, server);
-              lastStreamServer = regenerated;
-              const fresh = await resolveStreamCached(regenerated, { signal });
-              if (fresh == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
-              return fresh;
-            }
-          },
-          { signal, maxRetries: 2, tag: "stream" },
-        ),
+        withAuthRetry((attempt) => resolveChosen(ctx, signal, server, attempt > 0), {
+          signal,
+          maxRetries: 2,
+          tag: "stream",
+        }),
       );
       if (outcome.status === "error") dropPlaybackArtifacts();
       return outcome;

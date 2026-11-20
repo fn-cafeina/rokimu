@@ -64,6 +64,8 @@ export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, an
           return;
         }
 
+        // The user's server and audio track are not negotiable: one server,
+        // then the result is honest — success or error
         const servers = orderServers(serversOutcome.data, useSettingsStore.getState().preferredServer);
         const server =
           lastLanguage != null

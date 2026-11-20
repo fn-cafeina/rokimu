@@ -1,4 +1,4 @@
-import { orderServers } from "./serverOrder";
+import { findServer, orderServers } from "./serverOrder";
 
 function assertEqual(actual: unknown, expected: unknown, message: string): void {
   const a = JSON.stringify(actual);
@@ -29,5 +29,13 @@ assertEqual(
 
 // A preference the episode does not offer changes nothing
 assertEqual(orderServers(servers, "Gamma"), servers, "unknown preference keeps site order");
+
+// Site-side noise in the name must not disable the preference
+assertEqual(orderServers(servers, "  epsilon ").map((s) => s.id), ["2", "1", "3"], "case and spaces ignored");
+
+// A refreshed list resolves the same server, never a substitute
+assertEqual(findServer(servers, { id: "9", title: "Delta", url: "z", language: "Latino" }), servers[2], "id miss falls to name and language");
+assertEqual(findServer(servers, { id: "2", title: "Epsilon", url: "moved", language: "Subtitulado" }), servers[1], "id hit wins");
+assertEqual(findServer(servers, { id: "9", title: "Gamma", url: "z", language: "Latino" }), null, "a server that disappeared resolves to nothing");
 
 console.log("server order ok");
