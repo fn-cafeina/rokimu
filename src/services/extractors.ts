@@ -184,6 +184,25 @@ export function unpackPacked(page: string): string {
   return packed;
 }
 
+/** LuluStream answers a small embed page; a host that never replies must not hold a resolution. */
+const LULU_TIMEOUT_MS = 15_000;
+
+async function luluFetch(url: string, init: RequestInit, signal?: AbortSignal): Promise<string> {
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener("abort", onAbort, { once: true });
+  const timer = setTimeout(() => controller.abort(), LULU_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    if (!response.ok) throw new SourceError(`Lulu HTTP ${response.status}`, "VIDEO_ERROR");
+    return await response.text();
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", onAbort);
+  }
+}
+
 /**
  * LuluStream (Epsilon): the iframe page is a jwplayer embed whose sources
  * live inside a packed script; the source URL is a plain master playlist on
@@ -194,22 +213,19 @@ async function extractLuluStream(
   options?: { signal?: AbortSignal; userAgent?: string },
 ): Promise<ByseResult | null> {
   const ua = options?.userAgent ?? "";
-  const page = await fetch(iframeUrl, {
-    headers: { "User-Agent": ua, Referer: `${SOURCE_CONFIG.baseUrl}/` },
-    signal: options?.signal,
-  }).then((r) => {
-    if (!r.ok) throw new SourceError(`Lulu page HTTP ${r.status}`, "VIDEO_ERROR");
-    return r.text();
-  });
+  // Their CDN only answers the embed's own origin as the referer, so it comes
+  // from the URL instead of a domain that changes.
+  const headers = { "User-Agent": ua, Accept: "*/*", Referer: `${new URL(iframeUrl).origin}/` };
+  const page = await luluFetch(
+    iframeUrl,
+    { headers: { "User-Agent": ua, Referer: `${SOURCE_CONFIG.baseUrl}/` } },
+    options?.signal,
+  );
 
   const source = unpackPacked(page).match(/sources:\s*\[\s*\{\s*file:\s*"([^"]+)"/)?.[1];
   if (source == null) throw new SourceError("No source in Lulu player", "PARSER_ERROR");
 
-  const headers = { "User-Agent": ua, Accept: "*/*", Referer: "https://lplaygo.com/" };
-  const master = await fetch(source, { headers, signal: options?.signal }).then((r) => {
-    if (!r.ok) throw new SourceError(`Master playlist HTTP ${r.status}`, "VIDEO_ERROR");
-    return r.text();
-  });
+  const master = await luluFetch(source, { headers }, options?.signal);
 
   const best = bestStream(parseMaster(master, source));
   if (!best) return null;
