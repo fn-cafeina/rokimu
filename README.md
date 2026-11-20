@@ -1,14 +1,49 @@
+<img src="assets/images/icon.png" alt="Rokimu" width="120" />
+
 # Rokimu
 
-Android anime streaming client built with Expo SDK 58.
+Anime for Android, without the clutter.
 
-## Requirements
+[![Latest release](https://img.shields.io/github/v/release/fn-cafeina/rokimu?labelColor=0d1117)](https://github.com/fn-cafeina/rokimu/releases)
+[![License](https://img.shields.io/github/license/fn-cafeina/rokimu?labelColor=0d1117)](LICENSE)
 
-- Node.js LTS
-- bun
-- JDK 17 and the Android SDK for local builds
+Rokimu is a small client for watching anime on a phone. No feed of
+recommendations, no comments, no profile. You look something up, you watch it,
+it remembers where you stopped, and it keeps what you download.
 
-## Setup
+> [!WARNING]
+> Nothing is hosted here. Episodes come from the site Rokimu reads, so what you
+> can watch depends on that site being reachable from your network.
+
+## Download
+
+Grab the `.apk` from the [latest release](https://github.com/fn-cafeina/rokimu/releases),
+allow installs from your browser when Android asks, and open the file. Builds
+cover both 32- and 64-bit ARM phones.
+
+After that the app updates itself: Settings holds the check and the install.
+
+## Features
+
+- **Library first.** The app opens on what you saved. Save an anime from its
+  page and it is there next time.
+- **Something to browse.** The search tab shows the latest additions until you
+  type, then it becomes search.
+- **Your language.** Subtitled, Latino or Castellano, whichever the episode
+  carries.
+- **A second server.** Coral or Jade, or leave it on Auto.
+- **It remembers.** Every episode row shows how far you got, and the player
+  picks up from there. Finished episodes hand you the next one.
+- **Watch it later.** Download an episode and it plays from your phone with no
+  connection, even when the site is down.
+- **Nothing to set up.** No account, no ads, dark and portrait, one hand.
+
+## Your data
+
+Saved anime, watch progress and downloads stay on the phone. There is nothing
+to sign in to, nothing to sync and no server of ours holding a copy.
+
+## Build it
 
 ```bash
 bun install
@@ -16,90 +51,12 @@ bunx expo prebuild --platform android
 bun run android
 ```
 
-Rokimu needs a development build. It does not run in Expo Go: the
-`REQUEST_INSTALL_PACKAGES` permission is applied at prebuild time.
-
-## Stack
-
-- Expo SDK 58, React Native 0.88, TypeScript 6 (strict)
-- Tailwind CSS v4 through [uniwind](https://uniwind.dev/)
-- expo-router, Zustand 5, expo-video, Reanimated 4
-
-## Development
-
-| Command | What it does |
-|---|---|
-| `bun run android` | Build and run on a device or emulator |
-| `bun run start` | Dev server |
-| `bun run typecheck` | Typecheck |
-| `bun run lint` | ESLint via `expo lint` |
-| `bun run check` | Run every `*.check.ts` self-check |
-| `bun run release` | Bump, tag and push a release |
-
-`@/*` resolves to `src/*`.
-
-CI runs `typecheck`, `check`, `lint` and `expo-doctor` on every push and pull
-request, and the release workflow reuses that job before building.
-
-## Releases
-
-Releases are cut from tags and built on GitHub Actions.
-
-```bash
-bun run release patch   # 1.2.4 -> 1.2.5
-bun run release minor   # 1.2.4 -> 1.3.0
-bun run release major   # 1.2.4 -> 2.0.0
-bun run release 1.3.0   # explicit version
-```
-
-The bump words work the way `npm version` does; an explicit `X.Y.Z` is taken
-as-is. The script refuses to run unless the working tree is clean, you are on
-`main`, the resolved version differs from the current one, both version files
-agree and the tag `vX.Y.Z` does not exist yet. It then bumps `version` in
-`app.json` and `package.json`, commits with `chore(release): vX.Y.Z`, tags and
-pushes both. Add `--dry-run` to see the plan and the version it would land on
-without touching anything.
-
-The release workflow runs the checks, fails unless the tag matches both
-versions, builds a signed APK with `eas build --local`, and publishes a GitHub
-Release with the APK attached. Notes are generated from the commits since the
-previous tag.
-
-The build runs on the GitHub runner and uses no EAS build minutes. The Android
-keystore is stored and managed by EAS, so the only secret the workflow needs is
-the `EXPO_TOKEN` repository secret.
-
-`android.versionCode` is not tracked in this repository. `eas.json` sets
-`appVersionSource: "remote"` and `autoIncrement: true`, so EAS owns the
-versionCode and increments it on every production build. The version that
-users see lives in `app.json` (`expo.version`) and `package.json` (`version`),
-and the two must match.
-
-## Structure
-
-- `app/`: file-based routes through `expo-router` — `(tabs)` (library, search,
-  settings), `anime/[slug]`, `player`
-- `src/components/`: UI grouped by area (`anime`, `app`, `downloads`, `player`,
-  `search`, `ui`)
-- `src/hooks/`: screen and data hooks
-- `src/stores/`: Zustand stores — catalog, details, search, saved, history,
-  downloads, player, settings, update
-- `src/services/`: HTTP client and WebView worker, HTML/RSC parsers,
-  Cloudflare session, stream extractors, HLS, downloader, boot, updater
-- `src/config/`: source URLs, cache prefixes and TTLs, player config, theme
-- `src/utils/`: cache, storage, persistence, download queue, retry, CDN tuning,
-  server order, logger, navigation
-
-## Legal
-
-Rokimu is an independent third-party client. It is not affiliated with,
-endorsed by, or sponsored by any service or content provider it may access.
-
-The app does not host, store, or distribute anime content. All content
-belongs to its respective authors and rightsholders.
-
-Users are responsible for the content they access through the app.
+Needs bun, JDK 17 and the Android SDK. `AGENTS.md` covers the code and the
+release process.
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+Rokimu is an independent client, unaffiliated with any site it reads. Content
+belongs to its authors and rightsholders.
