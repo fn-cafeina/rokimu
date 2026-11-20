@@ -241,7 +241,9 @@ async function getEpisodeServers(slug: string, number: string, options?: { signa
       const servers: VideoServer[] = [];
 
       for (const player of players) {
-        if (player.server_name !== "Delta") continue;
+        // Delta and Epsilon share the Byse bridge shape; other servers stay out
+        // until their bridge is understood
+        if (player.server_name !== "Delta" && player.server_name !== "Epsilon") continue;
 
         servers.push({
           id: String(player.id),
@@ -257,7 +259,7 @@ async function getEpisodeServers(slug: string, number: string, options?: { signa
     }
   }
 
-  throw new SourceError(`No Delta servers extracted for ${slug} ep ${number}`, "PARSER_ERROR");
+  throw new SourceError(`No Delta/Epsilon servers extracted for ${slug} ep ${number}`, "PARSER_ERROR");
 }
 
 async function resolveStreamUrl(videoUrl: string, options?: { signal?: AbortSignal }): Promise<StreamUrlResult | null> {

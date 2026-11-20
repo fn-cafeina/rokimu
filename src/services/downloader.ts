@@ -1,7 +1,7 @@
 import { Directory, File, Paths } from "expo-file-system";
 import { TIMEOUTS } from "@/config/cache";
 import type { AppError } from "@/types";
-import { SourceError } from "@/utils/errors";
+import { SourceError, isCancelled } from "@/utils/errors";
 import { logger } from "@/utils/logger";
 import { withAuthRetry } from "@/utils/retry";
 import { source } from "./source";
@@ -11,6 +11,7 @@ import {
   parseMediaPlaylist,
   sequenceIv,
   type HlsInitSegment,
+  type HlsMediaPlaylist,
   type HlsSegment,
 } from "./hls";
 
@@ -177,7 +178,7 @@ async function fetchBytes(url: string, headers: Record<string, string>, signal: 
 async function pickStream(
   target: EpisodeTarget,
   signal: AbortSignal,
-): Promise<{ url: string; headers: Record<string, string> }> {
+): Promise<{ stream: { url: string; headers: Record<string, string> }; playlist: HlsMediaPlaylist }> {
   // Downloads go through the same ladder as playback: a session that expired
   // while the app sat in the background must not turn a download into an error
   const servers = await withAuthRetry(
@@ -186,18 +187,40 @@ async function pickStream(
   );
   if (servers.length === 0) throw new SourceError("No hay servidor disponible", "VIDEO_ERROR");
   // A requested language is not negotiable: downloading another audio track
-  // under that label would be a silent lie to the user
-  const server = target.language != null ? servers.find((s) => s.language === target.language) : servers[0];
-  if (server == null) {
+  // under that label would be a silent lie to the user. Without one, every
+  // server is a candidate in the order the site lists them.
+  const candidates =
+    target.language != null ? servers.filter((s) => s.language === target.language) : servers;
+  if (candidates.length === 0) {
     throw new SourceError(`No hay servidor en ${target.language} para este episodio`, "VIDEO_ERROR");
   }
 
-  const stream = await withAuthRetry(
-    () => source.resolveStreamUrl(server.url, { signal }),
-    { signal, tag: "download" },
-  );
-  if (stream == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
-  return { url: stream.url, headers: stream.headers ?? {} };
+  // One dead server must not kill the download while another of the same
+  // language survives: each candidate gets a full resolve-and-parse before
+  // the next one is tried
+  let lastError: unknown = new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
+  for (const server of candidates) {
+    try {
+      const resolved = await withAuthRetry(
+        () => source.resolveStreamUrl(server.url, { signal }),
+        { signal, tag: "download" },
+      );
+      if (resolved == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
+      const headers = resolved.headers ?? {};
+      logger.info("download", `Resolving playlist for ${target.slug} ep ${target.number}`);
+      const body = await fetchText(resolved.url, headers, signal);
+      const playlist = parseMediaPlaylist(body, resolved.url);
+      if (playlist.segments.length === 0) {
+        throw new SourceError("El playlist no tiene segmentos", "VIDEO_ERROR");
+      }
+      return { stream: { url: resolved.url, headers }, playlist };
+    } catch (error) {
+      if (isCancelled(error)) throw error;
+      lastError = error;
+      logger.warn("download", `Server ${server.id} (${server.language}) failed, trying next`, error);
+    }
+  }
+  throw lastError;
 }
 
 async function downloadInit(
@@ -260,10 +283,7 @@ export async function downloadEpisode(
   signal: AbortSignal,
   options: { resume?: boolean } = {},
 ): Promise<EpisodeDownloadResult> {
-  const stream = await pickStream(target, signal);
-  logger.info("download", `Resolving playlist for ${target.slug} ep ${target.number}`);
-  const body = await fetchText(stream.url, stream.headers, signal);
-  const playlist = parseMediaPlaylist(body, stream.url);
+  const { stream, playlist } = await pickStream(target, signal);
   if (playlist.segments.length === 0) {
     throw new SourceError("El playlist no tiene segmentos", "VIDEO_ERROR");
   }

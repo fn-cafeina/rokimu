@@ -63,6 +63,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
   const regenerateChain = async (
     ctx: { slug: string; number: string },
     signal: AbortSignal,
+    failed: VideoServer | null,
   ): Promise<VideoServer> => {
     dropPlaybackArtifacts();
     const cacheKey = `${CACHE_PREFIXES.SERVERS}_${ctx.slug}_${ctx.number}`;
@@ -72,8 +73,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       (sig) => source.getEpisodeServers(ctx.slug, ctx.number, { signal: sig }),
       { ttl: CACHE_TTL.SERVERS, signal, force: true },
     );
+    // The failed server just proved its chain dead: one retry against it is a
+    // retry against the same corpse, so it sits out this round
+    const alive = failed != null ? servers.filter((s) => s.id !== failed.id) : servers;
     const language = get().lastLanguage;
-    const server = (language != null ? servers.find((s) => s.language === language) : null) ?? servers[0];
+    const server = (language != null ? alive.find((s) => s.language === language) : null) ?? alive[0];
     if (server == null) throw new SourceError("No hay servidor disponible", "VIDEO_ERROR");
     return server;
   };
@@ -114,7 +118,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
             } catch (error) {
               if (isAuthError(error) || isCancelled(error)) throw error;
               logger.warn("stream", `Chain dead (${toAppError(error).type}), regenerating servers once`);
-              const regenerated = await regenerateChain(ctx, signal);
+              const regenerated = await regenerateChain(ctx, signal, server);
               lastStreamServer = regenerated;
               const fresh = await resolveStreamCached(regenerated, { signal });
               if (fresh == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
