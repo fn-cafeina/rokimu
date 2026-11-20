@@ -2,6 +2,7 @@ import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { NEXT_EPISODE_COUNTDOWN_SECONDS } from "@/config/player";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PlayerControls } from "@/components/player/PlayerControls";
+import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { orderEpisodes } from "@/hooks/episodeHelpers";
 import { WATCHED_THRESHOLD } from "@/hooks/episodeProgress";
 import { useAnimeData } from "@/hooks/useAnimeData";
@@ -15,7 +16,7 @@ import { StatusBar } from "expo-status-bar";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useLocalSearchParams, router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function PlayerContent() {
@@ -31,6 +32,8 @@ function PlayerContent() {
   const clearStream = usePlayerStore((s) => s.reset);
   const streamUrl = stream.data?.url ?? null;
   const streamHeaders = stream.data?.headers ?? null;
+  const resolveStream = usePlayerStore((s) => s.resolveStream);
+  const serversState = usePlayerStore((s) => s.servers);
   const addToHistory = useHistoryStore((s) => s.addToHistory);
   const { anime } = useAnimeData(slug);
   const { isInternetReachable: networkOk } = useNetworkStatus();
@@ -150,7 +153,9 @@ function PlayerContent() {
 
   // eslint-disable-next-line react-hooks/immutability -- expo-video player is a native imperative handle; media loading mutates it by design
   useEffect(() => {
-    if (streamUrl == null || streamEpNumber == null) return;
+    // A payload carrying a failed status belongs to the previous episode: loading
+    // it would play the wrong media behind the error screen
+    if (streamUrl == null || streamEpNumber == null || stream.status !== "success") return;
     let cancelled = false;
     const run = async () => {
       // streamEpNumber settles with (or before) the stream, so the loaded media
@@ -176,7 +181,16 @@ function PlayerContent() {
     };
     void run();
     return () => { cancelled = true; };
-  }, [streamUrl, streamHeaders, player, slug, streamEpNumber]);
+  }, [streamUrl, streamHeaders, player, slug, streamEpNumber, stream.status]);
+
+  // A failure must stop the media the player still holds and force the next
+  // attempt to reload: skipping the replace would leave ExoPlayer on a
+  // terminal error state that play() cannot recover from
+  useEffect(() => {
+    if (stream.status !== "error") return;
+    player.pause();
+    loadedUrlRef.current = null;
+  }, [stream.status, player]);
 
   const historyCtx = useRef({ title, url: slug, image, number: currentEpNumber });
   useEffect(() => {
@@ -199,10 +213,12 @@ function PlayerContent() {
   }, [saveProgress]);
 
   useEffect(() => {
-    if (streamUrl == null) return;
+    // Sampling a payload that no longer owns the screen would save the previous
+    // episode's position under the new episode's number
+    if (streamUrl == null || stream.status !== "success") return;
     const interval = setInterval(saveProgress, 10000);
     return () => { clearInterval(interval); };
-  }, [streamUrl, saveProgress]);
+  }, [streamUrl, stream.status, saveProgress]);
 
   useEffect(() => {
     return () => {
@@ -223,17 +239,28 @@ function PlayerContent() {
   // A stream can resolve fine and still die at the video layer (expired CDN
   // token, rejected playback): settle it as a real error instead of leaving
   // a mounted player that never plays. Ignored while a request is in flight,
-  // so a resolution still loading owns its own settling.
+  // so a resolution still loading owns its own settling. One reload of the
+  // same media comes first: ExoPlayer reports recoverable failures as errors.
+  const errorReloadRef = useRef<string | null>(null);
+
   useEffect(() => {
+    const fail = (message: string | undefined) => {
+      usePlayerStore.getState().failStream({ type: "VIDEO_ERROR", message: message ?? "Video player error" });
+    };
     const sub = player.addListener("statusChange", ({ status, error }) => {
       if (status !== "error") return;
-      usePlayerStore.getState().failStream({
-        type: "VIDEO_ERROR",
-        message: error?.message ?? "Video player error",
-      });
+      if (streamUrl != null && errorReloadRef.current !== streamUrl) {
+        errorReloadRef.current = streamUrl;
+        void player
+          .replaceAsync({ uri: streamUrl, headers: streamHeaders ?? undefined })
+          .then(() => player.play())
+          .catch(() => fail(error?.message));
+        return;
+      }
+      fail(error?.message);
     });
     return () => { sub.remove(); };
-  }, [player]);
+  }, [player, streamUrl, streamHeaders]);
 
   useEffect(() => {
     const sub = player.addListener("playToEnd", () => {
@@ -256,16 +283,36 @@ function PlayerContent() {
   }, [currentEpNumber]);
 
   // A failed stream resolution is a real failure: show it honestly with a
-  // retry that re-runs the full servers + stream path
+  // retry that re-runs the full servers + stream path, plus a hand-picked
+  // server for the cases the ladder could not settle
   if (stream.status === "error") {
     const retryNumber = currentEpNumber || number;
+    const alternatives = serversState.dataKey === `${slug}_${retryNumber}` ? serversState.data ?? [] : [];
     return (
-      <ErrorState
-        error={stream.error}
-        onRetry={() => {
-          if (retryNumber) void resolveAndPlay(slug, { number: retryNumber });
-        }}
-      />
+      <View className="flex-1 bg-black">
+        <ErrorState
+          error={stream.error}
+          onRetry={() => {
+            if (retryNumber) void resolveAndPlay(slug, { number: retryNumber });
+          }}
+        />
+        {alternatives.length > 0 && retryNumber !== "" && (
+          <View className="px-5 pb-8">
+            <Text className="mb-2 text-xs text-neutral-500">Probar otro servidor</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {alternatives.map((s) => (
+                <AnimatedPressable
+                  key={s.id}
+                  className="rounded-lg bg-white/10 px-4 py-2"
+                  onPress={() => void resolveStream(s, { slug, number: retryNumber })}
+                >
+                  <Text className="text-xs text-neutral-200">{s.title} · {s.language}</Text>
+                </AnimatedPressable>
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
     );
   }
 
