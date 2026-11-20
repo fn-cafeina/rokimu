@@ -18,9 +18,10 @@ import {
   type HlsSegment,
 } from "./hls";
 
-// Eight parallel requests to one CDN tripped its burst limit: every segment
-// came back 429 and the whole episode died on the first refusal
-const SEGMENT_CONCURRENCY = 3;
+// Every segment is decrypted in pure JS (AES-128 CBC) and crosses the bridge
+// twice, so a parallel burst starves the UI thread on a dev build. One at a
+// time keeps the download going without owning the frame budget.
+const SEGMENT_CONCURRENCY = 1;
 // One segment is retried on 429/5xx before the worker gives up
 const DOWNLOAD_ATTEMPTS = 3;
 // A transfer that stops moving is aborted: a dead socket otherwise holds one
@@ -356,6 +357,9 @@ export async function downloadEpisode(
       const index = nextIndex++;
       const segment = playlist.segments[index];
       if (segment == null) return;
+      // A decrypted segment blocks the JS thread; yield between segments so
+      // renders and touches get their turn instead of queueing behind the loop
+      await new Promise((resolve) => setTimeout(resolve, 0));
       try {
         const bytes = await downloadSegment(segment, index, dir, stream.headers, getKey, signal);
         segmentsDone += 1;
