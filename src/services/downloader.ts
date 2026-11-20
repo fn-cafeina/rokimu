@@ -21,7 +21,7 @@ import {
 // Every segment is decrypted in pure JS (AES-128 CBC) and crosses the bridge
 // twice, so a parallel burst starves the UI thread on a dev build. One at a
 // time keeps the download going without owning the frame budget.
-const SEGMENT_CONCURRENCY = 1;
+const SEGMENT_CONCURRENCY = 2;
 // One segment is retried on 429/5xx before the worker gives up
 const DOWNLOAD_ATTEMPTS = 3;
 // A transfer that stops moving is aborted: a dead socket otherwise holds one
@@ -404,7 +404,8 @@ export async function downloadEpisode(
         segmentsDone += 1;
         bytesDone += bytes;
         onProgress({ segmentsDone, segmentsTotal, bytesDone });
-        if (stats.count > 0 && segmentsDone % 25 === 0) {
+        // First segment reports immediately: waiting for 25 was minutes of silence
+        if (stats.count === 1 || stats.count % 25 === 0) {
           // Which phase is eating the wall clock: network, AES in JS, or the write back
           logger.debug(
             "download",
