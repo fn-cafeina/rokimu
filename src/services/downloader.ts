@@ -22,7 +22,7 @@ import {
 // time keeps the download going without owning the frame budget.
 // Pure I/O now that the player decrypts natively: three requests keep a fast
 // link busy without the eight-way burst that tripped the CDN rate limit
-const SEGMENT_CONCURRENCY = 3;
+const SEGMENT_CONCURRENCY = 4;
 // One segment is retried on 429/5xx before the worker gives up
 const DOWNLOAD_ATTEMPTS = 3;
 // A transfer that stops moving is aborted: a dead socket otherwise holds one
@@ -300,6 +300,7 @@ async function downloadInit(
 interface SegmentStats {
   count: number;
   downloadMs: number;
+  downloadBytes: number;
   writeMs: number;
 }
 
@@ -325,6 +326,7 @@ async function downloadSegment(
   const downloadStarted = Date.now();
   const written = await downloadTo(segment.uri, part, headers, signal, segment.range);
   stats.downloadMs += Date.now() - downloadStarted;
+  stats.downloadBytes += written.size;
   stats.count += 1;
 
   // Bytes land on disk as the CDN served them: an encrypted segment stays
@@ -404,7 +406,7 @@ export async function downloadEpisode(
   // link busy, which a strict one-at-a-time loop never does.
   let nextIndex = 0;
   let failure: unknown = null;
-  const stats: SegmentStats = { count: 0, downloadMs: 0, writeMs: 0 };
+  const stats: SegmentStats = { count: 0, downloadMs: 0, downloadBytes: 0, writeMs: 0 };
   const worker = async (): Promise<void> => {
     while (failure == null && !signal.aborted) {
       const index = nextIndex++;
@@ -421,11 +423,14 @@ export async function downloadEpisode(
         // One line per 25 iterations, not per download: a resumed run skips
         // segments and would otherwise stay silent for minutes
         if (index === 0 || index % 25 === 0) {
-          // Which phase is eating the wall clock: network or the write back
+          // Which phase is eating the wall clock, and whether the CDN caps the
+          // rate per connection (throughput low) or per request (latency high)
           const perSegment = Math.max(1, stats.count);
+          const megabytes = stats.downloadBytes / perSegment / 1_048_576;
+          const rate = stats.downloadMs > 0 ? (stats.downloadBytes / 1_048_576) / (stats.downloadMs / 1000) : 0;
           logger.debug(
             "download",
-            `${index + 1}/${segmentsTotal} (${segmentsDone} written), avg per written segment: network ${Math.round(stats.downloadMs / perSegment)}ms, write ${Math.round(stats.writeMs / perSegment)}ms`,
+            `${index + 1}/${segmentsTotal} (${segmentsDone} written), per segment: network ${Math.round(stats.downloadMs / perSegment)}ms, write ${Math.round(stats.writeMs / perSegment)}ms, ${megabytes.toFixed(2)}MB at ${rate.toFixed(2)}MB/s`,
           );
         }
       } catch (error) {
