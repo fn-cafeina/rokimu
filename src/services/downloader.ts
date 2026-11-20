@@ -2,6 +2,7 @@ import { Directory, File, Paths } from "expo-file-system";
 import { TIMEOUTS } from "@/config/cache";
 import type { AppError } from "@/types";
 import { SourceError, isCancelled } from "@/utils/errors";
+import { segmentConcurrency } from "@/utils/cdn";
 import { backoffDelay } from "@/utils/math";
 import { logger } from "@/utils/logger";
 import { withAuthRetry } from "@/utils/retry";
@@ -18,11 +19,6 @@ import {
 } from "./hls";
 
 // Every segment is decrypted in pure JS (AES-128 CBC) and crosses the bridge
-// twice, so a parallel burst starves the UI thread on a dev build. One at a
-// time keeps the download going without owning the frame budget.
-// Pure I/O now that the player decrypts natively: three requests keep a fast
-// link busy without the eight-way burst that tripped the CDN rate limit
-const SEGMENT_CONCURRENCY = 4;
 // One segment is retried on 429/5xx before the worker gives up
 const DOWNLOAD_ATTEMPTS = 3;
 // A transfer that stops moving is aborted: a dead socket otherwise holds one
@@ -376,7 +372,9 @@ export async function downloadEpisode(
   const segmentsTotal = playlist.segments.length + (init != null ? 1 : 0);
   let segmentsDone = init != null ? 1 : 0;
   let bytesDone = init?.bytes ?? 0;
-  logger.debug("download", `${target.slug} ep ${target.number}: ${segmentsTotal} segments queued, ${SEGMENT_CONCURRENCY} workers`);
+  // How many segments in flight is the host's answer, not a global choice
+  const concurrency = segmentConcurrency(playlist.segments.map((segment) => segment.uri));
+  logger.debug("download", `${target.slug} ep ${target.number}: ${segmentsTotal} segments queued, ${concurrency} workers`);
   onProgress({ segmentsDone, segmentsTotal, bytesDone });
 
   // Rotation keys are fetched once even when several segments need them, and
@@ -439,7 +437,7 @@ export async function downloadEpisode(
     }
   };
   await Promise.all(
-    Array.from({ length: Math.min(SEGMENT_CONCURRENCY, playlist.segments.length) }, worker),
+    Array.from({ length: Math.min(concurrency, playlist.segments.length) }, worker),
   );
   if (failure != null) throw failure;
   if (signal.aborted) throw new SourceError("Descarga cancelada", "NETWORK_ERROR");
