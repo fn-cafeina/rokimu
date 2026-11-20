@@ -53,7 +53,8 @@ export const AnimatedPressable: React.FC<AnimatedPressableProps> = ({
       }
       lastPressTimeRef.current = now;
       if (hapticFeedback) {
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        // Haptics is missing on some builds: feedback is a courtesy, never a crash
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       }
       onPress?.(e);
     },
