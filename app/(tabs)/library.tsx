@@ -2,11 +2,9 @@ import { AnimeCard } from "@/components/anime/AnimeCard";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { useTabBarManager } from "@/hooks/useTabBarManager";
 import { useSavedStore } from "@/stores/savedStore";
 import type { Anime } from "@/types";
 import { TAB_BAR_OFFSET, calcCardWidth } from "@/utils/layout";
-import { useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { FlatList, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,13 +14,6 @@ function LibraryContent() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = calcCardWidth(screenWidth);
-  const { handleScroll, reset } = useTabBarManager({ threshold: 8 });
-
-  useFocusEffect(
-    useCallback(() => {
-      reset();
-    }, [reset]),
-  );
 
   const renderItem = useCallback(({ item }: { item: Anime }) => (
     <View className="mb-3"><AnimeCard anime={item} width={cardWidth} /></View>
@@ -44,8 +35,6 @@ function LibraryContent() {
         contentContainerClassName="px-5"
         contentContainerStyle={{ paddingTop: saved.length > 0 ? 4 : insets.top + 16, paddingBottom: TAB_BAR_OFFSET + insets.bottom, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
         ListEmptyComponent={
           <EmptyState
             icon="bookmark"

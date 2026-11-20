@@ -5,13 +5,11 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import type { Anime } from "@/types";
 import { useSearchScreen } from "@/hooks/useSearchScreen";
-import { useTabBarManager } from "@/hooks/useTabBarManager";
 import { CATALOG_KEY, useCatalogStore } from "@/stores/catalogStore";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
 import { deriveView } from "@/utils/resource";
 import { TAB_BAR_OFFSET, calcCardWidth } from "@/utils/layout";
 import { Feather } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef } from "react";
 import { FlatList, RefreshControl, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -31,18 +29,11 @@ function SearchScreenContent() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = calcCardWidth(screenWidth);
-  const { handleScroll, reset } = useTabBarManager({ threshold: 8 });
   const listRef = useRef<FlatList<Anime>>(null);
 
   useEffect(() => {
     void fetchCatalog();
   }, [fetchCatalog]);
-
-  useFocusEffect(
-    useCallback(() => {
-      reset();
-    }, [reset]),
-  );
 
   useEffect(() => {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
@@ -94,10 +85,8 @@ function SearchScreenContent() {
             numColumns={3}
             renderItem={renderCard}
             columnWrapperClassName="gap-3"
-            contentContainerStyle={{ paddingTop: 4, paddingBottom: TAB_BAR_OFFSET, flexGrow: 1 }}
+            contentContainerStyle={{ paddingTop: 4, paddingBottom: TAB_BAR_OFFSET + insets.bottom, flexGrow: 1 }}
             showsVerticalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             refreshControl={

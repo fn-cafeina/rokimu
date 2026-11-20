@@ -1,15 +1,8 @@
 import { ACCENT_COLOR } from "@/config/theme";
 import { Feather } from "@expo/vector-icons";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
-import React from "react";
 import { View } from "react-native";
-import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
-} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useUIStore } from "@/stores/uiStore";
 import { useUpdateStore } from "@/stores/updateStore";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 
@@ -33,35 +26,21 @@ export function FloatingTabBar({
   navigateToTab,
 }: FloatingTabBarProps) {
   const insets = useSafeAreaInsets();
-  const visible = useUIStore((state) => state.tabBarVisible);
   const updateAvailable = useUpdateStore((state) => state.check.data?.updateAvailable ?? null);
   const updateCheckEnabled = useUpdateStore((state) => state.updateCheckEnabled);
 
-  const translateY = useSharedValue(0);
-
-  React.useEffect(() => {
-    translateY.value = withTiming(visible ? 0 : 120, {
-      duration: 250,
-    });
-  }, [visible, translateY]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
-
+  // Always on screen: the screens reserve TAB_BAR_OFFSET at the bottom of their
+  // scroll content, so the bar never sits on top of a card
   return (
-    <Animated.View
-      style={[
-        {
-          position: "absolute",
-          left: 0,
-          right: 0,
-          alignItems: "center",
-          justifyContent: "center",
-          bottom: insets.bottom + 16,
-        },
-        animatedStyle,
-      ]}
+    <View
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        alignItems: "center",
+        justifyContent: "center",
+        bottom: insets.bottom + 16,
+      }}
       pointerEvents="box-none"
     >
       <View
@@ -110,7 +89,7 @@ export function FloatingTabBar({
           );
         })}
       </View>
-    </Animated.View>
+    </View>
   );
 }
 

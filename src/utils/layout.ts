@@ -1,3 +1,5 @@
+// Height the floating tab bar occupies (bar + gap + safe area). Screens pad
+// their scroll content by this so the bar never sits on top of it.
 export const TAB_BAR_OFFSET = 116;
 
 /** Poster ratio shared with inkuru (248x352). */
