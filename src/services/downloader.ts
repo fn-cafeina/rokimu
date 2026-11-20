@@ -286,6 +286,14 @@ async function downloadInit(
   return { file: written.name, bytes: written.size };
 }
 
+/** Where the download time actually goes, per phase, readable in one log line. */
+interface SegmentStats {
+  count: number;
+  downloadMs: number;
+  decryptMs: number;
+  writeMs: number;
+}
+
 async function downloadSegment(
   segment: HlsSegment,
   index: number,
@@ -293,6 +301,7 @@ async function downloadSegment(
   headers: Record<string, string>,
   getKey: (uri: string) => Promise<Uint8Array>,
   signal: AbortSignal,
+  stats: SegmentStats,
 ): Promise<number> {
   const name = segmentFileName(index, segment.uri);
   const file = new File(dir, name);
@@ -305,14 +314,21 @@ async function downloadSegment(
   // Landing in a .part file keeps a half-written or still-encrypted segment
   // from ever looking complete to the resume check
   const part = new File(dir, `${name}.part`);
+  const downloadStarted = Date.now();
   const written = await downloadTo(segment.uri, part, headers, signal, segment.range);
+  stats.downloadMs += Date.now() - downloadStarted;
+  stats.count += 1;
 
   const key = segment.key;
   if (key != null) {
     const keyBytes = await getKey(key.uri);
     const iv = key.iv ?? sequenceIv(segment.sequence);
+    const decryptStarted = Date.now();
     const plain = decryptSegment(await written.bytes(), keyBytes, iv);
+    stats.decryptMs += Date.now() - decryptStarted;
+    const writeStarted = Date.now();
     await file.write(plain);
+    stats.writeMs += Date.now() - writeStarted;
     if (written.exists) written.delete();
   } else {
     await written.move(file);
@@ -374,6 +390,7 @@ export async function downloadEpisode(
   // link busy, which a strict one-at-a-time loop never does.
   let nextIndex = 0;
   let failure: unknown = null;
+  const stats: SegmentStats = { count: 0, downloadMs: 0, decryptMs: 0, writeMs: 0 };
   const worker = async (): Promise<void> => {
     while (failure == null && !signal.aborted) {
       const index = nextIndex++;
@@ -383,10 +400,17 @@ export async function downloadEpisode(
       // renders and touches get their turn instead of queueing behind the loop
       await new Promise((resolve) => setTimeout(resolve, 0));
       try {
-        const bytes = await downloadSegment(segment, index, dir, stream.headers, getKey, signal);
+        const bytes = await downloadSegment(segment, index, dir, stream.headers, getKey, signal, stats);
         segmentsDone += 1;
         bytesDone += bytes;
         onProgress({ segmentsDone, segmentsTotal, bytesDone });
+        if (stats.count > 0 && segmentsDone % 25 === 0) {
+          // Which phase is eating the wall clock: network, AES in JS, or the write back
+          logger.debug(
+            "download",
+            `${segmentsDone}/${segmentsTotal} segments, avg per segment: network ${Math.round(stats.downloadMs / stats.count)}ms, decrypt ${Math.round(stats.decryptMs / stats.count)}ms, write ${Math.round(stats.writeMs / stats.count)}ms`,
+          );
+        }
       } catch (error) {
         failure = error;
       }
