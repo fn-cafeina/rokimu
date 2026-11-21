@@ -66,12 +66,13 @@ export async function loadCached<T>(
     if (data == null) {
       logger.debug("cache", `Null result for "${cacheKey}", skipping write`);
     } else {
+      // One serialization: the size check and the write share the same string
       const entry: CacheEntry<T> = { payload: data, expiration: Date.now() + (ttl ?? 6 * 60 * 60 * 1000) };
-      const size = JSON.stringify(data).length;
-      if (size <= LIMITS.CACHE_MAX_ENTRY_SIZE) {
-        await storage.set(cacheKey, entry);
+      const serialized = JSON.stringify(entry);
+      if (serialized.length <= LIMITS.CACHE_MAX_ENTRY_SIZE) {
+        await storage.setRaw(cacheKey, serialized);
       } else {
-        logger.warn("cache", `Entry "${cacheKey}" too large (${(size / 1024).toFixed(1)}KB), skipping`);
+        logger.warn("cache", `Entry "${cacheKey}" too large (${(serialized.length / 1024).toFixed(1)}KB), skipping`);
       }
     }
   } catch {

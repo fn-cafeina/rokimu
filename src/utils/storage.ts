@@ -42,6 +42,16 @@ class Storage {
     }
   }
 
+  /** For callers that already hold the serialized form and must not pay it twice */
+  async setRaw(key: string, raw: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(key, raw);
+    } catch (error) {
+      logger.error("storage", `Failed to set key: ${key}`, error);
+      throw error;
+    }
+  }
+
   async remove(key: string): Promise<void> {
     try {
       await AsyncStorage.removeItem(key);
