@@ -1,14 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import type { VideoPlayer } from "expo-video";
 import { usePlayerStore } from "@/stores/playerStore";
-import { compareEpisodePage } from "@/services/source";
 import { useHistoryStore } from "@/stores/historyStore";
 import { downloadedForEpisode, useDownloadsStore } from "@/stores/downloadsStore";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "@/utils/history";
 import { orderServers } from "@/utils/serverOrder";
 import { useSettingsStore } from "@/stores/settingsStore";
-
-declare const __DEV__: boolean | undefined;
 
 export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, animeImage: string) {
   const lastLanguage = usePlayerStore((s) => s.lastLanguage);
@@ -60,8 +57,6 @@ export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, an
 
         // Each store operation owns its own auth ladder; this only sequences
         // them and surfaces orchestrator failures into the stream resource
-        // TEMP: compares the native and WebView transports for the same page
-        if (__DEV__) void compareEpisodePage(targetSlug, targetEp.number);
         const serversOutcome = await store.fetchServers(targetSlug, targetEp.number);
         if (serversOutcome.status === "cancelled") return;
         if (serversOutcome.status === "error") {

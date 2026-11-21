@@ -26,7 +26,6 @@ interface SessionResponse {
 async function fetchWithSession(path: string, options: RequestInit = {}): Promise<SessionResponse> {
   // The real response owns the verdict: stored cookies go out as-is, and a
   // 403/challenge below enters the wash-and-retry ladder
-  const session = await sessionManager.getSession();
   const baseUrl = SOURCE_CONFIG.baseUrl;
 
   const url = path.startsWith("http") ? path : `${baseUrl}${path}`;
@@ -34,14 +33,15 @@ async function fetchWithSession(path: string, options: RequestInit = {}): Promis
   // video host is that host's verdict, never grounds for a wash
   const isSourceOrigin = isSourceUrl(url, baseUrl);
 
-  const headers = buildHeaders({
-    url,
-    baseUrl,
-    session,
-    extra: options.headers as Record<string, string>,
-  });
-
   for (let attempt = 0; attempt < TIMEOUTS.MAX_ATTEMPTS; attempt++) {
+    // Rebuilt per attempt: a Set-Cookie merge between attempts must reach the retry
+    const session = await sessionManager.getSession();
+    const headers = buildHeaders({
+      url,
+      baseUrl,
+      session,
+      extra: options.headers as Record<string, string>,
+    });
     let timedOut = false;
     if (options.signal?.aborted) {
       // Navigation away or a newer request superseded this one: abort so
@@ -117,6 +117,11 @@ async function fetchWithSession(path: string, options: RequestInit = {}): Promis
       if (error instanceof Error && error.name === "AbortError") {
         if (timedOut && !options.signal?.aborted) {
           logger.warn("fetch", `Timeout (${TIMEOUTS.REQUEST_TIMEOUT / 1000}s, attempt ${attempt + 1}/${TIMEOUTS.MAX_ATTEMPTS}) for ${url}`);
+          if (hasMoreAttempts) {
+            logger.info("fetch", `Retrying (${attempt + 1}/${TIMEOUTS.MAX_ATTEMPTS}) after timeout: ${url}`);
+            await new Promise((resolve) => setTimeout(resolve, backoffDelay(attempt)));
+            continue;
+          }
           throw new SourceError("Request timed out", "TIMEOUT");
         }
         throw error; // external abort: navigation away, not a failure
@@ -155,21 +160,6 @@ export async function webviewFetch(path: string): Promise<SessionResponse> {
     throw new SourceError("Authentication failed - session invalid", "AUTH_ERROR");
   }
   return { ok: result.status >= 200 && result.status < 300, status: result.status, body: result.body };
-}
-
-/**
- * Dev probe: the same episode page over both transports, one summary line.
- * Temporary while the WebView path is being compared; it doubles one page
- * fetch per episode.
- */
-export async function compareEpisodePage(slug: string, number: string): Promise<void> {
-  const path = `/ver/${slug}/${number}`;
-  const describe = (outcome: PromiseSettledResult<SessionResponse>): string =>
-    outcome.status === "fulfilled"
-      ? `${outcome.value.status}/${outcome.value.body.length}b players:${outcome.value.body.includes('"players":')}`
-      : `ERR ${outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason)}`;
-  const [native, webview] = await Promise.allSettled([fetchWithSession(path), webviewFetch(path)]);
-  logger.debug("session", `compare ${path} native=[${describe(native)}] webview=[${describe(webview)}]`);
 }
 
 async function getHomeData(options?: { signal?: AbortSignal }): Promise<HomeData> {
