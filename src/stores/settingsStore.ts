@@ -10,17 +10,14 @@ export type PreferredServer = "Delta" | "Epsilon" | null;
 interface SettingsState {
   episodeOrder: "asc" | "desc";
   preferredServer: PreferredServer;
-  cacheInvalidationTimestamp: number;
   initialize: (order: "asc" | "desc", preferredServer?: PreferredServer) => void;
   setEpisodeOrder: (order: "asc" | "desc") => Promise<void>;
   setPreferredServer: (server: PreferredServer) => Promise<void>;
-  invalidateCache: () => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   episodeOrder: "asc",
   preferredServer: null,
-  cacheInvalidationTimestamp: 0,
 
   initialize: (order, preferredServer) =>
     set({
@@ -49,6 +46,4 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       logger.error("settingsStore", "Failed to persist preferred server", error);
     }
   },
-
-  invalidateCache: () => set({ cacheInvalidationTimestamp: Date.now() }),
 }));
