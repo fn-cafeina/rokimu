@@ -2,6 +2,7 @@ import { logger } from "@/utils/logger";
 
 type NavigateFn = (uri: string) => void;
 type InjectFn = (js: string) => void;
+type ReloadFn = () => void;
 
 export type WebViewResult =
   | { ok: true; status: number; body: string }
@@ -31,6 +32,7 @@ function buildScript(id: number, url: string): string {
 export class WebViewBridge {
   private navigateFn: NavigateFn | null = null;
   private injectFn: InjectFn | null = null;
+  private reloadFn: ReloadFn | null = null;
   private loaded = false;
   private nextId = 1;
   private pending = new Map<number, (result: WebViewResult) => void>();
@@ -41,6 +43,18 @@ export class WebViewBridge {
 
   registerInjector(fn: InjectFn) {
     this.injectFn = fn;
+  }
+
+  registerReloader(fn: ReloadFn) {
+    this.reloadFn = fn;
+  }
+
+  /** A wedged or crashed page never answers; a fresh load gives the next wash a chance */
+  reload(): void {
+    if (this.reloadFn) {
+      logger.info("session", "Reloading WebView worker");
+      this.reloadFn();
+    }
   }
 
   /** The page must be loaded before injected JS can run at all */
