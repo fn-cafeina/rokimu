@@ -10,14 +10,14 @@ class Storage {
     try {
       data = await AsyncStorage.getItem(key);
     } catch (error) {
-      logger.error("Storage", `Failed to get key: ${key}`, error);
+      logger.error("storage", `Failed to get key: ${key}`, error);
       return null;
     }
     if (data == null) return null;
     try {
       return JSON.parse(data) as T;
     } catch (error) {
-      logger.error("Storage", `Unreadable value for key: ${key}`, error);
+      logger.error("storage", `Unreadable value for key: ${key}`, error);
       // Without the copy the caller would start empty and overwrite the only
       // remaining bytes of a library or a download index on its next save
       await this.park(key, data);
@@ -29,7 +29,7 @@ class Storage {
     try {
       await AsyncStorage.setItem(`${UNREADABLE_PREFIX}${key}`, raw);
     } catch (error) {
-      logger.error("Storage", `Failed to park unreadable key: ${key}`, error);
+      logger.error("storage", `Failed to park unreadable key: ${key}`, error);
     }
   }
 
@@ -37,7 +37,7 @@ class Storage {
     try {
       await AsyncStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-      logger.error("Storage", `Failed to set key: ${key}`, error);
+      logger.error("storage", `Failed to set key: ${key}`, error);
       throw error;
     }
   }
@@ -46,7 +46,7 @@ class Storage {
     try {
       await AsyncStorage.removeItem(key);
     } catch (error) {
-      logger.error("Storage", `Failed to remove key: ${key}`, error);
+      logger.error("storage", `Failed to remove key: ${key}`, error);
     }
   }
 
@@ -54,7 +54,7 @@ class Storage {
     try {
       return [...(await AsyncStorage.getAllKeys())];
     } catch (error) {
-      logger.error("Storage", "Failed to get all keys", error);
+      logger.error("storage", "Failed to get all keys", error);
       return [];
     }
   }

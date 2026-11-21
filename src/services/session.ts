@@ -68,7 +68,7 @@ class SessionManager {
         return;
       }
       await storage.set(SESSION_KEY, session);
-      logger.info("session", `Session updated with ${session.cookies.length} cookies`);
+      logger.debug("session", `Session updated with ${session.cookies.length} cookies`);
       this.signalReport();
     } catch (error) {
       logger.error("session", "Failed to set session", error);

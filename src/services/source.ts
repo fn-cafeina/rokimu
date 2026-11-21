@@ -169,7 +169,7 @@ export async function compareEpisodePage(slug: string, number: string): Promise<
       ? `${outcome.value.status}/${outcome.value.body.length}b players:${outcome.value.body.includes('"players":')}`
       : `ERR ${outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason)}`;
   const [native, webview] = await Promise.allSettled([fetchWithSession(path), webviewFetch(path)]);
-  logger.info("session", `compare ${path} native=[${describe(native)}] webview=[${describe(webview)}]`);
+  logger.debug("session", `compare ${path} native=[${describe(native)}] webview=[${describe(webview)}]`);
 }
 
 async function getHomeData(options?: { signal?: AbortSignal }): Promise<HomeData> {

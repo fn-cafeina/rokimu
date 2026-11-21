@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
   }
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    logger.error("ErrorBoundary", `Component error: ${error.message}`, error);
+    logger.error("errorBoundary", `Component error: ${error.message}`, error);
 
     if (this.props.onError) {
       this.props.onError(error, errorInfo);

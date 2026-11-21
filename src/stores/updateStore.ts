@@ -104,7 +104,7 @@ async function persistCheck(next: StoredCheck): Promise<void> {
     await storage.set(UPDATE_STATE_KEY, next);
   } catch (error) {
     // Losing the anchor only costs one extra request on the next launch
-    logger.warn("updateStore", "Failed to persist the update check", error);
+    logger.warn("update", "Failed to persist the update check", error);
   }
 }
 
@@ -254,7 +254,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
       await storage.set(UPDATE_CHECK_KEY, enabled);
     } catch (err) {
       set({ updateCheckEnabled: prev });
-      logger.error("updateStore", "Failed to persist update check toggle", err);
+      logger.error("update", "Failed to persist update check toggle", err);
     }
   },
 
@@ -337,7 +337,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
       void storage.set(INSTALL_PERMISSION_KEY, true);
       set({ phase: "ready" });
     } catch (err) {
-      logger.error("updateStore", "Download/install failed", err);
+      logger.error("update", "Download/install failed", err);
       const message =
         err instanceof Error && err.message === "stalled"
           ? "La descarga se detuvo por conexión lenta. Reintentá cuando tengas mejor señal."
@@ -376,7 +376,7 @@ export async function grantInstallPermissionAndDownload(): Promise<void> {
     void storage.set(INSTALL_PERMISSION_KEY, true);
     await store.beginDownload();
   } catch (err) {
-    logger.error("updateStore", "Permission flow failed", err);
+    logger.error("update", "Permission flow failed", err);
     useUpdateStore.setState({
       phase: "error",
       errorMessage: "No se pudo abrir los ajustes de instalación.",

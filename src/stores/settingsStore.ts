@@ -32,7 +32,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       await storage.set(EPISODE_ORDER_KEY, order);
     } catch (error) {
       set({ episodeOrder: previous });
-      logger.error("settingsStore", "Failed to persist order", error);
+      logger.error("settings", "Failed to persist order", error);
     }
   },
 
@@ -43,7 +43,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       await storage.set(PREFERRED_SERVER_KEY, server);
     } catch (error) {
       set({ preferredServer: previous });
-      logger.error("settingsStore", "Failed to persist preferred server", error);
+      logger.error("settings", "Failed to persist preferred server", error);
     }
   },
 }));

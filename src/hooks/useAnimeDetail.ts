@@ -38,7 +38,7 @@ export function usePersistedRange(slug: string | undefined) {
         setIsRestoring(false);
       })
       .catch((error) => {
-        logger.error("usePersistedRange", "Failed to load persisted range", error);
+        logger.error("detail", "Failed to load persisted range", error);
         setActiveRangeIdx(0);
         setIsRestoring(false);
       });
@@ -49,7 +49,7 @@ export function usePersistedRange(slug: string | undefined) {
       setActiveRangeIdx(idx);
       if (slug != null) {
         storage.set(rangeKey(slug), idx).catch((error) => {
-          logger.error("usePersistedRange", "Failed to persist range", error);
+          logger.error("detail", "Failed to persist range", error);
         });
       }
     },

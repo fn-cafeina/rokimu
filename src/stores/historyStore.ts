@@ -33,7 +33,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
       // can overlap. Reverting to the list captured before this one would drop
       // an entry the other call already saved; memory keeps the newest value
       // and the next successful write persists it.
-      logger.error("historyStore", "Failed to persist", error);
+      logger.error("history", "Failed to persist", error);
     }
   },
 

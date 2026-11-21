@@ -30,7 +30,7 @@ export function useNetworkStatus(): NetworkStatus {
     NetInfo.fetch()
       .then(applyNetworkState)
       .catch((error) => {
-        logger.error("useNetworkStatus", "Failed to fetch network status", error);
+        logger.error("network", "Failed to fetch network status", error);
         setIsConnected(false);
         setIsInternetReachable(false);
       });

@@ -13,6 +13,8 @@ class Logger {
   // Level guide: debug = high-frequency flow (per request, cache hit/miss);
   // info = flow decisions (wash, ladder retries, settles); warn = degraded but
   // recovering; error = terminal or user-visible failure.
+  // Tag convention: camelCase module or domain name, no suffix
+  // (`downloads`, not `downloadsStore`; `storage`, not `Storage`).
   private logLevel: LogLevel = DEFAULT_LOG_LEVEL;
 
   private shouldLog(level: LogLevel): boolean {

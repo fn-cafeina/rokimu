@@ -93,7 +93,7 @@ function persist(entries: Record<string, DownloadEntry>): void {
     entry.status === "downloading" ? { ...entry, status: "queued" as const } : entry,
   );
   void storage.set(DOWNLOADS_KEY, snapshot).catch((error) => {
-    logger.warn("downloadsStore", "Failed to persist index", error);
+    logger.warn("downloads", "Failed to persist index", error);
   });
 }
 
@@ -182,7 +182,7 @@ async function persistRemoval(entries: Record<string, DownloadEntry>): Promise<v
   try {
     await storage.set(DOWNLOADS_KEY, Object.values(entries));
   } catch (error) {
-    logger.error("downloadsStore", "Failed to persist the removal", error);
+    logger.error("downloads", "Failed to persist the removal", error);
   }
 }
 
@@ -321,7 +321,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
       await storage.set(DOWNLOAD_CONCURRENCY_KEY, concurrency);
     } catch (error) {
       set({ concurrency: previous });
-      logger.error("downloadsStore", "Failed to persist concurrency", error);
+      logger.error("downloads", "Failed to persist concurrency", error);
     }
   },
 }));
