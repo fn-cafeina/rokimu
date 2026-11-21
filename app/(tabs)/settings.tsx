@@ -10,13 +10,21 @@ import {
 import { useUpdateStore, UPDATE_CHECK_RESOURCE_KEY } from "@/stores/updateStore";
 import { isLoadingFor } from "@/utils/resource";
 import { Feather } from "@expo/vector-icons";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Linking, ScrollView, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TAB_BAR_OFFSET } from "@/utils/layout";
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  // The floating tab bar overlaps the bottom of the list. Reserve its height
+  // only when the content needs it, and switch scrolling off when the whole
+  // list already fits: a short screen must not drag over empty space.
+  const clearance = TAB_BAR_OFFSET + insets.bottom;
+  const fits = viewportHeight > 0 && contentHeight <= viewportHeight;
 
   const updateCheckEnabled = useUpdateStore((s) => s.updateCheckEnabled);  const setUpdateCheckEnabled = useUpdateStore((s) => s.setUpdateCheckEnabled);
   const updateAvailable = useUpdateStore((s) => s.check.data?.updateAvailable ?? null);
@@ -56,7 +64,14 @@ export default function SettingsScreen() {
     <View className="flex-1 bg-black" style={{ paddingTop: insets.top + 16 }}>
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: TAB_BAR_OFFSET + insets.bottom }}
+        scrollEnabled={!fits}
+        onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
+        onContentSizeChange={(_w, h) => setContentHeight(h)}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: 20,
+          paddingBottom: fits ? 0 : clearance,
+        }}
       >
       <View className="pb-6">
         <SectionTitle>Actualizaciones</SectionTitle>
