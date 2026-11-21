@@ -9,7 +9,6 @@ import { DetailSkeleton } from "@/components/anime/DetailSkeleton";
 import { useAnimeDetailScreen } from "@/hooks/useAnimeDetailScreen";
 import { navigateBack } from "@/utils/navigation";
 import { useHistoryStore } from "@/stores/historyStore";
-import { findHistoryEntry } from "@/utils/history";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { EpisodeDownloadButton } from "@/components/downloads/EpisodeDownloadButton";
 import { calcProgress } from "@/utils/math";
@@ -24,6 +23,44 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCrossfade } from "@/hooks/useCrossfade";
+import type { Episode, HistoryItem } from "@/types";
+
+interface EpisodeRowProps {
+  slug: string;
+  episode: Episode;
+  entry: HistoryItem | undefined;
+  onPress: (episode: Episode) => void;
+  onDownload: (episode: Episode) => void;
+}
+
+const EpisodeRow = memo(function EpisodeRow({ slug, episode, entry, onPress, onDownload }: EpisodeRowProps) {
+  const hasProgress = entry != null && (entry.progress ?? 0) > 0 && (entry.duration ?? 0) > 0;
+  const pct = hasProgress ? calcProgress(entry!.progress, entry!.duration) : 0;
+  const isWatched = pct >= WATCHED_THRESHOLD;
+  // A finished episode fills the bar; the row itself stays plain,
+  // so the bar is the only thing that reports the progress
+  const barProgress = isWatched ? entry!.duration : entry?.progress;
+
+  return (
+    <AnimatedPressable onPress={() => onPress(episode)}>
+      <View className="rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden">
+        <View className="flex-row items-center justify-between p-4">
+          <Text className="text-base font-semibold text-white">Episodio {episode.number}</Text>
+          <View className="flex-row items-center gap-4">
+            <EpisodeDownloadButton
+              slug={slug}
+              number={episode.number}
+              onRequestDownload={() => onDownload(episode)}
+            />
+          </View>
+        </View>
+        {hasProgress && (
+          <ProgressBar progress={barProgress} duration={entry!.duration} />
+        )}
+      </View>
+    </AnimatedPressable>
+  );
+});
 
 const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   const { slug } = useLocalSearchParams();
@@ -37,6 +74,15 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
 
   // Subscribed so returning from the player repaints the episode progress bars
   const lastViewed = useHistoryStore((s) => s.lastViewed);
+
+  // One lookup per episode instead of a history scan per row per render
+  const progressByNumber = useMemo(() => {
+    const map = new Map<string, HistoryItem>();
+    for (const item of lastViewed) {
+      if (item.url === slug) map.set(item.number, item);
+    }
+    return map;
+  }, [lastViewed, slug]);
 
   const { ctaEpisode, ctaMode, watchedCount } = useMemo(() => {
     const ordered = orderEpisodes(anime?.episodes ?? []);
@@ -99,35 +145,16 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                       <Text className="mt-4 max-w-[300px] text-center text-sm text-neutral-500">Este anime aún no tiene episodios disponibles. Vuelve más tarde para comprobarlo.</Text>
                     </View>
                   )}
-                  {visibleEpisodes.map((item) => {
-                    const historyEntry = findHistoryEntry(lastViewed, slug as string, item.number);
-                    const hasProgress = historyEntry != null && (historyEntry.progress ?? 0) > 0 && (historyEntry.duration ?? 0) > 0;
-                    const pct = hasProgress ? calcProgress(historyEntry.progress, historyEntry.duration) : 0;
-                    const isWatched = pct >= WATCHED_THRESHOLD;
-                    // A finished episode fills the bar; the row itself stays plain,
-                    // so the bar is the only thing that reports the progress
-                    const barProgress = isWatched ? historyEntry!.duration : historyEntry?.progress;
-
-                    return (
-                      <AnimatedPressable key={item.id} onPress={() => handleEpisodePress(item)}>
-                        <View className="rounded-xl bg-neutral-900 border border-neutral-800 overflow-hidden">
-                          <View className="flex-row items-center justify-between p-4">
-                            <Text className="text-base font-semibold text-white">Episodio {item.number}</Text>
-                            <View className="flex-row items-center gap-4">
-                              <EpisodeDownloadButton
-                                slug={slug as string}
-                                number={item.number}
-                                onRequestDownload={() => handleDownloadPress(item)}
-                              />
-                            </View>
-                          </View>
-                          {hasProgress && (
-                            <ProgressBar progress={barProgress} duration={historyEntry.duration} />
-                          )}
-                        </View>
-                      </AnimatedPressable>
-                    );
-                  })}
+                  {visibleEpisodes.map((item) => (
+                    <EpisodeRow
+                      key={item.id}
+                      slug={slug as string}
+                      episode={item}
+                      entry={progressByNumber.get(item.number)}
+                      onPress={handleEpisodePress}
+                      onDownload={handleDownloadPress}
+                    />
+                  ))}
                 </View>
               </ScrollView>
 
