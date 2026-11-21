@@ -20,6 +20,9 @@ export const WebViewWorker = () => {
     webViewBridge.registerInjector((js: string) => {
       vRef.current?.injectJavaScript(js);
     });
+    webViewBridge.registerReloader(() => {
+      vRef.current?.reload();
+    });
   }, []);
 
   const handleMessage = useCallback((e: WebViewMessageEvent) => {
@@ -39,7 +42,9 @@ export const WebViewWorker = () => {
 
     if (result.type === "SESSION_UPDATE") {
       if (typeof result.data === "object" && result.data !== null && "cookies" in result.data && "userAgent" in result.data) {
-        void sessionManager.setSession(result.data as ISession);
+        void sessionManager.setSession(result.data as ISession).catch((error: unknown) => {
+          logger.warn("session", "Failed to persist session report", error);
+        });
       }
       return;
     }
@@ -56,6 +61,12 @@ export const WebViewWorker = () => {
         // makes them fail fast instead of racing the page swap
         onLoadStart={() => webViewBridge.setLoaded(false)}
         onLoadEnd={() => webViewBridge.setLoaded(true)}
+        onRenderProcessGone={() => {
+          // Android killed the renderer (memory pressure): without a reload the
+          // worker stays dead and every wash burns its 40s timeout forever
+          webViewBridge.setLoaded(false);
+          vRef.current?.reload();
+        }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
       />
