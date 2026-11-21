@@ -34,14 +34,13 @@ export async function bootApp(): Promise<void> {
   // Fire and forget: the sweep is IO over every stored key, nothing waits on it
   void pruneExpiredCache();
   await sessionManager.initialize();
-  const [history, saved, order, preferredServer, updateCheckEnabled] = await Promise.all([
+  // One batch: the slowest read bounds boot, not the sum of two batches
+  const [history, saved, order, preferredServer, updateCheckEnabled, downloads, downloadConcurrency] = await Promise.all([
     storage.get<HistoryItem[]>(HISTORY_KEY),
     storage.get<Anime[]>(SAVED_KEY),
     storage.get<"asc" | "desc">(EPISODE_ORDER_KEY),
     storage.get<"Delta" | "Epsilon" | null>(PREFERRED_SERVER_KEY),
     storage.get<boolean>(UPDATE_CHECK_KEY),
-  ]);
-  const [downloads, downloadConcurrency] = await Promise.all([
     storage.get<DownloadEntry[]>(DOWNLOADS_KEY),
     storage.get<number>(DOWNLOAD_CONCURRENCY_KEY),
   ]);
