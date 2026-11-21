@@ -22,10 +22,12 @@ import { ACCENT_COLOR } from "@/config/theme";
 import { memo, useMemo } from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCrossfade } from "@/hooks/useCrossfade";
 
 const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   const { slug } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const {
     anime, view, isRefreshing, error, rows, serverLoading, serverError, serverOffline, retryServers, setEpisodeOrder,
     isExpanded, setIsExpanded, selectedEpisode, setSelectedEpisode,
@@ -67,7 +69,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
         <Animated.View style={[{ flex: 1 }, contentStyle]}>
           <View className="flex-1 bg-black">
               <ScrollView
-                contentContainerStyle={{ paddingBottom: TAB_BAR_OFFSET }}
+                contentContainerStyle={{ paddingBottom: TAB_BAR_OFFSET + insets.bottom }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={ACCENT_COLOR} colors={[ACCENT_COLOR]} />}
               >
