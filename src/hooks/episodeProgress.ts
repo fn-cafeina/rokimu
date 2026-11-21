@@ -39,7 +39,8 @@ export function isWatched(progress: EpisodeProgress): boolean {
  * Episode the detail CTA opens. An episode in progress keeps the CTA; a
  * finished one hands it to the first unwatched episode after it, in reading
  * order. Null means there is nothing to continue with: every episode watched,
- * or the last played episode is no longer in the list.
+ * or the last played episode is no longer in the list. The screen turns null
+ * into a rewatch CTA instead of hiding the button.
  */
 export function pickCtaEpisode(
   ordered: Episode[],

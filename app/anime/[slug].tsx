@@ -38,15 +38,18 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   // Subscribed so returning from the player repaints the episode progress bars
   const lastViewed = useHistoryStore((s) => s.lastViewed);
 
-  const { ctaEpisode, continuing, watchedCount } = useMemo(() => {
+  const { ctaEpisode, ctaMode, watchedCount } = useMemo(() => {
     const ordered = orderEpisodes(anime?.episodes ?? []);
     const progress = collectEpisodeProgress(ordered, lastViewed, slug as string);
     const cta = pickCtaEpisode(ordered, progress);
+    const first = ordered[0] ?? null;
+    // Nothing played starts at episode one; everything watched offers a
+    // rewatch of episode one instead of dropping the CTA and shifting layout
+    const mode: "continue" | "start" | "rewatch" =
+      cta != null ? "continue" : progress.length === 0 ? "start" : "rewatch";
     return {
-      // Nothing played yet opens the first episode; something played with
-      // nothing left to watch hides the CTA instead of offering a rewatch
-      ctaEpisode: cta?.episode ?? (progress.length === 0 ? ordered[0] ?? null : null),
-      continuing: cta != null,
+      ctaEpisode: cta?.episode ?? first,
+      ctaMode: mode,
       watchedCount: progress.filter((item) => item.ratio >= WATCHED_THRESHOLD).length,
     };
   }, [anime?.episodes, lastViewed, slug]);
@@ -82,7 +85,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                   isAscending={isAscending}
                   toggleSort={() => void setEpisodeOrder(isAscending ? "desc" : "asc")}
                   ctaEpisode={ctaEpisode}
-                  continuing={continuing}
+                  ctaMode={ctaMode}
                   onResume={handleEpisodePress}
                   watchedCount={watchedCount}
                 />

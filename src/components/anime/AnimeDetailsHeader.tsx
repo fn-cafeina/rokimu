@@ -19,8 +19,8 @@ interface AnimeDetailsHeaderProps {
   toggleSort: () => void;
   /** Episode the detail CTA opens; null hides the button. */
   ctaEpisode: Episode | null;
-  /** True when the CTA continues a series already started. */
-  continuing: boolean;
+  /** What the CTA does: resume in progress, start, or rewatch from scratch. */
+  ctaMode: "continue" | "start" | "rewatch";
   onResume: (episode: Episode) => void;
   watchedCount: number;
 }
@@ -39,7 +39,7 @@ export const AnimeDetailsHeader = memo(
     isAscending,
     toggleSort,
     ctaEpisode,
-    continuing,
+    ctaMode,
     onResume,
     watchedCount,
   }: AnimeDetailsHeaderProps) => {
@@ -119,7 +119,11 @@ export const AnimeDetailsHeader = memo(
               style={{ backgroundColor: ACCENT_COLOR }}
             >
               <Text className="text-sm font-semibold text-neutral-950">
-                {continuing ? `Continuar Episodio ${ctaEpisode.number}` : "Ver primer episodio"}
+                {ctaMode === "continue"
+                  ? `Continuar Episodio ${ctaEpisode.number}`
+                  : ctaMode === "rewatch"
+                    ? `Volver a ver Episodio ${ctaEpisode.number}`
+                    : "Ver primer episodio"}
               </Text>
             </AnimatedPressable>
           </View>
