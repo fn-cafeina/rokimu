@@ -22,9 +22,9 @@ const SUBTITLES: Record<AppError["type"], string> = {
 
 export function ErrorState({ onRetry, error, title = "Error al cargar" }: ErrorStateProps) {
   return (
-    <View className="flex-1 items-center justify-center bg-black px-5">
+    <View className="flex-1 items-center justify-center px-5">
       <Feather name="alert-circle" size={48} color={MUTED_ICON} />
-      <Text className="mt-2 text-lg font-bold text-neutral-500">
+      <Text className="mt-4 text-center text-sm font-semibold text-neutral-500">
         {title}
       </Text>
       <Text className="mt-2 max-w-[300px] text-center text-xs text-neutral-600">
