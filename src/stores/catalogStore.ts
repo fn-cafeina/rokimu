@@ -106,7 +106,9 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
           items: merged.items,
           page: reached,
           lastPage: next.pagination.lastPage,
-          hasMore: merged.added > 0 && reached < next.pagination.lastPage,
+          // A page that adds no new cards (the feed shifted under us) must not
+          // stop the walk: dedup already hides the repeats
+          hasMore: reached < next.pagination.lastPage,
           isLoadingMore: false,
         });
       } catch (error) {
