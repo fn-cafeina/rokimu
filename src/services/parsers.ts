@@ -337,6 +337,28 @@ export class HtmlParser {
   }
 }
 
+export interface Pagination {
+  /** Page the server actually rendered */
+  page: number;
+  /** Last page for this filter combination */
+  lastPage: number;
+}
+
+const PAGINATION_REGEX = /text-sm font-black text-foreground">(\d+)<span[^>]*>\/<\/span>(\d+)</;
+const NEXT_LINK_REGEX = /<a[^>]*rel="next"/;
+
+/**
+ * The listing prints "Página X/Y" and renders a `rel="next"` link only when
+ * another page exists. No markup at all means a single page, not "unknown".
+ */
+export function parsePagination(html: string): Pagination {
+  const match = PAGINATION_REGEX.exec(html);
+  if (match == null) {
+    return { page: 1, lastPage: NEXT_LINK_REGEX.test(html) ? 2 : 1 };
+  }
+  return { page: Number(match[1]), lastPage: Number(match[2]) };
+}
+
 /**
  * Cloudflare challenge fingerprint, shared with the WebView worker so both sides
  * recognize the same page. Titles survive localization, ids are stable.

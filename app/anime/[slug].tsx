@@ -120,7 +120,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
               <ScrollView
                 contentContainerStyle={{ paddingBottom: TAB_BAR_OFFSET + insets.bottom }}
                 showsVerticalScrollIndicator={false}
-                refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={ACCENT_COLOR} colors={[ACCENT_COLOR]} />}
+                refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={refresh} tintColor={ACCENT_COLOR} colors={[ACCENT_COLOR]} progressBackgroundColor="#000000" />}
               >
                 <DetailTopBar anime={anime} onBack={navigateBack} />
                 <AnimeDetailsHeader

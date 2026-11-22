@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { source } from "@/services/source";
-import { BROWSE } from "@/config/browse";
+import { source, type BrowsePage } from "@/services/source";
+import { browseQuery, EMPTY_FILTER, type BrowseFilter } from "@/config/browse";
 import { loadCached } from "@/utils/cache";
 import { appendPage } from "@/utils/paging";
 import { withAuthRetry } from "@/utils/retry";
@@ -9,46 +9,36 @@ import { CACHE_PREFIXES, CACHE_TTL } from "@/config/cache";
 import { logger } from "@/utils/logger";
 import type { Anime } from "@/types";
 
-export interface BrowseFilter {
-  genre: string | null;
-  year: number | null;
-}
+const HOME_QUERY = browseQuery(EMPTY_FILTER, 1);
 
-export const EMPTY_FILTER: BrowseFilter = { genre: null, year: null };
-
-/**
- * The site ignores genre and year as query params, so a filter picks one path:
- * combined filters have no URL that honors both.
- */
-export function browsePath(filter: BrowseFilter): string {
-  if (filter.genre != null) return BROWSE.genre(filter.genre);
-  if (filter.year != null) return BROWSE.year(filter.year);
-  return BROWSE.home;
-}
-
-/** Page 1 is cached per path; later pages are cheap enough to re-request */
-function cacheKeyFor(path: string): string {
-  if (path === BROWSE.home) return CACHE_PREFIXES.HOME;
-  return `${CACHE_PREFIXES.HOME}_${path.replace(/[^a-z0-9]+/gi, "-")}`;
+/** Page 1 is cached per filter combination; later pages are re-requested */
+function cacheKeyFor(query: string): string {
+  if (query === HOME_QUERY) return CACHE_PREFIXES.HOME;
+  return `${CACHE_PREFIXES.HOME}_${query.replace(/[^a-z0-9]+/gi, "-")}`;
 }
 
 interface CatalogState {
   filter: BrowseFilter;
-  /** Browse path for the current filter; also the resource key of page 1 */
-  path: string;
-  resource: ResourceState<Anime[]>;
+  /** Browse URL of the current filter, page 1; it is also the resource key */
+  query: string;
+  resource: ResourceState<BrowsePage>;
   /** Page 1 plus every page loaded since, deduplicated by slug */
   items: Anime[];
   page: number;
+  lastPage: number;
   hasMore: boolean;
   isLoadingMore: boolean;
+  /** The filter sheet lives at the root so it draws above the floating tab bar */
+  sheetOpen: boolean;
   fetchCatalog: (force?: boolean) => Promise<void>;
   loadMore: () => Promise<void>;
   setFilter: (filter: BrowseFilter) => void;
+  openSheet: () => void;
+  closeSheet: () => void;
 }
 
 export const useCatalogStore = create<CatalogState>((set, get) => {
-  const runner = new ResourceRunner<Anime[]>({
+  const runner = new ResourceRunner<BrowsePage>({
     tag: "home",
     get: () => get().resource,
     set: (resource) => set({ resource }),
@@ -56,26 +46,28 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
 
   return {
     filter: EMPTY_FILTER,
-    path: BROWSE.home,
-    resource: resourceInitialState<Anime[]>(),
+    query: HOME_QUERY,
+    resource: resourceInitialState<BrowsePage>(),
     items: [],
     page: 1,
+    lastPage: 1,
     hasMore: true,
     isLoadingMore: false,
+    sheetOpen: false,
 
     fetchCatalog: async (force = false) => {
-      const path = get().path;
-      const outcome = await runner.load(path, (signal) =>
+      const query = get().query;
+      const outcome = await runner.load(query, (signal) =>
         withAuthRetry(
           (attempt) =>
             loadCached(
-              cacheKeyFor(path),
-              (sig) => source.getBrowsePage(path, 1, { signal: sig }),
+              cacheKeyFor(query),
+              (sig) => source.getBrowsePage(query, { signal: sig }),
               {
                 ttl: CACHE_TTL.HOME,
                 signal,
                 force: attempt > 0 ? true : force,
-                isValid: (cards) => cards.length > 0,
+                isValid: (page) => page.items.length > 0,
               },
             ),
           {
@@ -85,37 +77,54 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
           },
         ),
       );
-      // A filter change during the request already reset the grid for its path
-      if (outcome.status !== "success" || get().path !== path) return;
-      set({ items: outcome.data, page: 1, hasMore: outcome.data.length > 0, isLoadingMore: false });
+      // A filter change during the request already reset the grid for its query
+      if (outcome.status !== "success" || get().query !== query) return;
+      const { items, pagination } = outcome.data;
+      set({
+        items,
+        page: 1,
+        lastPage: pagination.lastPage,
+        hasMore: pagination.lastPage > 1,
+        isLoadingMore: false,
+      });
     },
 
     loadMore: async () => {
-      const { hasMore, isLoadingMore, path, page } = get();
+      const { hasMore, isLoadingMore, query, page, filter } = get();
       if (!hasMore || isLoadingMore) return;
       set({ isLoadingMore: true });
       try {
-        const next = await withAuthRetry(() => source.getBrowsePage(path, page + 1), {
+        const next = await withAuthRetry(() => source.getBrowsePage(browseQuery(filter, page + 1)), {
           maxRetries: 2,
           tag: "home",
         });
-        // A refresh that landed mid-flight already replaced the list for page 1
-        if (get().path !== path || get().page !== page) return;
-        const merged = appendPage(get().items, next);
-        set({ items: merged.items, page: page + 1, hasMore: merged.added > 0, isLoadingMore: false });
+        // A refresh or filter change that landed mid-flight owns the list now
+        if (get().query !== query || get().page !== page) return;
+        const merged = appendPage(get().items, next.items);
+        const reached = page + 1;
+        set({
+          items: merged.items,
+          page: reached,
+          lastPage: next.pagination.lastPage,
+          hasMore: merged.added > 0 && reached < next.pagination.lastPage,
+          isLoadingMore: false,
+        });
       } catch (error) {
-        if (get().path !== path) return;
-        // Stop the scroll instead of hammering a failing page; a refresh retries
-        logger.warn("home", `Page ${page + 1} failed for ${path}`, error);
-        set({ isLoadingMore: false, hasMore: false });
+        if (get().query !== query) return;
+        // Keep the list loadable: the next scroll retries instead of dying here
+        logger.warn("home", `Page ${page + 1} failed for ${query}`, error);
+        set({ isLoadingMore: false });
       }
     },
 
     setFilter: (filter) => {
-      const path = browsePath(filter);
-      if (path === get().path) return;
-      set({ filter, path, items: [], page: 1, hasMore: true, isLoadingMore: false });
+      const query = browseQuery(filter, 1);
+      if (query === get().query) return;
+      set({ filter, query, items: [], page: 1, lastPage: 1, hasMore: true, isLoadingMore: false });
       void get().fetchCatalog();
     },
+
+    openSheet: () => set({ sheetOpen: true }),
+    closeSheet: () => set({ sheetOpen: false }),
   };
 });

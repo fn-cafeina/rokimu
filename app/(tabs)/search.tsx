@@ -1,28 +1,20 @@
 import { AnimeCard } from "@/components/anime/AnimeCard";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { GridSkeleton } from "@/components/search/GridSkeleton";
-import { FilterSheet } from "@/components/search/FilterSheet";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import type { Anime } from "@/types";
 import { useSearchScreen } from "@/hooks/useSearchScreen";
-import { EMPTY_FILTER, useCatalogStore, type BrowseFilter } from "@/stores/catalogStore";
+import { useCatalogStore } from "@/stores/catalogStore";
+import { filterSummary } from "@/config/browse";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
-import { genreLabel } from "@/config/browse";
 import { deriveView } from "@/utils/resource";
 import { TAB_BAR_OFFSET, calcCardWidth } from "@/utils/layout";
 import { Feather } from "@expo/vector-icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ActivityIndicator, FlatList, RefreshControl, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-/** What the filter button shows: the active dimension, or nothing */
-function filterLabel(filter: BrowseFilter): string | null {
-  if (filter.genre != null) return genreLabel(filter.genre);
-  if (filter.year != null) return String(filter.year);
-  return null;
-}
 
 function SearchScreenContent() {
   const { searchTerm, searchAnimes, isLoading, isPending, error, hasQuery, handleTextChange, resetSearch, retrySearch } = useSearchScreen();
@@ -30,22 +22,21 @@ function SearchScreenContent() {
   // The catalog is the discover feed when nothing is typed: /directorio, no query
   const fetchCatalog = useCatalogStore((s) => s.fetchCatalog);
   const loadMore = useCatalogStore((s) => s.loadMore);
-  const setFilter = useCatalogStore((s) => s.setFilter);
+  const openSheet = useCatalogStore((s) => s.openSheet);
   const filter = useCatalogStore((s) => s.filter);
-  const catalogPath = useCatalogStore((s) => s.path);
+  const catalogQuery = useCatalogStore((s) => s.query);
   const catalog = useCatalogStore((s) => s.items);
   const isLoadingMore = useCatalogStore((s) => s.isLoadingMore);
   const homeResource = useCatalogStore((s) => s.resource);
-  const catalogView = deriveView(homeResource, catalogPath);
+  const catalogView = deriveView(homeResource, catalogQuery);
   const catalogError = homeResource.status === "error" ? homeResource.error : null;
 
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const cardWidth = calcCardWidth(screenWidth);
   const listRef = useRef<FlatList<Anime>>(null);
-  const [filterOpen, setFilterOpen] = useState(false);
 
-  const activeLabel = filterLabel(filter);
+  const summary = filterSummary(filter);
 
   useEffect(() => {
     void fetchCatalog();
@@ -53,16 +44,11 @@ function SearchScreenContent() {
 
   useEffect(() => {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
-  }, [hasQuery, catalogPath]);
+  }, [hasQuery, catalogQuery]);
 
   const renderCard = useCallback(({ item }: { item: Anime }) => (
     <View className="mb-3"><AnimeCard anime={item} width={cardWidth} /></View>
   ), [cardWidth]);
-
-  const handleSelectFilter = useCallback((next: BrowseFilter) => {
-    setFilter(next);
-    setFilterOpen(false);
-  }, [setFilter]);
 
   const handleEndReached = useCallback(() => {
     if (hasQuery) return;
@@ -93,23 +79,20 @@ function SearchScreenContent() {
           )}
         </View>
 
-        {/* Filters only pick a browse path: the site has no URL that combines
-            them with a text query, so they stay out of the way while searching */}
+        {/* The site's search endpoint takes no filters, so the sheet stays out of
+            the way while a query is typed */}
         {!hasQuery && (
           <View className="flex-row items-center mt-3">
             <AnimatedPressable
-              onPress={() => setFilterOpen(true)}
-              accessibilityLabel="Filtrar por género o año"
-              className={`flex-row items-center rounded-full border px-3 py-1.5 ${activeLabel != null ? "bg-neutral-800 border-neutral-600" : "bg-neutral-900 border-neutral-800"}`}
+              onPress={openSheet}
+              accessibilityLabel="Filtrar el catálogo"
+              className={`flex-row items-center rounded-full border px-3 py-1.5 ${summary != null ? "bg-neutral-800 border-neutral-600" : "bg-neutral-900 border-neutral-800"}`}
             >
-              <Feather name="sliders" size={12} color={activeLabel != null ? ACCENT_COLOR : MUTED_ICON} />
-              <Text className={`text-xs ml-2 ${activeLabel != null ? "text-white" : "text-neutral-400"}`}>
-                {activeLabel ?? "Filtros"}
+              <Feather name="sliders" size={12} color={summary != null ? ACCENT_COLOR : MUTED_ICON} />
+              <Text className={`text-xs ml-2 ${summary != null ? "text-white" : "text-neutral-400"}`}>
+                {summary ?? "Filtros"}
               </Text>
             </AnimatedPressable>
-            {activeLabel != null && (
-              <Feather name="x" size={14} color={MUTED_ICON} onPress={() => setFilter(EMPTY_FILTER)} style={{ padding: 8 }} />
-            )}
           </View>
         )}
       </View>
@@ -150,6 +133,7 @@ function SearchScreenContent() {
                 onRefresh={hasQuery ? retrySearch : () => void fetchCatalog(true)}
                 tintColor={ACCENT_COLOR}
                 colors={[ACCENT_COLOR]}
+                progressBackgroundColor="#000000"
               />
             }
             ListEmptyComponent={
@@ -160,19 +144,12 @@ function SearchScreenContent() {
                   subtitle="Probá con otro término."
                 />
               ) : (
-                <EmptyState icon="book-open" title="Catálogo vacío" subtitle="No hay animes para mostrar." />
+                <EmptyState icon="book-open" title="Sin resultados" subtitle="Probá con otros filtros." />
               )
             }
           />
         )}
       </View>
-
-      <FilterSheet
-        visible={filterOpen && !hasQuery}
-        filter={filter}
-        onClose={() => setFilterOpen(false)}
-        onSelect={handleSelectFilter}
-      />
     </View>
   );
 }

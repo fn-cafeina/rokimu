@@ -1,4 +1,4 @@
-import { HtmlParser, cleanTitle, extractJson, isChallengeHtml } from "./parsers";
+import { HtmlParser, cleanTitle, extractJson, isChallengeHtml, parsePagination } from "./parsers";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -89,6 +89,31 @@ assert(
 assert(
   !isChallengeHtml('<html><head><title>One Piece</title></head><body>cards</body></html>'),
   "a normal page is not a challenge",
+);
+
+// --- parsePagination ---
+// Markup copied from a real /directorio listing (filtered, page 1 of 2)
+const pagination = (page: number, lastPage: number, withNext: boolean) => [
+  '<nav aria-label="Paginaci\u00f3n" class="mt-20 flex items-center justify-center gap-8">',
+  '<span class="h-12 w-12"></span>',
+  '<div class="flex flex-col items-center gap-0.5">',
+  '<span class="text-[10px] font-black tracking-widest text-muted-foreground uppercase">P\u00e1gina</span>',
+  `<span class="text-sm font-black text-foreground">${page}<span class="mx-2 text-muted-foreground">/</span>${lastPage}</span>`,
+  '</div>',
+  withNext
+    ? '<a rel="next" aria-label="P\u00e1gina siguiente" class="flex h-12 w-12" href="/directorio?year=&amp;page=2&amp;genre=&amp;type=&amp;status="></a>'
+    : '<span class="h-12 w-12"></span>',
+  '</nav>',
+].join("");
+
+assertEqual(parsePagination(pagination(1, 2, true)), { page: 1, lastPage: 2 }, "pagination: first of two");
+assertEqual(parsePagination(pagination(2, 2, false)), { page: 2, lastPage: 2 }, "pagination: last page");
+assertEqual(parsePagination(pagination(3, 7, true)), { page: 3, lastPage: 7 }, "pagination: middle page");
+assertEqual(parsePagination("<html><body>no listing</body></html>"), { page: 1, lastPage: 1 }, "pagination: no footer means one page");
+assertEqual(
+  parsePagination('<a rel="next" href="/directorio?page=2"></a>'),
+  { page: 1, lastPage: 2 },
+  "pagination: a next link without the counter still means another page",
 );
 
 console.log("parsers ok");

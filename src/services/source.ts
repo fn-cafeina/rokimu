@@ -4,7 +4,7 @@ import { logger } from "@/utils/logger";
 import { SourceError } from "@/utils/errors";
 import { backoffDelay } from "@/utils/math";
 import { sessionManager } from "./session";
-import { HtmlParser, cleanTitle, extractJson, isChallengeHtml } from "./parsers";
+import { HtmlParser, cleanTitle, extractJson, isChallengeHtml, parsePagination, type Pagination } from "./parsers";
 import { buildHeaders, isSourceUrl } from "./requestHeaders";
 import { webViewBridge } from "./webview";
 import { extractBest } from "./extractors";
@@ -163,20 +163,28 @@ export async function webviewFetch(path: string): Promise<SessionResponse> {
 }
 
 /**
- * One page of a card grid. `/directorio`, `/genero/<slug>` and `/anio/<year>`
- * all take `?page=N` and return 28 cards.
+ * One page of a card grid. `/directorio` takes `page` plus the four filters and
+ * answers with 28 cards and the pagination footer this returns.
  */
-async function getBrowsePage(path: string, page: number, options?: { signal?: AbortSignal }): Promise<Anime[]> {
-  const endpoint = page > 1 ? `${path}?page=${page}` : path;
-  const { ok, status, body: html } = await fetchWithSession(endpoint, options ?? {});
+export interface BrowsePage {
+  items: Anime[];
+  pagination: Pagination;
+}
+
+async function getBrowsePage(
+  query: string,
+  options?: { signal?: AbortSignal },
+): Promise<BrowsePage> {
+  const { ok, status, body: html } = await fetchWithSession(query, options ?? {});
   if (!ok) throw new SourceError(`HTTP Error: ${status}`, "NETWORK_ERROR");
-  const cards = htmlParser.parseCards(html);
-  if (cards.length === 0) {
+  const pagination = parsePagination(html);
+  const items = htmlParser.parseCards(html);
+  if (items.length === 0) {
     if (isChallengeHtml(html)) throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
-    // Page 1 of a real taxonomy is never empty; a later page is the end of the list
-    if (page === 1) throw new SourceError("No cards extracted — site structure may have changed", "PARSER_ERROR");
+    // Page 1 with no cards is a broken parse; a later empty page is the end
+    if (pagination.page <= 1) throw new SourceError("No cards extracted — site structure may have changed", "PARSER_ERROR");
   }
-  return cards;
+  return { items, pagination };
 }
 
 export interface RawSearchItem {

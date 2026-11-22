@@ -3,7 +3,7 @@ import type { Anime } from "@/types";
 /**
  * Browse pages shift between requests: a series published today pushes the
  * previous page's last card into the next one. Appending by slug keeps a card
- * from showing twice, and `added` is the only proof another page exists.
+ * from showing twice, and `added` counts what actually landed.
  */
 export function appendPage(current: Anime[], incoming: Anime[]): { items: Anime[]; added: number } {
   if (incoming.length === 0) return { items: current, added: 0 };

@@ -1,5 +1,6 @@
 import "../global.css";
 import { UpdateModal } from "@/components/app/UpdateModal";
+import { FilterSheet } from "@/components/search/FilterSheet";
 import { WebViewWorker } from "@/components/app/WebViewWorker";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { bootApp } from "@/services/boot";
@@ -84,6 +85,7 @@ function RootInner() {
       </Stack>
       <WebViewWorker />
       <UpdateModal />
+      <FilterSheet />
     </View>
   );
 }
