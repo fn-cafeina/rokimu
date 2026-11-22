@@ -71,16 +71,8 @@ export function decrypt(data: PlaybackData): string {
   }
 
   const iv = b64url(data.iv);
-  const payload = b64url(data.payload);
-  const tag = payload.subarray(-16);
-  const ct = payload.subarray(0, -16);
-
-  const fullCt = new Uint8Array(ct.length + tag.length);
-  fullCt.set(ct, 0);
-  fullCt.set(tag, ct.length);
-
-  const cipher = gcm(keyBytes, iv);
-  const decrypted = cipher.decrypt(fullCt);
+  // The payload is already ciphertext || tag, the shape noble's gcm expects
+  const decrypted = gcm(keyBytes, iv).decrypt(b64url(data.payload));
   return bytesToUtf8(decrypted);
 }
 
@@ -111,11 +103,6 @@ function bestStream(streams: HlsStream[]): HlsStream | null {
   });
 }
 
-/**
- * Dean Edwards packer: eval(function(p,a,c,k,e,d){...}('payload', radix,
- * count, 'k|k|...'.split('|'), 0, {})). The LuluStream player page hides its
- * jwplayer sources inside one of these.
- */
 /**
  * Dean Edwards packer: eval(function(p,a,c,k,e,d){...}('payload', radix,
  * count, 'k|k|...'.split('|'), 0, {})). The LuluStream player page hides its
