@@ -87,7 +87,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     try {
       const resolved = await resolveStreamCached(chosen, { force, signal });
       if (resolved == null) throw new SourceError("No se pudo resolver el stream", "VIDEO_ERROR");
-      lastStreamServer = chosen;
       return resolved;
     } catch (error) {
       if (isAuthError(error) || isCancelled(error)) throw error;
