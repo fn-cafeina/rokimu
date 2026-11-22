@@ -4,9 +4,9 @@ import type { AppError, Episode, EpisodeSheetRow, VideoServer } from "@/types";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { useHistoryStore } from "@/stores/historyStore";
-import { useAnimeData } from "./useAnimeData";
-import { usePersistedRange } from "./useAnimeDetail";
-import { computeEpisodePagination } from "./episodeHelpers";
+import { useAnimeDetail } from "./useAnimeDetail";
+import { usePersistedRange } from "./usePersistedRange";
+import { computeEpisodePagination } from "./episodePagination";
 import { errorFor, isLoadingFor } from "@/utils/resource";
 import { findHistoryEntry, makeHistoryEntry, addToHistorySafe } from "@/utils/history";
 import { orderServers } from "@/utils/serverOrder";
@@ -22,7 +22,7 @@ import { useNetworkStatus } from "./useNetworkStatus";
 const NO_ENTRIES: Record<string, DownloadEntry> = {};
 
 export function useAnimeDetailScreen(slug: string) {
-  const { anime, view, isLoading: isAnimeLoading, isRefreshing, error, hasLoaded, refresh } = useAnimeData(slug);
+  const { anime, view, isLoading: isAnimeLoading, isRefreshing, error, hasLoaded, refresh } = useAnimeDetail(slug);
   const resolveStream = usePlayerStore((s) => s.resolveStream);
   const serversResource = usePlayerStore((s) => s.servers);
   const fetchServers = usePlayerStore((s) => s.fetchServers);

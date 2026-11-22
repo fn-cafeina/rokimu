@@ -3,9 +3,9 @@ import { NEXT_EPISODE_COUNTDOWN_SECONDS } from "@/config/player";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PlayerControls } from "@/components/player/PlayerControls";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
-import { orderEpisodes } from "@/hooks/episodeHelpers";
+import { orderEpisodes } from "@/hooks/episodePagination";
 import { WATCHED_THRESHOLD } from "@/hooks/episodeProgress";
-import { useAnimeData } from "@/hooks/useAnimeData";
+import { useAnimeDetail } from "@/hooks/useAnimeDetail";
 import { useEpisodeNavigation } from "@/hooks/useEpisodeNavigation";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { usePlayerStore } from "@/stores/playerStore";
@@ -35,7 +35,7 @@ function PlayerContent() {
   const resolveStream = usePlayerStore((s) => s.resolveStream);
   const serversState = usePlayerStore((s) => s.servers);
   const addToHistory = useHistoryStore((s) => s.addToHistory);
-  const { anime } = useAnimeData(slug);
+  const { anime } = useAnimeDetail(slug);
   const { isInternetReachable: networkOk } = useNetworkStatus();
   const networkOkRef = useRef<boolean | null>(null);
   useEffect(() => {

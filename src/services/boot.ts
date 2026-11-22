@@ -4,7 +4,7 @@ import { useSavedStore, SAVED_KEY } from "@/stores/savedStore";
 import { useSettingsStore, EPISODE_ORDER_KEY, EPISODE_ORDER_BY_SLUG_KEY, PREFERRED_SERVER_KEY } from "@/stores/settingsStore";
 import { useUpdateStore, UPDATE_CHECK_KEY } from "@/stores/updateStore";
 import { isWorthKeepingOffline } from "@/hooks/useAnimeSnapshot";
-import { prunePersistedRanges } from "@/hooks/useAnimeDetail";
+import { prunePersistedRanges } from "@/hooks/usePersistedRange";
 import { resetToPortrait } from "@/services/playerUI";
 import { sessionManager } from "@/services/session";
 import { pruneAnimeSnapshots } from "@/utils/animeSnapshot";

@@ -1,61 +1,45 @@
-import { useCallback, useEffect, useState } from "react";
-import { storage } from "@/utils/storage";
-import { logger } from "@/utils/logger";
+import { useEffect, useRef, useState } from "react";
+import { useDetailsStore } from "@/stores/detailsStore";
+import { deriveView, errorFor, isLoadingFor, type ResourceView } from "@/utils/resource";
+import { useAnimeSnapshot } from "./useAnimeSnapshot";
 
-/** One remembered episode range per anime, pruned at boot like saved detail. */
-const RANGE_KEY_PREFIX = "range_";
+export function useAnimeDetail(slug: string) {
+  const resource = useDetailsStore((s) => s.resource);
+  const fetchDetails = useDetailsStore((s) => s.fetchDetails);
+  // One auto-load per slug per screen mount; failures retry only on demand
+  const attemptedSlugRef = useRef<string | null>(null);
+  // A pull is the only refresh the user started, so it is the only one the
+  // spinner should report; the auto refetch on re-entry runs behind content
+  const [pulled, setPulled] = useState(false);
 
-const rangeKey = (slug: string) => `${RANGE_KEY_PREFIX}${slug}`;
-
-/** Boot sweep: a range for an anime nobody keeps only counts against the cap. */
-export async function prunePersistedRanges(keep: (slug: string) => boolean): Promise<void> {
-  const keys = await storage.getAllKeys();
-  const stale = keys
-    .filter((key) => key.startsWith(RANGE_KEY_PREFIX))
-    .map((key) => key.slice(RANGE_KEY_PREFIX.length))
-    .filter((slug) => !keep(slug));
-  await Promise.all(stale.map((slug) => storage.remove(rangeKey(slug))));
-}
-
-export function usePersistedRange(slug: string | undefined) {
-  const [activeRangeIdx, setActiveRangeIdx] = useState(0);
-  const [isRestoring, setIsRestoring] = useState(slug != null);
-  // Reset during render on slug change so a stale range is never shown
-  const [prevSlug, setPrevSlug] = useState<string | undefined>(slug);
-
-  if (prevSlug !== slug) {
-    setPrevSlug(slug);
-    setActiveRangeIdx(0);
-    setIsRestoring(slug != null);
-  }
+  const live = resource.data != null && resource.dataKey === slug ? resource.data : null;
+  const snapshot = useAnimeSnapshot(slug, live);
+  // A saved copy is content: offline it keeps the episode list on screen while
+  // the refresh fails behind it
+  const anime = live ?? snapshot;
+  const view: ResourceView = anime != null ? "content" : deriveView(resource, slug);
 
   useEffect(() => {
-    if (slug == null) return;
-    storage
-      .get<number>(rangeKey(slug))
-      .then((idx) => {
-        setActiveRangeIdx(idx ?? 0);
-        setIsRestoring(false);
-      })
-      .catch((error) => {
-        logger.error("detail", "Failed to load persisted range", error);
-        setActiveRangeIdx(0);
-        setIsRestoring(false);
-      });
-  }, [slug]);
+    if (attemptedSlugRef.current === slug) return;
+    attemptedSlugRef.current = slug;
+    const current = useDetailsStore.getState().resource;
+    if (isLoadingFor(current, slug)) return;
+    if (current.data != null && current.dataKey === slug) return;
+    void fetchDetails(slug);
+  }, [slug, fetchDetails]);
 
-  const setAndPersist = useCallback(
-    (idx: number) => {
-      setActiveRangeIdx(idx);
-      if (slug != null) {
-        storage.set(rangeKey(slug), idx).catch((error) => {
-          logger.error("detail", "Failed to persist range", error);
-        });
-      }
+  const isLoading = isLoadingFor(resource, slug);
+
+  return {
+    anime,
+    view,
+    isLoading,
+    isRefreshing: isLoading && pulled,
+    error: errorFor(resource, slug),
+    hasLoaded: anime != null,
+    refresh: () => {
+      setPulled(true);
+      void fetchDetails(slug, true);
     },
-    [slug],
-  );
-
-  return [activeRangeIdx, setAndPersist, isRestoring] as const;
+  };
 }
-
