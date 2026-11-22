@@ -2,7 +2,6 @@ import { Directory, File, Paths } from "expo-file-system";
 import { TIMEOUTS } from "@/config/cache";
 import type { AppError } from "@/types";
 import { SourceError, isCancelled } from "@/utils/errors";
-import { segmentConcurrency } from "@/utils/cdn";
 import { isRetryable, statusOf } from "@/utils/httpError";
 import { backoffDelay, withAuthRetry } from "@/utils/retry";
 import { logger } from "@/utils/logger";
@@ -21,6 +20,9 @@ import {
 // Every segment is decrypted in pure JS (AES-128 CBC) and crosses the bridge
 // One segment is retried on 429/5xx before the worker gives up
 const DOWNLOAD_ATTEMPTS = 3;
+// expo-file-system downloads through a shared OkHttpClient, and its Dispatcher
+// allows 5 requests per host: a bigger pool only queues inside it
+const SEGMENT_CONCURRENCY = 5;
 // A transfer that stops moving is aborted: a dead socket otherwise holds one
 // worker forever and, with concurrency 1, the whole queue behind it
 const STALL_TIMEOUT_MS = 45_000;
@@ -352,8 +354,8 @@ export async function downloadEpisode(
   const segmentsTotal = playlist.segments.length + (init != null ? 1 : 0);
   let segmentsDone = init != null ? 1 : 0;
   let bytesDone = init?.bytes ?? 0;
-  // How many segments in flight is the host's answer, not a global choice
-  const concurrency = segmentConcurrency(playlist.segments.map((segment) => segment.uri));
+  // 5 is what the HTTP client runs per host; a short episode has fewer segments
+  const concurrency = Math.min(SEGMENT_CONCURRENCY, playlist.segments.length);
   logger.debug("download", `${target.slug} ep ${target.number}: ${segmentsTotal} segments queued, ${concurrency} workers`);
   onProgress({ segmentsDone, segmentsTotal, bytesDone });
 
@@ -416,9 +418,7 @@ export async function downloadEpisode(
       }
     }
   };
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, playlist.segments.length) }, worker),
-  );
+  await Promise.all(Array.from({ length: concurrency }, worker));
   if (failure != null) throw failure;
   if (signal.aborted) throw new SourceError("Descarga cancelada", "NETWORK_ERROR");
 
