@@ -99,15 +99,6 @@ export function browseQuery(filter: BrowseFilter, page: number): string {
   return `${BROWSE.home}?${params.map(([key, value]) => `${key}=${value}`).join("&")}`;
 }
 
-export function activeFilterCount(filter: BrowseFilter): number {
-  return (filter.genre != null ? 1 : 0) + (filter.type != null ? 1 : 0)
-    + (filter.status != null ? 1 : 0) + (filter.year != null ? 1 : 0);
-}
-
-export function isFilterEmpty(filter: BrowseFilter): boolean {
-  return activeFilterCount(filter) === 0;
-}
-
 /** What the filter button says: the picked values, or how many */
 export function filterSummary(filter: BrowseFilter): string | null {
   const labels: string[] = [];

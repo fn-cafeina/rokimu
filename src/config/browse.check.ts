@@ -5,16 +5,12 @@ import {
   EMPTY_FILTER,
   GENRES,
   YEARS,
-  activeFilterCount,
   browseQuery,
   filterSummary,
-  isFilterEmpty,
 } from "./browse";
 
 // Page 1 with no filter is the plain listing, and its key is the cached one
 assert.equal(browseQuery(EMPTY_FILTER, 1), "/directorio?year=&page=1&genre=&type=&status=");
-assert.ok(isFilterEmpty(EMPTY_FILTER), "no picked value means no filter");
-assert.equal(activeFilterCount(EMPTY_FILTER), 0);
 
 // All four at once: the site reads every key from the same request
 assert.equal(
@@ -31,7 +27,6 @@ assert.equal(
 // Pagination is part of the query, so two pages are two different requests
 assert.notEqual(browseQuery(EMPTY_FILTER, 1), browseQuery(EMPTY_FILTER, 2));
 
-assert.equal(activeFilterCount({ genre: "accion", type: null, status: "2", year: null }), 2);
 assert.equal(filterSummary(EMPTY_FILTER), null, "nothing picked, nothing to show");
 assert.equal(filterSummary({ ...EMPTY_FILTER, genre: "accion" }), "Acción");
 assert.equal(filterSummary({ ...EMPTY_FILTER, type: "Movie", year: 2020 }), "2 filtros");

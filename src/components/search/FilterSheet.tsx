@@ -6,14 +6,12 @@ import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import {
   BROWSE_STATUSES,
   BROWSE_TYPES,
-  EMPTY_FILTER,
   GENRES,
   YEARS,
-  activeFilterCount,
   type BrowseFilter,
   type BrowseOption,
 } from "@/config/browse";
-import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
+import { MUTED_ICON } from "@/config/theme";
 import { useCatalogStore } from "@/stores/catalogStore";
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
@@ -95,7 +93,6 @@ export function FilterSheet() {
 
   if (!visible) return null;
 
-  const active = activeFilterCount(filter);
   const update = (patch: Partial<BrowseFilter>) => setFilter({ ...filter, ...patch });
 
   return (
@@ -108,20 +105,12 @@ export function FilterSheet() {
           <Feather name="x" size={20} color={MUTED_ICON} onPress={closeSheet} style={{ padding: 4 }} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
-          <Section title="Tipo">
+        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
+          <Section title="Género">
             <Options
-              options={BROWSE_TYPES}
-              selected={filter.type}
-              onToggle={(type) => update({ type })}
-            />
-          </Section>
-
-          <Section title="Estado">
-            <Options
-              options={BROWSE_STATUSES}
-              selected={filter.status}
-              onToggle={(status) => update({ status })}
+              options={GENRES}
+              selected={filter.genre}
+              onToggle={(genre) => update({ genre })}
             />
           </Section>
 
@@ -139,28 +128,22 @@ export function FilterSheet() {
             })}
           </Section>
 
-          <Section title="Género">
+          <Section title="Tipo">
             <Options
-              options={GENRES}
-              selected={filter.genre}
-              onToggle={(genre) => update({ genre })}
+              options={BROWSE_TYPES}
+              selected={filter.type}
+              onToggle={(type) => update({ type })}
+            />
+          </Section>
+
+          <Section title="Estado">
+            <Options
+              options={BROWSE_STATUSES}
+              selected={filter.status}
+              onToggle={(status) => update({ status })}
             />
           </Section>
         </ScrollView>
-
-        <Pressable
-          onPress={active > 0 ? () => setFilter(EMPTY_FILTER) : closeSheet}
-          className={`mt-4 flex-row items-center justify-center rounded-xl py-3 ${active > 0 ? "bg-neutral-800" : "border border-neutral-800"}`}
-        >
-          {active > 0 ? (
-            <>
-              <Feather name="rotate-ccw" size={14} color={ACCENT_COLOR} />
-              <Text className="text-white text-sm ml-2">{`Limpiar ${active} filtro${active === 1 ? "" : "s"}`}</Text>
-            </>
-          ) : (
-            <Text className="text-neutral-300 text-sm">Listo</Text>
-          )}
-        </Pressable>
       </View>
     </View>
   );

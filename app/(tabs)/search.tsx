@@ -7,7 +7,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import type { Anime } from "@/types";
 import { useSearchScreen } from "@/hooks/useSearchScreen";
 import { useCatalogStore } from "@/stores/catalogStore";
-import { filterSummary } from "@/config/browse";
+import { EMPTY_FILTER, filterSummary } from "@/config/browse";
 import { ACCENT_COLOR, MUTED_ICON } from "@/config/theme";
 import { deriveView } from "@/utils/resource";
 import { TAB_BAR_OFFSET, calcCardWidth } from "@/utils/layout";
@@ -23,6 +23,7 @@ function SearchScreenContent() {
   const fetchCatalog = useCatalogStore((s) => s.fetchCatalog);
   const loadMore = useCatalogStore((s) => s.loadMore);
   const openSheet = useCatalogStore((s) => s.openSheet);
+  const setFilter = useCatalogStore((s) => s.setFilter);
   const filter = useCatalogStore((s) => s.filter);
   const catalogQuery = useCatalogStore((s) => s.query);
   const catalog = useCatalogStore((s) => s.items);
@@ -93,6 +94,9 @@ function SearchScreenContent() {
                 {summary ?? "Filtros"}
               </Text>
             </AnimatedPressable>
+            {summary != null && (
+              <Feather name="x" size={14} color={MUTED_ICON} onPress={() => setFilter(EMPTY_FILTER)} style={{ padding: 8 }} />
+            )}
           </View>
         )}
       </View>
@@ -120,13 +124,6 @@ function SearchScreenContent() {
             keyboardDismissMode="on-drag"
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
-            ListFooterComponent={
-              !hasQuery && isLoadingMore ? (
-                <View className="py-4 items-center">
-                  <ActivityIndicator color={ACCENT_COLOR} />
-                </View>
-              ) : undefined
-            }
             refreshControl={
               <RefreshControl
                 refreshing={hasQuery ? isLoading : homeResource.status === "loading"}
@@ -150,6 +147,20 @@ function SearchScreenContent() {
           />
         )}
       </View>
+
+      {/* Overlay, not a list footer: the footer sits a screen below the trigger,
+          so the spinner only showed when the user kept scrolling past the end */}
+      {isLoadingMore && (
+        <View
+          className="absolute left-0 right-0 items-center"
+          style={{ bottom: TAB_BAR_OFFSET + insets.bottom + 8 }}
+          pointerEvents="none"
+        >
+          <View className="bg-neutral-900 border border-neutral-800 rounded-full px-4 py-2">
+            <ActivityIndicator size="small" color={ACCENT_COLOR} />
+          </View>
+        </View>
+      )}
     </View>
   );
 }

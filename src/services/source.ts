@@ -181,8 +181,12 @@ async function getBrowsePage(
   const items = htmlParser.parseCards(html);
   if (items.length === 0) {
     if (isChallengeHtml(html)) throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
-    // Page 1 with no cards is a broken parse; a later empty page is the end
-    if (pagination.page <= 1) throw new SourceError("No cards extracted — site structure may have changed", "PARSER_ERROR");
+    // A filter combination with no matches is a normal answer, not a failure;
+    // the warning keeps a broken parse visible in the logs
+    if (pagination.page <= 1) {
+      logger.warn("source", `Browse rendered no cards (${html.length} bytes): ${query}`);
+      return { items, pagination: { page: 1, lastPage: 1 } };
+    }
   }
   return { items, pagination };
 }

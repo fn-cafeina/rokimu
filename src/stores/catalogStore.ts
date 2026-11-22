@@ -67,7 +67,7 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
                 ttl: CACHE_TTL.HOME,
                 signal,
                 force: attempt > 0 ? true : force,
-                isValid: (page) => page.items.length > 0,
+                isValid: (page) => Array.isArray(page.items),
               },
             ),
           {
