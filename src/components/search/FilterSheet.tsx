@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { BackHandler, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useEffect } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import {
   BROWSE_STATUSES,
@@ -14,10 +14,23 @@ import {
 import { MUTED_ICON } from "@/config/theme";
 import { useCatalogStore } from "@/stores/catalogStore";
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+// memo + stable onSelect: a tap re-renders only the two chips whose active
+// flag flips, not the ~106 Reanimated chips the sheet mounts
+const Chip = memo(function Chip({
+  label,
+  value,
+  active,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  active: boolean;
+  onSelect: (value: string | null) => void;
+}) {
   return (
     <AnimatedPressable
-      onPress={onPress}
+      // Tapping the active value clears it, so one tap both picks and undoes
+      onPress={() => onSelect(active ? null : value)}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       className={`rounded-full border px-3 py-1.5 mb-2 mr-2 ${active ? "bg-neutral-800 border-neutral-600" : "bg-neutral-900 border-neutral-800"}`}
@@ -25,12 +38,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
       <Text className={`text-xs font-medium ${active ? "text-white" : "text-neutral-400"}`}>{label}</Text>
     </AnimatedPressable>
   );
-}
-
-/** Tapping the active value clears it, so one tap both picks and undoes */
-function toggle(current: string | null, value: string): string | null {
-  return current === value ? null : value;
-}
+});
 
 function Section({
   title,
@@ -50,11 +58,11 @@ function Section({
 function Options({
   options,
   selected,
-  onToggle,
+  onSelect,
 }: {
   options: BrowseOption[];
   selected: string | null;
-  onToggle: (value: string | null) => void;
+  onSelect: (value: string | null) => void;
 }) {
   return (
     <>
@@ -62,8 +70,9 @@ function Options({
         <Chip
           key={option.value}
           label={option.label}
+          value={option.value}
           active={selected === option.value}
-          onPress={() => onToggle(toggle(selected, option.value))}
+          onSelect={onSelect}
         />
       ))}
     </>
@@ -81,6 +90,20 @@ export function FilterSheet() {
   const setFilter = useCatalogStore((s) => s.setFilter);
   const closeSheet = useCatalogStore((s) => s.closeSheet);
 
+  // Reads the filter via getState so the callback identity never changes and
+  // memoized chips keep skipping re-renders
+  const update = useCallback(
+    (patch: Partial<BrowseFilter>) => setFilter({ ...useCatalogStore.getState().filter, ...patch }),
+    [setFilter],
+  );
+  const selectGenre = useCallback((value: string | null) => update({ genre: value }), [update]);
+  const selectType = useCallback((value: string | null) => update({ type: value }), [update]);
+  const selectStatus = useCallback((value: string | null) => update({ status: value }), [update]);
+  const selectYear = useCallback(
+    (value: string | null) => update({ year: value === null ? null : Number(value) }),
+    [update],
+  );
+
   // Back closes the sheet instead of leaving the tab with the sheet still up
   useEffect(() => {
     if (!visible) return undefined;
@@ -92,8 +115,6 @@ export function FilterSheet() {
   }, [visible, closeSheet]);
 
   if (!visible) return null;
-
-  const update = (patch: Partial<BrowseFilter>) => setFilter({ ...filter, ...patch });
 
   return (
     <View className="absolute inset-0 bg-black/80 justify-end" style={{ elevation: 50 }}>
@@ -107,41 +128,27 @@ export function FilterSheet() {
 
         <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
           <Section title="Género">
-            <Options
-              options={GENRES}
-              selected={filter.genre}
-              onToggle={(genre) => update({ genre })}
-            />
+            <Options options={GENRES} selected={filter.genre} onSelect={selectGenre} />
           </Section>
 
           <Section title="Año">
-            {YEARS.map((year) => {
-              const value = String(year);
-              return (
-                <Chip
-                  key={year}
-                  label={value}
-                  active={filter.year === year}
-                  onPress={() => update({ year: filter.year === year ? null : year })}
-                />
-              );
-            })}
+            {YEARS.map((year) => (
+              <Chip
+                key={year}
+                label={String(year)}
+                value={String(year)}
+                active={filter.year === year}
+                onSelect={selectYear}
+              />
+            ))}
           </Section>
 
           <Section title="Tipo">
-            <Options
-              options={BROWSE_TYPES}
-              selected={filter.type}
-              onToggle={(type) => update({ type })}
-            />
+            <Options options={BROWSE_TYPES} selected={filter.type} onSelect={selectType} />
           </Section>
 
           <Section title="Estado">
-            <Options
-              options={BROWSE_STATUSES}
-              selected={filter.status}
-              onToggle={(status) => update({ status })}
-            />
+            <Options options={BROWSE_STATUSES} selected={filter.status} onSelect={selectStatus} />
           </Section>
         </ScrollView>
       </View>
