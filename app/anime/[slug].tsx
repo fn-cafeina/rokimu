@@ -66,7 +66,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
   const { slug } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const {
-    anime, view, isRefreshing, error, rows, serverLoading, serverError, serverOffline, retryServers, setEpisodeOrder,
+    anime, view, isRefreshing, error, rows, serverLoading, serverError, serverOffline, retryServers, toggleEpisodeOrder,
     isExpanded, setIsExpanded, selectedEpisode, setSelectedEpisode,
     activeRangeIdx, setActiveRangeIdx, isRestoring,
     ranges, visibleEpisodes, isAscending, handleEpisodePress, handleDownloadPress, refresh,
@@ -129,7 +129,7 @@ const AnimeDetailsContent = memo(function AnimeDetailsContent() {
                   isExpanded={isExpanded}
                   setIsExpanded={setIsExpanded}
                   isAscending={isAscending}
-                  toggleSort={() => void setEpisodeOrder(isAscending ? "desc" : "asc")}
+                  toggleSort={toggleEpisodeOrder}
                   ctaEpisode={ctaEpisode}
                   ctaMode={ctaMode}
                   onResume={handleEpisodePress}

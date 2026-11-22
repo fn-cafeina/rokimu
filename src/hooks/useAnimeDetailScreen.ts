@@ -26,7 +26,8 @@ export function useAnimeDetailScreen(slug: string) {
   const resolveStream = usePlayerStore((s) => s.resolveStream);
   const serversResource = usePlayerStore((s) => s.servers);
   const fetchServers = usePlayerStore((s) => s.fetchServers);
-  const episodeOrder = useSettingsStore((s) => s.episodeOrder);
+  // Each series keeps its own order: flipping one never reorders the rest
+  const episodeOrder = useSettingsStore((s) => s.episodeOrderBySlug[slug] ?? s.episodeOrder);
   const setEpisodeOrder = useSettingsStore((s) => s.setEpisodeOrder);
   const addToHistory = useHistoryStore((s) => s.addToHistory);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
@@ -204,6 +205,10 @@ export function useAnimeDetailScreen(slug: string) {
     if (selectedEpisode != null) void fetchServers(slug, selectedEpisode.number, true);
   }, [slug, selectedEpisode, fetchServers]);
 
+  const toggleEpisodeOrder = useCallback(() => {
+    void setEpisodeOrder(slug, episodeOrder === "asc" ? "desc" : "asc");
+  }, [setEpisodeOrder, slug, episodeOrder]);
+
   return {
     anime,
     view,
@@ -218,7 +223,7 @@ export function useAnimeDetailScreen(slug: string) {
     serverOffline: isInternetReachable === false,
     retryServers,
     episodeOrder,
-    setEpisodeOrder,
+    toggleEpisodeOrder,
     isAscending: episodeOrder === "asc",
     activeRangeIdx,
     setActiveRangeIdx,
