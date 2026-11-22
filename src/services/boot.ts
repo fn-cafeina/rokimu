@@ -15,6 +15,10 @@ import type { Anime, HistoryItem } from "@/types";
 
 const UPDATE_CHECK_ATTEMPTS = 3;
 const UPDATE_CHECK_RETRY_DELAY = 2000;
+// The sweep parses every cached entry just to read its expiration (up to the
+// 6MB AsyncStorage cap), so it runs after first paint instead of competing
+// with it
+const CACHE_SWEEP_DELAY_MS = 10_000;
 
 function runUpdateCheckWithRetry(attempt = 1): void {
   void useUpdateStore.getState().checkForUpdates().then((ok) => {
@@ -31,8 +35,8 @@ function runUpdateCheckWithRetry(attempt = 1): void {
  */
 export async function bootApp(): Promise<void> {
   await resetToPortrait();
-  // Fire and forget: the sweep is IO over every stored key, nothing waits on it
-  void pruneExpiredCache();
+  // Fire and forget, and late: nothing waits on it (see CACHE_SWEEP_DELAY_MS)
+  setTimeout(() => void pruneExpiredCache(), CACHE_SWEEP_DELAY_MS);
   await sessionManager.initialize();
   // One batch: the slowest read bounds boot, not the sum of two batches
   const [history, saved, order, orderBySlug, preferredServer, updateCheckEnabled, downloads, downloadConcurrency] = await Promise.all([
