@@ -6,8 +6,8 @@ export const EPISODE_ORDER_KEY = "episode_order";
 export const EPISODE_ORDER_BY_SLUG_KEY = "episode_order_by_slug";
 export const PREFERRED_SERVER_KEY = "preferred_server";
 
-export type PreferredServer = "Delta" | "Epsilon" | null;
-export type EpisodeOrder = "asc" | "desc";
+type PreferredServer = "Delta" | "Epsilon" | null;
+type EpisodeOrder = "asc" | "desc";
 
 interface SettingsState {
   /** Last order picked anywhere: a new series starts with it */

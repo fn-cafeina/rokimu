@@ -2,7 +2,7 @@ import type { AppError } from "@/types";
 import { isCancelled, toAppError } from "./errors";
 import { logger } from "./logger";
 
-export type ResourceStatus = "idle" | "loading" | "success" | "error";
+type ResourceStatus = "idle" | "loading" | "success" | "error";
 
 /**
  * One state machine per loaded resource. `key` scopes every field to the

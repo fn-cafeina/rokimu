@@ -119,7 +119,7 @@ async function getCachedStream(server: { url: string; id: string }): Promise<Str
   return null;
 }
 
-export function setCachedStream(server: { url: string; id: string }, result: StreamUrlResult): Promise<void> {
+function setCachedStream(server: { url: string; id: string }, result: StreamUrlResult): Promise<void> {
   return storage.set(streamCacheKey(server), { payload: result, expiration: Date.now() + CACHE_TTL.STREAM });
 }
 

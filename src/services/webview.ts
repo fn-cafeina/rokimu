@@ -4,7 +4,7 @@ type NavigateFn = (uri: string) => void;
 type InjectFn = (js: string) => void;
 type ReloadFn = () => void;
 
-export type WebViewResult =
+type WebViewResult =
   | { ok: true; status: number; body: string }
   | { ok: false; error: string };
 

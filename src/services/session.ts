@@ -6,7 +6,7 @@ import { storage } from "@/utils/storage";
 import { mergeCookies } from "./cookies";
 import { webViewBridge } from "./webview";
 
-export const SESSION_KEY = "scraper_session";
+const SESSION_KEY = "scraper_session";
 // Slow devices can take well over 15s to clear a Cloudflare challenge.
 // Matches the bootstrap poll window so both sides share one 40s timing.
 const SESSION_REFRESH_TIMEOUT = 40_000;
@@ -23,7 +23,7 @@ const REPORT_SETTLE_MS = 1_500;
 // Coupled to the cookie name; Cloudflare has kept `cf_clearance` for years.
 const CLEARANCE_COOKIE = "cf_clearance=";
 
-export function isValidSessionCookies(raw: string | undefined | null): boolean {
+function isValidSessionCookies(raw: string | undefined | null): boolean {
   if (!raw) return false;
   return raw.includes(CLEARANCE_COOKIE);
 }

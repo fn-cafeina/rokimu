@@ -29,7 +29,7 @@ export interface DownloadEntry extends QueuedEntry {
   createdAt: number;
 }
 
-export type DownloadInput = EpisodeTarget & { title: string; image: string };
+type DownloadInput = EpisodeTarget & { title: string; image: string };
 
 interface DownloadsState {
   entries: Record<string, DownloadEntry>;
@@ -76,7 +76,7 @@ export function activeEntryForEpisode(
   );
 }
 
-export function clampConcurrency(value: number): number {
+function clampConcurrency(value: number): number {
   if (!Number.isFinite(value)) return DEFAULT_DOWNLOAD_CONCURRENCY;
   return Math.min(MAX_DOWNLOAD_CONCURRENCY, Math.max(MIN_DOWNLOAD_CONCURRENCY, Math.round(value)));
 }

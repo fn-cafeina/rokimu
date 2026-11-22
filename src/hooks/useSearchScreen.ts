@@ -4,7 +4,7 @@ import { errorFor, isPendingFor } from "@/utils/resource";
 import { useDebounce } from "./useDebounce";
 
 // The source site rejects queries shorter than 3 characters
-export const MIN_SEARCH_LENGTH = 3;
+const MIN_SEARCH_LENGTH = 3;
 
 /**
  * Live search: the debounced input fires the request itself, there is no

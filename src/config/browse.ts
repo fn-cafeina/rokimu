@@ -1,7 +1,7 @@
 // One route carries every filter: `/directorio` reads `genre`, `type`, `status`
 // and `year` server-side and they combine. The taxonomy pages (`/genero/<slug>`,
 // `/anio/<year>`) ignore any extra param, so they are not used for filtering.
-export const BROWSE = {
+const BROWSE = {
   home: "/directorio",
 };
 

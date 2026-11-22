@@ -15,7 +15,7 @@ import {
 } from "@/utils/resource";
 import type { AppError, StreamUrlResult, VideoServer } from "@/types";
 
-export const STREAM_KEY = "stream";
+const STREAM_KEY = "stream";
 
 interface PlayerState {
   servers: ResourceState<VideoServer[]>;

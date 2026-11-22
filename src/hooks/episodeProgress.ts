@@ -5,7 +5,7 @@ import { findHistoryEntry } from "@/utils/history";
 /** Share of an episode that counts as watched, matching the row strike. */
 export const WATCHED_THRESHOLD = 0.9;
 
-export interface EpisodeProgress {
+interface EpisodeProgress {
   episode: Episode;
   /** Position in the ordered list, so the CTA can move in reading order. */
   index: number;

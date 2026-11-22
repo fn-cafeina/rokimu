@@ -12,7 +12,7 @@ export interface DownloadProgress {
   totalBytes: number | null;
 }
 
-export interface DownloadResult {
+interface DownloadResult {
   file: File;
   cancelled: boolean;
 }

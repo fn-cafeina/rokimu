@@ -26,8 +26,8 @@ const DOWNLOAD_ATTEMPTS = 3;
 // worker forever and, with concurrency 1, the whole queue behind it
 const STALL_TIMEOUT_MS = 45_000;
 
-export const DOWNLOADS_DIR = "downloads";
-export const PLAYLIST_FILE = "index.m3u8";
+const DOWNLOADS_DIR = "downloads";
+const PLAYLIST_FILE = "index.m3u8";
 // Marks a folder as written in the current format: segments stay encrypted and
 // the local playlist carries their key. Older folders were decrypted in place.
 const FORMAT_MARKER = "format";
@@ -40,13 +40,13 @@ export interface EpisodeTarget {
   language?: string | null;
 }
 
-export interface EpisodeDownloadProgress {
+interface EpisodeDownloadProgress {
   segmentsDone: number;
   segmentsTotal: number;
   bytesDone: number;
 }
 
-export interface EpisodeDownloadResult {
+interface EpisodeDownloadResult {
   dirUri: string;
   playlistUri: string;
   bytes: number;
@@ -59,11 +59,11 @@ function languageDir(language: string | null): string {
   return normalized === "" || normalized === "-" ? "default" : normalized;
 }
 
-export function episodeDirectory(slug: string, number: string, language: string | null): Directory {
+function episodeDirectory(slug: string, number: string, language: string | null): Directory {
   return new Directory(Paths.document, DOWNLOADS_DIR, slug, `ep-${number}-${languageDir(language)}`);
 }
 
-export function episodePlaylist(slug: string, number: string, language: string | null): File {
+function episodePlaylist(slug: string, number: string, language: string | null): File {
   return new File(episodeDirectory(slug, number, language), PLAYLIST_FILE);
 }
 

@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { logger } from "./logger";
 
 /** An unreadable blob is parked here so the next write cannot erase it. */
-export const UNREADABLE_PREFIX = "backup_unreadable_";
+const UNREADABLE_PREFIX = "backup_unreadable_";
 
 class Storage {
   async get<T>(key: string): Promise<T | null> {

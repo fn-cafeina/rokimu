@@ -1,13 +1,13 @@
 import { cbc } from "@noble/ciphers/aes.js";
 import { SourceError } from "@/utils/errors";
 
-export interface ByteRange {
+interface ByteRange {
   length: number;
   offset: number;
 }
 
 /** AES-128 is the only HLS encryption a local download can undo. */
-export interface HlsKey {
+interface HlsKey {
   uri: string;
   iv: Uint8Array | null;
 }
@@ -212,7 +212,7 @@ export function decryptSegment(payload: Uint8Array, key: Uint8Array, iv: Uint8Ar
   }
 }
 
-export interface LocalPlaylistSegment {
+interface LocalPlaylistSegment {
   duration: number;
   file: string;
   /** Local key file when the segment is still AES-128 encrypted on disk */

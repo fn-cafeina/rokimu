@@ -42,7 +42,7 @@ function isNewer(latest: string, current: string): boolean {
   return false;
 }
 
-export type UpdatePhase =
+type UpdatePhase =
   | "idle"
   | "confirm"
   | "permission"

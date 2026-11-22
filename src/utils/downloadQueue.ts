@@ -13,7 +13,7 @@ export interface QueuedEntry {
   status: DownloadStatus;
 }
 
-export interface DownloadTarget {
+interface DownloadTarget {
   slug: string;
   number: string;
   title: string;
@@ -57,7 +57,7 @@ export function isWaiting(entries: Record<string, QueuedEntry>, key: string): bo
   return entries[key]?.status === "queued";
 }
 
-export interface HydratedQueue<T extends QueuedEntry> {
+interface HydratedQueue<T extends QueuedEntry> {
   /** Entries that survive the boot, keyed as the store keys them */
   kept: Record<string, T>;
   /** Done entries whose files vanished: dropped, never offered as playable */

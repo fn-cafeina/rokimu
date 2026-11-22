@@ -2,7 +2,7 @@ import type { Anime, AnimeRelations, Episode } from "@/types";
 import { TMDB_IMAGE_BASE } from "@/config/source";
 import { logger } from "@/utils/logger";
 
-export function sanitizeTitle(title: string): string {
+function sanitizeTitle(title: string): string {
   return title
     .replace(/&amp;/g, "&")
     .replace(/<[^>]*>/g, "")
@@ -24,7 +24,7 @@ export function extractJson(text: string, key: string, sChar: string, eChar: str
   return text.slice(start, end);
 }
 
-export function cleanUrl(url: string): string {
+function cleanUrl(url: string): string {
   return url.replace(/^\/+/, "").replace(/\/+$/, "");
 }
 
