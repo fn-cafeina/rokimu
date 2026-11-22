@@ -28,7 +28,9 @@ After that the app updates itself: Settings holds the check and the install.
 - **Library first.** The app opens on what you saved. Save an anime from its
   page and it is there next time.
 - **Something to browse.** The search tab shows the latest additions until you
-  type, then it becomes search.
+  type, then it becomes search. The feed scrolls on its own, and one filter
+  turns it into a genre or a year: the site serves those as their own pages and
+  ignores the combination.
 - **Your language.** Subtitled, Latino or Castellano, whichever the episode
   carries.
 - **A second server.** Coral or Jade, or leave it on Auto.

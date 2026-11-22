@@ -9,8 +9,8 @@ import { buildHeaders, isSourceUrl } from "./requestHeaders";
 import { webViewBridge } from "./webview";
 import { extractBest } from "./extractors";
 import type {
+  Anime,
   AnimeDetail,
-  HomeData,
   VideoServer,
   StreamUrlResult,
 } from "@/types";
@@ -162,16 +162,21 @@ export async function webviewFetch(path: string): Promise<SessionResponse> {
   return { ok: result.status >= 200 && result.status < 300, status: result.status, body: result.body };
 }
 
-async function getHomeData(options?: { signal?: AbortSignal }): Promise<HomeData> {
-  const homeEndpoint = SOURCE_CONFIG.homeEndpoint;
-  const { ok, status, body: html } = await fetchWithSession(homeEndpoint, options ?? {});
+/**
+ * One page of a card grid. `/directorio`, `/genero/<slug>` and `/anio/<year>`
+ * all take `?page=N` and return 28 cards.
+ */
+async function getBrowsePage(path: string, page: number, options?: { signal?: AbortSignal }): Promise<Anime[]> {
+  const endpoint = page > 1 ? `${path}?page=${page}` : path;
+  const { ok, status, body: html } = await fetchWithSession(endpoint, options ?? {});
   if (!ok) throw new SourceError(`HTTP Error: ${status}`, "NETWORK_ERROR");
-  const recent = htmlParser.parseCards(html);
-  if (recent.length === 0) {
+  const cards = htmlParser.parseCards(html);
+  if (cards.length === 0) {
     if (isChallengeHtml(html)) throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
-    throw new SourceError("No cards extracted — site structure may have changed", "PARSER_ERROR");
+    // Page 1 of a real taxonomy is never empty; a later page is the end of the list
+    if (page === 1) throw new SourceError("No cards extracted — site structure may have changed", "PARSER_ERROR");
   }
-  return { recent };
+  return cards;
 }
 
 export interface RawSearchItem {
@@ -315,7 +320,7 @@ async function resolveStreamUrl(videoUrl: string, options?: { signal?: AbortSign
 }
 
 export const source = {
-  getHomeData,
+  getBrowsePage,
   searchRaw,
   getDetails,
   getEpisodeServers,

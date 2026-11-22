@@ -48,10 +48,6 @@ export interface VideoServer {
   language: string;
 }
 
-export interface HomeData {
-  recent: Anime[];
-}
-
 export interface HistoryItem {
   title: string;
   image: string;
