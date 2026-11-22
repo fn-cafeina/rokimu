@@ -8,7 +8,7 @@ import {
 } from "@/services/downloader";
 import { storage } from "@/utils/storage";
 import { logger } from "@/utils/logger";
-import { downloadKey, isWaiting, resumeTargets, type DownloadStatus, type QueuedEntry } from "@/utils/downloadQueue";
+import { downloadKey, hydrateQueue, isWaiting, type DownloadStatus, type QueuedEntry } from "@/utils/downloadQueue";
 
 export { downloadKey };
 export type { DownloadStatus };
@@ -203,22 +203,22 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
   concurrency: DEFAULT_DOWNLOAD_CONCURRENCY,
 
   initialize: (entries, concurrency) => {
-    const next: Record<string, DownloadEntry> = {};
-
-    for (const entry of entries) {
-      const key = downloadKey(entry.slug, entry.number, entry.language);
-      // Downloads whose files vanished are dropped instead of offered as playable
-      if (entry.status === "done" && !isEpisodeDownloaded(entry.slug, entry.number, entry.language)) {
-        logger.info("download", `Dropping ${key}: playlist missing`);
-        continue;
-      }
-      next[key] = entry.status === "downloading" ? { ...entry, status: "queued" } : entry;
+    const { kept, dropped, resume } = hydrateQueue(
+      entries,
+      (entry) => downloadKey(entry.slug, entry.number, entry.language),
+      (entry) => isEpisodeDownloaded(entry.slug, entry.number, entry.language),
+    );
+    for (const entry of dropped) {
+      logger.info(
+        "download",
+        `Dropping ${downloadKey(entry.slug, entry.number, entry.language)}: playlist missing`,
+      );
     }
 
-    set({ entries: next, concurrency: clampConcurrency(concurrency) });
+    set({ entries: kept, concurrency: clampConcurrency(concurrency) });
     // An interrupted queue resumes: segment files already on disk are skipped,
     // and the language travels along so the worker finds the same entry
-    for (const target of resumeTargets(Object.values(next))) {
+    for (const target of resume) {
       const key = downloadKey(target.slug, target.number, target.language);
       if (!queue.some((q) => downloadKey(q.input.slug, q.input.number, q.input.language ?? null) === key)) {
         queue.push({ input: target, resume: true });

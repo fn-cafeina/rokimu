@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   downloadKey,
   hasDownloadFor,
+  hydrateQueue,
   isWaiting,
   resumeTargets,
   type QueuedEntry,
@@ -49,5 +50,31 @@ const key = downloadKey("one-piece", "1", "Latino");
 assert.equal(isWaiting({ [key]: entry() }, key), true);
 assert.equal(isWaiting({ [key]: entry({ status: "downloading" }) }, key), false);
 assert.equal(isWaiting({}, key), false);
+
+// Boot hydration: done entries without files are dropped, interrupted ones
+// become queued again, and the resume list carries the same key
+const onDisk = (e: QueuedEntry) => e.status !== "done" || e.number !== "2";
+const hydrated = hydrateQueue(
+  [
+    entry({ number: "1", status: "done" }),
+    entry({ number: "2", status: "done" }),
+    entry({ number: "3", status: "downloading" }),
+    entry({ number: "4", status: "error" }),
+  ],
+  (e) => downloadKey(e.slug, e.number, e.language),
+  onDisk,
+);
+assert.deepEqual(hydrated.dropped.map((e) => e.number), ["2"]);
+assert.equal(hydrated.kept[downloadKey("one-piece", "1", "Latino")]?.status, "done");
+assert.equal(hydrated.kept[downloadKey("one-piece", "3", "Latino")]?.status, "queued");
+assert.equal(hydrated.kept[downloadKey("one-piece", "4", "Latino")]?.status, "error");
+assert.deepEqual(hydrated.resume.map((t) => t.number), ["3"]);
+assert.equal(hydrated.resume[0]?.language, "Latino");
+
+// A done entry with files on disk stays done and never resumes
+const intact = hydrateQueue([entry({ status: "done" })], (e) => downloadKey(e.slug, e.number, e.language), () => true);
+assert.deepEqual(intact.dropped, []);
+assert.deepEqual(intact.resume, []);
+assert.equal(intact.kept[downloadKey("one-piece", "1", "Latino")]?.status, "done");
 
 console.log("download queue ok");
