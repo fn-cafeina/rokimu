@@ -33,7 +33,6 @@
           }
         }
       ],
-      "expo-font",
       [
         "expo-navigation-bar",
         {
