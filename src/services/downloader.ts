@@ -1,11 +1,11 @@
 import { Directory, File, Paths } from "expo-file-system";
 import { TIMEOUTS } from "@/config/cache";
-import type { AppError } from "@/types";
+import type { AppError, VideoServer } from "@/types";
 import { SourceError, isCancelled } from "@/utils/errors";
 import { isRetryable, statusOf } from "@/utils/httpError";
 import { backoffDelay, withAuthRetry } from "@/utils/retry";
 import { logger } from "@/utils/logger";
-import { orderServers } from "@/utils/serverOrder";
+import { orderServers, segmentConcurrencyFor } from "@/utils/serverOrder";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { source } from "./source";
 import {
@@ -20,9 +20,6 @@ import {
 // Every segment is decrypted in pure JS (AES-128 CBC) and crosses the bridge
 // One segment is retried on 429/5xx before the worker gives up
 const DOWNLOAD_ATTEMPTS = 3;
-// expo-file-system downloads through a shared OkHttpClient, and its Dispatcher
-// allows 5 requests per host: a bigger pool only queues inside it
-const SEGMENT_CONCURRENCY = 5;
 // A transfer that stops moving is aborted: a dead socket otherwise holds one
 // worker forever and, with concurrency 1, the whole queue behind it
 const STALL_TIMEOUT_MS = 45_000;
@@ -210,7 +207,11 @@ async function fetchBytes(url: string, headers: Record<string, string>, signal: 
 async function pickStream(
   target: EpisodeTarget,
   signal: AbortSignal,
-): Promise<{ stream: { url: string; headers: Record<string, string> }; playlist: HlsMediaPlaylist }> {
+): Promise<{
+  stream: { url: string; headers: Record<string, string> };
+  playlist: HlsMediaPlaylist;
+  server: VideoServer;
+}> {
   // Downloads go through the same ladder as playback: a session that expired
   // while the app sat in the background must not turn a download into an error
   const servers = await withAuthRetry(
@@ -248,7 +249,7 @@ async function pickStream(
       if (playlist.segments.length === 0) {
         throw new SourceError("El playlist no tiene segmentos", "VIDEO_ERROR");
       }
-      return { stream: { url: resolved.url, headers }, playlist };
+      return { stream: { url: resolved.url, headers }, playlist, server };
     } catch (error) {
       if (isCancelled(error)) throw error;
       lastError = error;
@@ -327,7 +328,7 @@ export async function downloadEpisode(
   signal: AbortSignal,
   options: { resume?: boolean } = {},
 ): Promise<EpisodeDownloadResult> {
-  const { stream, playlist } = await pickStream(target, signal);
+  const { stream, playlist, server } = await pickStream(target, signal);
   if (playlist.segments.length === 0) {
     throw new SourceError("El playlist no tiene segmentos", "VIDEO_ERROR");
   }
@@ -354,8 +355,8 @@ export async function downloadEpisode(
   const segmentsTotal = playlist.segments.length + (init != null ? 1 : 0);
   let segmentsDone = init != null ? 1 : 0;
   let bytesDone = init?.bytes ?? 0;
-  // 5 is what the HTTP client runs per host; a short episode has fewer segments
-  const concurrency = Math.min(SEGMENT_CONCURRENCY, playlist.segments.length);
+  // The server decides the pool: its CDN owns the rate limit, not the host name
+  const concurrency = Math.min(segmentConcurrencyFor(server.title), playlist.segments.length);
   logger.debug("download", `${target.slug} ep ${target.number}: ${segmentsTotal} segments queued, ${concurrency} workers`);
   onProgress({ segmentsDone, segmentsTotal, bytesDone });
 

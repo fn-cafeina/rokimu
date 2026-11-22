@@ -1,4 +1,4 @@
-import { findServer, orderServers } from "./serverOrder";
+import { findServer, orderServers, segmentConcurrencyFor } from "./serverOrder";
 
 function assertEqual(actual: unknown, expected: unknown, message: string): void {
   const a = JSON.stringify(actual);
@@ -47,5 +47,12 @@ assertEqual(
 assertEqual(findServer(servers, { id: "9", title: "Delta", url: "z", language: "Latino" }), servers[2], "id miss falls to name and language");
 assertEqual(findServer(servers, { id: "2", title: "Epsilon", url: "moved", language: "Subtitulado" }), servers[1], "id hit wins");
 assertEqual(findServer(servers, { id: "9", title: "Gamma", url: "z", language: "Latino" }), null, "a server that disappeared resolves to nothing");
+
+// Epsilon's CDN 429s above four requests; the rest take the client's five
+assertEqual(segmentConcurrencyFor("Epsilon"), 4, "Epsilon keeps a smaller pool");
+assertEqual(segmentConcurrencyFor("Epsilon 2"), 4, "the suffix does not lift the limit");
+assertEqual(segmentConcurrencyFor("Jade"), 5, "another name gets the full pool");
+assertEqual(segmentConcurrencyFor("Delta"), 5, "Delta takes everything the client runs");
+assertEqual(segmentConcurrencyFor(""), 5, "an unnamed server falls back to the full pool");
 
 console.log("server order ok");

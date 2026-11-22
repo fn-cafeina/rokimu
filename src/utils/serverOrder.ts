@@ -1,5 +1,9 @@
 import type { VideoServer } from "@/types";
 
+// OkHttp, behind expo-file-system's downloads, allows 5 requests per host
+const SEGMENT_CONCURRENCY = 5;
+const EPSILON_SEGMENT_CONCURRENCY = 4;
+
 /**
  * The first word of a title: the site appends suffixes ("Delta 2", "Epsilon HD")
  * and a rename there must not silently disable the user's preference.
@@ -25,6 +29,14 @@ export function orderServers(servers: VideoServer[], preferred: string | null): 
   const first = servers.filter((s) => sameTitle(s.title, preferred));
   if (first.length === 0) return servers;
   return [...first, ...servers.filter((s) => !sameTitle(s.title, preferred))];
+}
+
+/**
+ * Segments to keep in flight for a server. Epsilon's CDN answers 429 above
+ * four requests; Delta takes all five the HTTP client runs per host.
+ */
+export function segmentConcurrencyFor(title: string): number {
+  return family(title) === "epsilon" ? EPSILON_SEGMENT_CONCURRENCY : SEGMENT_CONCURRENCY;
 }
 
 /**
