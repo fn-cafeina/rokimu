@@ -39,9 +39,12 @@ function SearchScreenContent() {
 
   const summary = filterSummary(filter);
 
+  // Cache-first, so ending a search costs nothing unless the listing is stale.
+  // It also guarantees the grid on screen belongs to the filter it shows.
   useEffect(() => {
+    if (hasQuery) return;
     void fetchCatalog();
-  }, [fetchCatalog]);
+  }, [hasQuery, fetchCatalog]);
 
   useEffect(() => {
     listRef.current?.scrollToOffset({ offset: 0, animated: false });

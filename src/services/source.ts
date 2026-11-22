@@ -179,6 +179,11 @@ async function getBrowsePage(
   if (!ok) throw new SourceError(`HTTP Error: ${status}`, "NETWORK_ERROR");
   const pagination = parsePagination(html);
   const items = htmlParser.parseCards(html);
+  // The URL and the first title together prove whether the site applied the filter
+  logger.debug(
+    "source",
+    `Browse ${query} → page ${pagination.page}/${pagination.lastPage}, ${items.length} cards, first "${items[0]?.title ?? "-"}"`,
+  );
   if (items.length === 0) {
     if (isChallengeHtml(html)) throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
     // A filter combination with no matches is a normal answer, not a failure;
