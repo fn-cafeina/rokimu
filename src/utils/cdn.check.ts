@@ -23,10 +23,10 @@ assertEqual(
   "the bare domain is throttled too",
 );
 
-// Any other host gets the full burst
+// Any other host gets the pool the HTTP client actually runs
 assertEqual(
   segmentConcurrency(["https://cdn.example.com/hls/seg-0.ts"]),
-  8,
+  5,
   "unknown host gets the full pool",
 );
 
@@ -43,11 +43,11 @@ assertEqual(
 // A host that merely ends with the letters of the domain is not the domain
 assertEqual(
   segmentConcurrency(["https://nottnmr.org/seg-0.ts"]),
-  8,
+  5,
   "similar names are not the throttled host",
 );
 
 // Garbage URIs must not crash the download
-assertEqual(segmentConcurrency(["not a url"]), 8, "unparseable URI falls back to the full pool");
+assertEqual(segmentConcurrency(["not a url"]), 5, "unparseable URI falls back to the full pool");
 
 console.log("cdn rules ok");

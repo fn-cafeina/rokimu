@@ -3,8 +3,13 @@
  * the self-check runs without a device.
  */
 
-/** Delta's CDN takes a burst; the tnmr one answers 429 above a few requests */
-const DEFAULT_SEGMENT_CONCURRENCY = 8;
+/**
+ * expo-file-system downloads through a shared OkHttpClient that hands the call
+ * to the Dispatcher, whose default ceiling is 5 requests per host: anything
+ * above that waits in its queue instead of opening a connection, so a bigger
+ * pool only adds idle JS workers. Raising this needs a different client.
+ */
+const DEFAULT_SEGMENT_CONCURRENCY = 5;
 const THROTTLED_SEGMENT_CONCURRENCY = 4;
 const THROTTLED_HOSTS = ["tnmr.org", "cdn-tnmr.org"];
 
