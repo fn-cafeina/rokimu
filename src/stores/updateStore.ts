@@ -164,20 +164,26 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
       if (previous.etag != null) headers["If-None-Match"] = previous.etag;
 
       let res: Response;
+      // Own controller: when the timer wins, the fetch is aborted too instead
+      // of running on in the background; the caller signal still cancels
+      const controller = new AbortController();
+      const onAbort = () => controller.abort();
+      if (signal.aborted) controller.abort();
+      else signal.addEventListener("abort", onAbort, { once: true });
+      const timer = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_CHECK);
       try {
-        res = await Promise.race([
-          fetch(GITHUB_RELEASES_URL, { headers, signal }),
-          new Promise<never>((_, reject) =>
-            setTimeout(
-              () => reject(new SourceError("Se agotó el tiempo de búsqueda", "TIMEOUT")),
-              TIMEOUTS.UPDATE_CHECK,
-            ),
-          ),
-        ]);
+        res = await fetch(GITHUB_RELEASES_URL, { headers, signal: controller.signal });
       } catch (err) {
+        if (signal.aborted) throw err;
+        if (controller.signal.aborted) {
+          throw new SourceError("Se agotó el tiempo de búsqueda", "TIMEOUT");
+        }
         throw err instanceof SourceError
           ? err
           : new SourceError("Error al buscar actualizaciones", "NETWORK_ERROR");
+      } finally {
+        clearTimeout(timer);
+        signal.removeEventListener("abort", onAbort);
       }
 
       if (res.status === 304) {
