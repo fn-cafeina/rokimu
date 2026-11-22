@@ -37,11 +37,30 @@ interface CatalogState {
   closeSheet: () => void;
 }
 
+/**
+ * Payload and grid commit in one update. Publishing the payload first and
+ * `items` afterwards renders a frame with the resource settled and the grid
+ * empty, which flashes the empty state. A payload for another query (filter
+ * changed mid-flight) must not touch the grid the new query already reset.
+ */
+export function commitFor(resource: ResourceState<BrowsePage>, query: string): Partial<CatalogState> {
+  const data = resource.status === "success" && resource.key === query ? resource.data : null;
+  if (data == null) return { resource };
+  return {
+    resource,
+    items: data.items,
+    page: 1,
+    lastPage: data.pagination.lastPage,
+    hasMore: data.pagination.lastPage > 1,
+    isLoadingMore: false,
+  };
+}
+
 export const useCatalogStore = create<CatalogState>((set, get) => {
   const runner = new ResourceRunner<BrowsePage>({
     tag: "home",
     get: () => get().resource,
-    set: (resource) => set({ resource }),
+    set: (resource) => set(commitFor(resource, get().query)),
   });
 
   return {
@@ -57,7 +76,7 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
 
     fetchCatalog: async (force = false) => {
       const query = get().query;
-      const outcome = await runner.load(query, (signal) =>
+      await runner.load(query, (signal) =>
         withAuthRetry(
           (attempt) =>
             loadCached(
@@ -77,16 +96,6 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
           },
         ),
       );
-      // A filter change during the request already reset the grid for its query
-      if (outcome.status !== "success" || get().query !== query) return;
-      const { items, pagination } = outcome.data;
-      set({
-        items,
-        page: 1,
-        lastPage: pagination.lastPage,
-        hasMore: pagination.lastPage > 1,
-        isLoadingMore: false,
-      });
     },
 
     loadMore: async () => {
