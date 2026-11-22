@@ -11,10 +11,10 @@ import { navigateBack } from "@/utils/navigation";
 import { useHistoryStore } from "@/stores/historyStore";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { EpisodeDownloadButton } from "@/components/downloads/EpisodeDownloadButton";
-import { calcProgress } from "@/utils/math";
+import { WATCHED_THRESHOLD, calcProgress, collectEpisodeProgress, pickCtaEpisode } from "@/hooks/episodeProgress";
 import { TAB_BAR_OFFSET } from "@/utils/layout";
 import { orderEpisodes } from "@/hooks/episodeHelpers";
-import { WATCHED_THRESHOLD, collectEpisodeProgress, pickCtaEpisode } from "@/hooks/episodeProgress";
+
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { ACCENT_COLOR } from "@/config/theme";

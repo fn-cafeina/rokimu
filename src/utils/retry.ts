@@ -1,7 +1,15 @@
 import { logger } from "./logger";
 import { isAuthError, toAppError } from "./errors";
-import { backoffDelay } from "./math";
+import { TIMEOUTS } from "@/config/cache";
 import { refreshSession } from "@/services/session";
+
+// Full-jitter exponential backoff (AWS-style): random within [floor, min(max, base * 2^attempt))
+// Floor keeps ladder retries off a closed gate on slow networks instead of hammering it instantly
+export function backoffDelay(attempt: number): number {
+  const cap = Math.min(TIMEOUTS.RETRY_MAX_DELAY, TIMEOUTS.RETRY_BASE_DELAY * 2 ** attempt);
+  const floor = Math.min(cap, 500);
+  return floor + Math.floor(Math.random() * (cap - floor + 1));
+}
 
 interface WithAuthRetryOptions {
   /** Optional caller signal for cooperative abort between attempts */

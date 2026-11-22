@@ -1,6 +1,6 @@
 import React from "react";
 import { View } from "react-native";
-import { calcProgress } from "@/utils/math";
+import { calcProgress } from "@/hooks/episodeProgress";
 import { ACCENT_COLOR } from "@/config/theme";
 
 interface ProgressBarProps {

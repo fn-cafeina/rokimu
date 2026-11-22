@@ -2,7 +2,7 @@ import { TIMEOUTS } from "@/config/cache";
 import { SOURCE_CONFIG, LANGUAGE_MAP } from "@/config/source";
 import { logger } from "@/utils/logger";
 import { SourceError } from "@/utils/errors";
-import { backoffDelay } from "@/utils/math";
+import { backoffDelay } from "@/utils/retry";
 import { sessionManager } from "./session";
 import { HtmlParser, cleanTitle, extractJson, isChallengeHtml, parsePagination, type Pagination } from "./parsers";
 import { buildHeaders, isSourceUrl } from "./requestHeaders";
