@@ -68,3 +68,4 @@ Expo 58 + React Native 0.88. **Android-only** (no iOS/web). File-based routing v
 - Version: `bun run release patch|minor|major|X.Y.Z` bumps `app.json` (`expo.version`) and `package.json`, commits, tags and pushes; the words resolve like `npm version`
 - `android.versionCode` is not in the repo — `appVersionSource: "remote"` plus `autoIncrement: true` in `eas.json` lets EAS own it
 - `bun install` respects `trustedDependencies` — `unrs-resolver` is listed there, without it its native binding never builds and ESLint import resolution fails
+- `expo-font` is a required peer dependency of `@expo/vector-icons` (used across the UI). Removing it fails `expo-doctor` in CI ("Missing peer dependency: expo-font") even though nothing imports `expo-font` directly. Do not remove it; direct imports are not the criterion for Expo native peer deps.
