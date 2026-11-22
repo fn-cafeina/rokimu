@@ -6,7 +6,6 @@ import { backoffDelay } from "@/utils/math";
 import { sessionManager } from "./session";
 import { HtmlParser, cleanTitle, extractJson, isChallengeHtml, parsePagination, type Pagination } from "./parsers";
 import { buildHeaders, isSourceUrl } from "./requestHeaders";
-import { webViewBridge } from "./webview";
 import { extractBest } from "./extractors";
 import type {
   Anime,
@@ -143,24 +142,6 @@ async function fetchWithSession(path: string, options: RequestInit = {}): Promis
 }
 
 const htmlParser = new HtmlParser();
-
-/**
- * Same verdict as fetchWithSession, executed by the worker's page instead of
- * the native client. The browser attaches the whole jar (HttpOnly included), so
- * there is nothing to transplant and no copy that can go stale.
- * Same-origin only: the page refuses a cross-origin fetch under CORS.
- */
-export async function webviewFetch(path: string): Promise<SessionResponse> {
-  const url = path.startsWith("http") ? path : `${SOURCE_CONFIG.baseUrl}${path}`;
-  const result = await webViewBridge.fetchInPage(url);
-  if (!result.ok) {
-    throw new SourceError(`WebView request failed: ${result.error}`, result.error === "timeout" ? "TIMEOUT" : "NETWORK_ERROR");
-  }
-  if (isSourceUrl(url, SOURCE_CONFIG.baseUrl) && (result.status === 401 || result.status === 403 || isChallengeHtml(result.body))) {
-    throw new SourceError("Authentication failed - session invalid", "AUTH_ERROR");
-  }
-  return { ok: result.status >= 200 && result.status < 300, status: result.status, body: result.body };
-}
 
 /**
  * One page of a card grid. `/directorio` takes `page` plus the four filters and
