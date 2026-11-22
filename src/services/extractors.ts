@@ -227,8 +227,15 @@ async function extractLuluStream(
 
   const master = await luluFetch(source, { headers }, options?.signal);
 
-  const best = bestStream(parseMaster(master, source));
-  if (!best) return null;
+  // A direct media playlist (no variant tags) is playable as-is; discarding it
+  // left resolveStreamUrl handing the player the embed page instead
+  const streams = parseMaster(master, source);
+  if (streams.length === 0) {
+    if (!master.trimStart().startsWith("#EXTM3U")) return null;
+    return { url: source, headers };
+  }
+  const best = bestStream(streams);
+  if (best == null) return null;
   return { url: best.url, headers };
 }
 
