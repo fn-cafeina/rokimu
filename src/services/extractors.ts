@@ -1,6 +1,7 @@
 import { gcm } from "@noble/ciphers/aes.js";
 import { bytesToUtf8 } from "@noble/ciphers/utils.js";
 import { SourceError, isCancelled } from "@/utils/errors";
+import { withTimeout } from "@/utils/withTimeout";
 import { SOURCE_CONFIG } from "@/config/source";
 
 interface PlaybackData {
@@ -175,19 +176,16 @@ export function unpackPacked(page: string): string {
 const LULU_TIMEOUT_MS = 15_000;
 
 async function luluFetch(url: string, init: RequestInit, signal?: AbortSignal): Promise<string> {
-  const controller = new AbortController();
-  const onAbort = () => controller.abort();
-  if (signal?.aborted) controller.abort();
-  else signal?.addEventListener("abort", onAbort, { once: true });
-  const timer = setTimeout(() => controller.abort(), LULU_TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    if (!response.ok) throw new SourceError(`Lulu HTTP ${response.status}`, "VIDEO_ERROR");
-    return await response.text();
-  } finally {
-    clearTimeout(timer);
-    signal?.removeEventListener("abort", onAbort);
-  }
+  return withTimeout(
+    signal,
+    LULU_TIMEOUT_MS,
+    async (requestSignal) => {
+      const response = await fetch(url, { ...init, signal: requestSignal });
+      if (!response.ok) throw new SourceError(`Lulu HTTP ${response.status}`, "VIDEO_ERROR");
+      return response.text();
+    },
+    "Lulu no respondió",
+  );
 }
 
 /**

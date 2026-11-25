@@ -5,7 +5,8 @@ import { TIMEOUTS } from "@/config/cache";
 import { storage } from "@/utils/storage";
 import { persistWithRollback } from "@/utils/persist";
 import { logger } from "@/utils/logger";
-import { SourceError } from "@/utils/errors";
+import { SourceError, isCancelled } from "@/utils/errors";
+import { withTimeout } from "@/utils/withTimeout";
 import { EMPTY_CHECK, parseStoredCheck, shouldCheck, type StoredCheck } from "@/utils/updateCheck";
 import {
   ResourceRunner,
@@ -165,26 +166,18 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
       if (previous.etag != null) headers["If-None-Match"] = previous.etag;
 
       let res: Response;
-      // Own controller: when the timer wins, the fetch is aborted too instead
-      // of running on in the background; the caller signal still cancels
-      const controller = new AbortController();
-      const onAbort = () => controller.abort();
-      if (signal.aborted) controller.abort();
-      else signal.addEventListener("abort", onAbort, { once: true });
-      const timer = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_CHECK);
+      // One helper owns the deadline: a stall here is a timeout the check can
+      // report, not a cancellation that leaves the row stuck on "Buscando..."
       try {
-        res = await fetch(GITHUB_RELEASES_URL, { headers, signal: controller.signal });
+        res = await withTimeout(
+          signal,
+          TIMEOUTS.UPDATE_CHECK,
+          (requestSignal) => fetch(GITHUB_RELEASES_URL, { headers, signal: requestSignal }),
+          "Se agotó el tiempo de búsqueda",
+        );
       } catch (err) {
-        if (signal.aborted) throw err;
-        if (controller.signal.aborted) {
-          throw new SourceError("Se agotó el tiempo de búsqueda", "TIMEOUT");
-        }
-        throw err instanceof SourceError
-          ? err
-          : new SourceError("Error al buscar actualizaciones", "NETWORK_ERROR");
-      } finally {
-        clearTimeout(timer);
-        signal.removeEventListener("abort", onAbort);
+        if (err instanceof SourceError || isCancelled(err)) throw err;
+        throw new SourceError("Error al buscar actualizaciones", "NETWORK_ERROR");
       }
 
       if (res.status === 304) {
