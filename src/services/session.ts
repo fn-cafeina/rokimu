@@ -4,6 +4,7 @@ import { logger } from "@/utils/logger";
 import { SourceError } from "@/utils/errors";
 import { storage } from "@/utils/storage";
 import { mergeCookies } from "./cookies";
+import { washOutcome, isValidSessionCookies } from "./sessionRules";
 import { webViewBridge } from "./webview";
 
 const SESSION_KEY = "scraper_session";
@@ -18,15 +19,11 @@ const WASH_FAIL_FAST_WINDOW = 15_000;
 // guarantees a 403. Settle: consume only after 1.5s without new updates.
 const REPORT_SETTLE_MS = 1_500;
 
-// The jar is only usable when Cloudflare's clearance cookie is in it: a jar of
-// telemetry cookies alone passes validation but still answers 403 downstream.
-// Coupled to the cookie name; Cloudflare has kept `cf_clearance` for years.
-const CLEARANCE_COOKIE = "cf_clearance=";
-
-function isValidSessionCookies(raw: string | undefined | null): boolean {
-  if (!raw) return false;
-  return raw.includes(CLEARANCE_COOKIE);
-}
+// Both failures are auth errors, but only one means the page may be wedged
+const WASH_FAILURE_MESSAGE = {
+  "no-report": "Session wash timed out - no cookie report",
+  "no-clearance": "Session wash got no valid cookies",
+} as const;
 
 class SessionManager {
   private refreshPromise: Promise<void> | null = null;
@@ -121,15 +118,12 @@ class SessionManager {
       const reported = this.waitForReport();
       webViewBridge.navigateTo(SOURCE_CONFIG.sessionWashUrl);
       const settled = await reported;
-      if (!settled) {
+      const outcome = washOutcome(settled, (await this.getSession())?.cookies);
+      if (!outcome.ok) {
         // The page may be wedged rather than slow: a fresh load gives the next
         // wash a page that can actually run the challenge
-        webViewBridge.reload();
-        throw new SourceError("Session wash timed out - no cookie report", "AUTH_ERROR");
-      }
-      const session = await this.getSession();
-      if (!isValidSessionCookies(session?.cookies)) {
-        throw new SourceError("Session wash got no valid cookies", "AUTH_ERROR");
+        if (outcome.reason === "no-report") webViewBridge.reload();
+        throw new SourceError(WASH_FAILURE_MESSAGE[outcome.reason], "AUTH_ERROR");
       }
       this.lastWashFailedAt = 0;
       logger.info("session", `Session refreshed successfully in ${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
