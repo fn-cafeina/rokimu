@@ -26,17 +26,24 @@ export function usePersistedRange(slug: string | undefined) {
 
   useEffect(() => {
     if (slug == null) return;
+    // A read for the previous anime must never land on the one on screen now
+    let active = true;
     storage
       .get<number>(rangeKey(slug))
       .then((idx) => {
+        if (!active) return;
         setActiveRangeIdx(idx ?? 0);
         setIsRestoring(false);
       })
       .catch((error) => {
+        if (!active) return;
         logger.error("detail", "Failed to load persisted range", error);
         setActiveRangeIdx(0);
         setIsRestoring(false);
       });
+    return () => {
+      active = false;
+    };
   }, [slug]);
 
   const setAndPersist = useCallback(
