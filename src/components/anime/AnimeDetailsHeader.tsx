@@ -4,7 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import React, { memo, useMemo } from "react";
 import { ScrollView, Text, View } from "react-native";
 import type { AnimeDetail, AnimeRelations, Episode, RelatedAnime } from "@/types";
-import { router } from "expo-router";
+import { navigateToAnime } from "@/utils/navigation";
 import { AnimatedPressable } from "@/components/ui/AnimatedPressable";
 import { ImageWithLoader } from "@/components/ui/ImageWithLoader";
 import { SectionTitle } from "@/components/ui/SectionTitle";
@@ -185,7 +185,7 @@ export const AnimeDetailsHeader = memo(
                 renderItem={({ item }) => (
                   <AnimatedPressable
                     className="w-[100px] mr-3"
-                    onPress={() => router.replace(`/anime/${item.anime.slug}`)}
+                    onPress={() => navigateToAnime(item.anime.slug)}
                   >
                     <View className="relative">
                       <ImageWithLoader
