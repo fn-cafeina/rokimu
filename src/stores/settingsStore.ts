@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { storage } from "@/utils/storage";
-import { logger } from "@/utils/logger";
+import { persistWithRollback } from "@/utils/persist";
 
 export const EPISODE_ORDER_KEY = "episode_order";
 export const EPISODE_ORDER_BY_SLUG_KEY = "episode_order_by_slug";
@@ -44,26 +44,25 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const previous = get().episodeOrderBySlug;
     const bySlug = { ...previous, [slug]: order };
     set({ episodeOrderBySlug: bySlug, episodeOrder: order });
-    try {
-      // One write for both: the map is the memory, the single value is the default
-      await Promise.all([
-        storage.set(EPISODE_ORDER_BY_SLUG_KEY, bySlug),
-        storage.set(EPISODE_ORDER_KEY, order),
-      ]);
-    } catch (error) {
-      set({ episodeOrderBySlug: previous });
-      logger.error("settings", "Failed to persist episode order", error);
-    }
+    // One write for both: the map is the memory, the single value is the default
+    await persistWithRollback(
+      () =>
+        Promise.all([
+          storage.set(EPISODE_ORDER_BY_SLUG_KEY, bySlug),
+          storage.set(EPISODE_ORDER_KEY, order),
+        ]).then(() => undefined),
+      () => set({ episodeOrderBySlug: previous }),
+      "settings",
+    );
   },
 
   setPreferredServer: async (server) => {
     const previous = get().preferredServer;
     set({ preferredServer: server });
-    try {
-      await storage.set(PREFERRED_SERVER_KEY, server);
-    } catch (error) {
-      set({ preferredServer: previous });
-      logger.error("settings", "Failed to persist preferred server", error);
-    }
+    await persistWithRollback(
+      () => storage.set(PREFERRED_SERVER_KEY, server),
+      () => set({ preferredServer: previous }),
+      "settings",
+    );
   },
 }));

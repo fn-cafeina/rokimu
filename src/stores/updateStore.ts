@@ -3,6 +3,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { create } from "zustand";
 import { TIMEOUTS } from "@/config/cache";
 import { storage } from "@/utils/storage";
+import { persistWithRollback } from "@/utils/persist";
 import { logger } from "@/utils/logger";
 import { SourceError } from "@/utils/errors";
 import { EMPTY_CHECK, parseStoredCheck, shouldCheck, type StoredCheck } from "@/utils/updateCheck";
@@ -256,12 +257,11 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
   setUpdateCheckEnabled: async (enabled) => {
     const prev = get().updateCheckEnabled;
     set({ updateCheckEnabled: enabled });
-    try {
-      await storage.set(UPDATE_CHECK_KEY, enabled);
-    } catch (err) {
-      set({ updateCheckEnabled: prev });
-      logger.error("update", "Failed to persist update check toggle", err);
-    }
+    await persistWithRollback(
+      () => storage.set(UPDATE_CHECK_KEY, enabled),
+      () => set({ updateCheckEnabled: prev }),
+      "update",
+    );
   },
 
   checkForUpdates: async (force = false) => {
