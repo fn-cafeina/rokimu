@@ -116,7 +116,7 @@ async function fetchWithSession(path: string, options: RequestInit = {}): Promis
       if (error instanceof Error && error.name === "AbortError") {
         if (timedOut && !options.signal?.aborted) {
           logger.warn("fetch", `Timeout (${TIMEOUTS.REQUEST_TIMEOUT / 1000}s, attempt ${attempt + 1}/${TIMEOUTS.MAX_ATTEMPTS}) for ${url}`);
-          if (hasMoreAttempts) {
+          if (attempt + 1 < TIMEOUTS.TIMEOUT_ATTEMPTS) {
             logger.info("fetch", `Retrying (${attempt + 1}/${TIMEOUTS.MAX_ATTEMPTS}) after timeout: ${url}`);
             await new Promise((resolve) => setTimeout(resolve, backoffDelay(attempt)));
             continue;

@@ -25,6 +25,9 @@ export const TIMEOUTS = {
   REQUEST_TIMEOUT: 30_000,
   UPDATE_CHECK: 10_000,
   MAX_ATTEMPTS: 3,
+  // A timeout says the host is not answering at all; a second 30s wait buys
+  // nothing, while a 5xx or a 429 is worth the third try
+  TIMEOUT_ATTEMPTS: 2,
   RETRY_BASE_DELAY: 1_000,
   RETRY_MAX_DELAY: 4_000,
 } as const;
