@@ -172,19 +172,28 @@ export function unpackPacked(page: string): string {
   return packed;
 }
 
-/** LuluStream answers a small embed page; a host that never replies must not hold a resolution. */
-const LULU_TIMEOUT_MS = 15_000;
+/**
+ * Every embed request runs under one deadline, body included: a host that accepts
+ * the connection and then stops answering must not hold a resolution forever.
+ * The label names the host in both messages.
+ */
+const EMBED_TIMEOUT_MS = 15_000;
 
-async function luluFetch(url: string, init: RequestInit, signal?: AbortSignal): Promise<string> {
+async function embedFetch(
+  url: string,
+  init: RequestInit,
+  signal: AbortSignal | undefined,
+  label: string,
+): Promise<string> {
   return withTimeout(
     signal,
-    LULU_TIMEOUT_MS,
+    EMBED_TIMEOUT_MS,
     async (requestSignal) => {
       const response = await fetch(url, { ...init, signal: requestSignal });
-      if (!response.ok) throw new SourceError(`Lulu HTTP ${response.status}`, "VIDEO_ERROR");
+      if (!response.ok) throw new SourceError(`${label} HTTP ${response.status}`, "VIDEO_ERROR");
       return response.text();
     },
-    "Lulu no respondió",
+    `${label} no respondió`,
   );
 }
 
@@ -201,16 +210,17 @@ async function extractLuluStream(
   // Their CDN only answers the embed's own origin as the referer, so it comes
   // from the URL instead of a domain that changes.
   const headers = { "User-Agent": ua, Accept: "*/*", Referer: `${new URL(iframeUrl).origin}/` };
-  const page = await luluFetch(
+  const page = await embedFetch(
     iframeUrl,
     { headers: { "User-Agent": ua, Referer: `${SOURCE_CONFIG.baseUrl}/` } },
     options?.signal,
+    "Lulu",
   );
 
   const source = unpackPacked(page).match(/sources:\s*\[\s*\{\s*file:\s*"([^"]+)"/)?.[1];
   if (source == null) throw new SourceError("No source in Lulu player", "PARSER_ERROR");
 
-  const master = await luluFetch(source, { headers }, options?.signal);
+  const master = await embedFetch(source, { headers }, options?.signal, "Lulu");
 
   // A direct media playlist (no variant tags) is playable as-is; discarding it
   // left resolveStreamUrl handing the player the embed page instead
@@ -244,12 +254,11 @@ export async function extractBest(
   };
 
   const apiUrl = `https://${host}/api/videos/${id}`;
-  const raw = await fetch(apiUrl, { headers: fetchHeaders, signal: options?.signal });
-  if (!raw.ok) throw new SourceError(`Byse API HTTP ${raw.status}`, "VIDEO_ERROR");
+  const raw = await embedFetch(apiUrl, { headers: fetchHeaders }, options?.signal, "Byse API");
 
   let decrypted: DecryptedData;
   try {
-    const videoData: { playback?: PlaybackData } = await raw.json();
+    const videoData = JSON.parse(raw) as { playback?: PlaybackData };
     if (videoData.playback == null) throw new SourceError("No playback data from Byse API", "PARSER_ERROR");
     decrypted = JSON.parse(decrypt(videoData.playback)) as DecryptedData;
   } catch (e: unknown) {
@@ -265,13 +274,12 @@ export async function extractBest(
     const su = src.url ?? src.file;
     if (su == null || su.length === 0) continue;
 
-    const hlsBody = await fetch(su, {
-      headers: { "User-Agent": ua, Referer: `https://${host}/`, Accept: "*/*" },
-      signal: options?.signal,
-    }).then((r) => {
-      if (!r.ok) throw new SourceError(`Master playlist HTTP ${r.status}`, "VIDEO_ERROR");
-      return r.text();
-    });
+    const hlsBody = await embedFetch(
+      su,
+      { headers: { "User-Agent": ua, Referer: `https://${host}/`, Accept: "*/*" } },
+      options?.signal,
+      "Master playlist",
+    );
 
     allStreams.push(...parseMaster(hlsBody, su));
   }
