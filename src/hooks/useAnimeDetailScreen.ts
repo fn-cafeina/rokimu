@@ -45,6 +45,9 @@ export function useAnimeDetailScreen(slug: string) {
     () => computeEpisodePagination(anime?.episodes, episodeOrder, activeRangeIdx),
     [anime?.episodes, episodeOrder, activeRangeIdx],
   );
+  // A remembered index outlives a list that shrank under it: highlight the
+  // range the episodes on screen actually belong to
+  const rangeIdx = ranges[activeRangeIdx] != null ? activeRangeIdx : 0;
 
   // Servers belong to one episode: key them the same way so the modal can
   // never show another episode's list or a stale error
@@ -225,7 +228,7 @@ export function useAnimeDetailScreen(slug: string) {
     episodeOrder,
     toggleEpisodeOrder,
     isAscending: episodeOrder === "asc",
-    activeRangeIdx,
+    activeRangeIdx: rangeIdx,
     setActiveRangeIdx,
     isRestoring,
     ranges,
