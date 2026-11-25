@@ -38,8 +38,6 @@ interface DownloadsState {
   enqueue: (input: DownloadInput) => void;
   cancel: (key: string) => void;
   remove: (key: string) => Promise<void>;
-  /** Drops every language saved for one episode. */
-  removeEpisode: (slug: string, number: string) => Promise<void>;
   setConcurrency: (value: number) => Promise<void>;
 }
 
@@ -286,28 +284,6 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
     // The files are gone: restoring the entry on a failed write would offer a
     // download that cannot play. Memory keeps the removal and the next
     // successful write persists it.
-    await persistRemoval(rest);
-  },
-
-  removeEpisode: async (slug, number) => {
-    const previous = get().entries;
-    const mine = entriesForEpisode(previous, slug, number);
-    let rest = previous;
-    for (const entry of mine) {
-      const key = downloadKey(slug, number, entry.language);
-      controllers.get(key)?.abort();
-      const index = queue.findIndex(
-        (item) => downloadKey(item.input.slug, item.input.number, item.input.language ?? null) === key,
-      );
-      if (index >= 0) queue.splice(index, 1);
-      rest = withoutKey(rest, key);
-      try {
-        deleteEpisodeDownload(slug, number, entry.language);
-      } catch (error) {
-        logger.warn("download", `Failed to delete files for ${key}`, error);
-      }
-    }
-    set({ entries: rest });
     await persistRemoval(rest);
   },
 
