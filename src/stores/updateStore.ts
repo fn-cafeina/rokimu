@@ -258,7 +258,12 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
   },
 
   checkForUpdates: async (force = false) => {
-    if (checkPromise) return checkPromise;
+    // A manual tap must not settle with the throttled answer of the background
+    // check already in flight: it waits for that one, then runs its own
+    if (checkPromise) {
+      if (!force) return checkPromise;
+      await checkPromise;
+    }
     checkPromise = runCheck(force);
     try {
       return await checkPromise;
