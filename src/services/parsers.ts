@@ -16,9 +16,18 @@ export function extractJson(text: string, key: string, sChar: string, eChar: str
   if (start === -1) return "";
   let depth = 1;
   let end = start + 1;
+  // Strings are skipped: a bracket inside a title is text, and counting it ends
+  // the scan early or never, which turns a valid payload into an empty list
+  let inString = false;
   while (depth > 0 && end < text.length) {
-    if (text[end] === sChar) depth++;
-    else if (text[end] === eChar) depth--;
+    const char = text[end];
+    if (inString) {
+      if (char === "\\") end += 1;
+      else if (char === '"') inString = false;
+    } else if (char === '"') {
+      inString = true;
+    } else if (char === sChar) depth++;
+    else if (char === eChar) depth--;
     end++;
   }
   return text.slice(start, end);

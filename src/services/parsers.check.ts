@@ -41,12 +41,34 @@ assertEqual(
 );
 assertEqual(extractJson("no key here", '"players":', "[", "]"), "", "extractJson returns empty for a missing key");
 
+// A bracket inside a string is text: counting it either ends the scan early or
+// never ends it, and both turn a valid payload into an empty list
+assertEqual(
+  extractJson('x "episodes": [{"title": "[A"}, {"id": 2}] y', '"episodes":', "[", "]"),
+  '[{"title": "[A"}, {"id": 2}]',
+  "extractJson ignores an unbalanced bracket inside a string",
+);
+assertEqual(
+  extractJson('x "episodes": [{"title": "A]"}, {"id": 2}] y', '"episodes":', "[", "]"),
+  '[{"title": "A]"}, {"id": 2}]',
+  "extractJson ignores an unbalanced closing bracket inside a string",
+);
+assertEqual(
+  extractJson('x "episodes": [{"title": "a\\"b"}] y', '"episodes":', "[", "]"),
+  '[{"title": "a\\"b"}]',
+  "extractJson keeps an escaped quote inside the string",
+);
+
 // --- parseEpisodes: raw JSON in the page ---
 const rawEpHtml =
   '<html><body>"episodes":[{"id":1,"number":"1"},{"id":2,"number":"2"},{"number":"3"}]</body></html>';
 const rawEps = parser.parseEpisodes(rawEpHtml, "one-piece");
 assertEqual(rawEps.length, 2, "parseEpisodes raw: entries without an id are dropped");
 assertEqual(rawEps[0]?.url, "/ver/one-piece/1", "parseEpisodes raw: url");
+
+// A title with a bracket must not cost the episode list
+const bracketEpHtml = '<html><body>"episodes":[{"id":1,"number":"1","title":"[A"}]</body></html>';
+assertEqual(parser.parseEpisodes(bracketEpHtml, "one-piece").length, 1, "parseEpisodes: a bracket in a title is not the end of the list");
 
 // --- parseEpisodes: escaped JSON inside a self.__next_f.push script ---
 const scriptEpHtml =
