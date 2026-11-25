@@ -162,6 +162,7 @@ export default function SettingsScreen() {
                 disabled={concurrency <= MIN_DOWNLOAD_CONCURRENCY}
                 hitSlop={6}
                 hapticFeedback={true}
+                debounceMs={0}
                 onPress={() => void setConcurrency(concurrency - 1)}
                 className="min-h-8 min-w-8 items-center justify-center"
               >
@@ -178,6 +179,7 @@ export default function SettingsScreen() {
                 disabled={concurrency >= MAX_DOWNLOAD_CONCURRENCY}
                 hitSlop={6}
                 hapticFeedback={true}
+                debounceMs={0}
                 onPress={() => void setConcurrency(concurrency + 1)}
                 className="min-h-8 min-w-8 items-center justify-center"
               >
