@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import {
+  classifyFolders,
   downloadKey,
   drainStartable,
   hasDownloadFor,
   hydrateQueue,
   isWaiting,
   resumeTargets,
+  type FolderRecord,
   type QueuedEntry,
 } from "./downloadQueue";
 
@@ -101,5 +103,60 @@ assert.deepEqual(drainStartable(["a", "b", "c"], (k) => k, stillWaits, 5), {
 
 // An empty queue is not a start
 assert.deepEqual(drainStartable([], (k) => k, stillWaits, 3), { start: [], rest: [] });
+
+// Boot reconciliation of the folders on disk. A folder the index lost comes
+// back; one without a record or a playlist is dropped; one the index knows is
+// left to the index
+const record = (overrides: Partial<FolderRecord> = {}): FolderRecord => ({
+  slug: "one-piece",
+  number: "1",
+  title: "One Piece",
+  image: "",
+  language: "Latino",
+  createdAt: 1,
+  ...overrides,
+});
+const keyOfRecord = (r: FolderRecord) => downloadKey(r.slug, r.number, r.language);
+
+const lostIndex = classifyFolders(
+  new Set(),
+  [
+    { record: record(), hasPlaylist: true },
+    { record: record({ number: "2" }), hasPlaylist: true },
+    { record: record({ number: "3" }), hasPlaylist: false },
+    { record: null, hasPlaylist: true },
+  ],
+  keyOfRecord,
+);
+assert.deepEqual(lostIndex.adopt, [0, 1]);
+assert.deepEqual(lostIndex.drop, [2, 3]);
+
+// An entry the index still holds owns its folder, which is never deleted
+const tracked = classifyFolders(
+  new Set([downloadKey("one-piece", "1", "Latino")]),
+  [{ record: record(), hasPlaylist: true }],
+  keyOfRecord,
+);
+assert.deepEqual(tracked, { adopt: [], drop: [] });
+
+// The same episode in two languages is two folders and two entries
+const languages = classifyFolders(
+  new Set([downloadKey("one-piece", "1", "Latino")]),
+  [{ record: record({ language: null }), hasPlaylist: true }],
+  keyOfRecord,
+);
+assert.deepEqual(languages.adopt, [0]);
+
+// Two folders claiming the same key adopt one and leave the other unseen
+const duplicated = classifyFolders(
+  new Set(),
+  [
+    { record: record(), hasPlaylist: true },
+    { record: record(), hasPlaylist: true },
+  ],
+  keyOfRecord,
+);
+assert.deepEqual(duplicated.adopt, [0]);
+assert.deepEqual(duplicated.drop, []);
 
 console.log("download queue ok");

@@ -6,6 +6,7 @@ import { useUpdateStore, UPDATE_CHECK_KEY } from "@/stores/updateStore";
 import { isWorthKeepingOffline } from "@/hooks/useAnimeSnapshot";
 import { prunePersistedRanges } from "@/hooks/usePersistedRange";
 import { resetToPortrait } from "@/services/playerUI";
+import { scanDownloadFolders } from "@/services/downloader";
 import { sessionManager } from "@/services/session";
 import { pruneAnimeSnapshots } from "@/utils/animeSnapshot";
 import { pruneExpiredCache } from "@/utils/cache";
@@ -39,7 +40,7 @@ export async function bootApp(): Promise<void> {
   setTimeout(() => void pruneExpiredCache(), CACHE_SWEEP_DELAY_MS);
   await sessionManager.initialize();
   // One batch: the slowest read bounds boot, not the sum of two batches
-  const [history, saved, order, orderBySlug, preferredServer, updateCheckEnabled, downloads, downloadConcurrency] = await Promise.all([
+  const [history, saved, order, orderBySlug, preferredServer, updateCheckEnabled, downloads, downloadConcurrency, folders] = await Promise.all([
     storage.get<HistoryItem[]>(HISTORY_KEY),
     storage.get<Anime[]>(SAVED_KEY),
     storage.get<"asc" | "desc">(EPISODE_ORDER_KEY),
@@ -48,12 +49,13 @@ export async function bootApp(): Promise<void> {
     storage.get<boolean>(UPDATE_CHECK_KEY),
     storage.get<DownloadEntry[]>(DOWNLOADS_KEY),
     storage.get<number>(DOWNLOAD_CONCURRENCY_KEY),
+    scanDownloadFolders(),
   ]);
   useHistoryStore.getState().initialize(history ?? []);
   useSavedStore.getState().initialize(saved ?? []);
   useSettingsStore.getState().initialize(order ?? "asc", preferredServer, orderBySlug ?? {});
   useUpdateStore.getState().initialize(updateCheckEnabled !== false);
-  useDownloadsStore.getState().initialize(downloads ?? [], downloadConcurrency ?? DEFAULT_DOWNLOAD_CONCURRENCY);
+  useDownloadsStore.getState().initialize(downloads ?? [], downloadConcurrency ?? DEFAULT_DOWNLOAD_CONCURRENCY, folders);
   // Stored detail and episode ranges outlive the cache, so the sweep waits
   // for the lists that decide what is still worth keeping offline
   void pruneAnimeSnapshots(isWorthKeepingOffline);

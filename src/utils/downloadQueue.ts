@@ -89,6 +89,52 @@ export function hydrateQueue<T extends QueuedEntry>(
   return { kept, dropped, resume: resumeTargets(Object.values(kept)) };
 }
 
+/** What a finished download leaves next to its files, so the folder explains itself. */
+export interface FolderRecord {
+  slug: string;
+  number: string;
+  title: string;
+  image: string;
+  language: string | null;
+  createdAt: number;
+}
+
+/** A folder found under `downloads/`, with whatever it could say about itself. */
+export interface DownloadedFolder {
+  dirUri: string;
+  playlistUri: string | null;
+  hasPlaylist: boolean;
+  /** null for a folder written before the record existed, or a cut-short write */
+  record: FolderRecord | null;
+}
+
+/**
+ * Boot reconciliation of the folders on disk against the index. A folder the
+ * index lost is adopted (its playlist still plays); one that cannot say what it
+ * holds, or lost its playlist, is dropped instead of sitting there unseen.
+ * Returns indexes, so the caller keeps the folder list and the file access.
+ */
+export function classifyFolders(
+  keptKeys: ReadonlySet<string>,
+  folders: Pick<DownloadedFolder, "record" | "hasPlaylist">[],
+  keyOf: (record: FolderRecord) => string,
+): { adopt: number[]; drop: number[] } {
+  const adopt: number[] = [];
+  const drop: number[] = [];
+  const claimed = new Set(keptKeys);
+  folders.forEach((folder, index) => {
+    if (!folder.hasPlaylist || folder.record == null) {
+      drop.push(index);
+      return;
+    }
+    const key = keyOf(folder.record);
+    if (claimed.has(key)) return;
+    claimed.add(key);
+    adopt.push(index);
+  });
+  return { adopt, drop };
+}
+
 /**
  * What a free worker may start now, in queue order. An item whose entry stopped
  * waiting (removed, finished, mismatched) leaves the queue for good; everything

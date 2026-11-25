@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import {
+  deleteDownloadFolder,
   deleteEpisodeDownload,
   downloadEpisode,
   isEpisodeDownloaded,
@@ -8,7 +9,16 @@ import {
 } from "@/services/downloader";
 import { storage } from "@/utils/storage";
 import { logger } from "@/utils/logger";
-import { downloadKey, drainStartable, hydrateQueue, isWaiting, type DownloadStatus, type QueuedEntry } from "@/utils/downloadQueue";
+import {
+  classifyFolders,
+  downloadKey,
+  drainStartable,
+  hydrateQueue,
+  isWaiting,
+  type DownloadStatus,
+  type DownloadedFolder,
+  type QueuedEntry,
+} from "@/utils/downloadQueue";
 
 export { downloadKey };
 export type { DownloadStatus };
@@ -34,7 +44,7 @@ type DownloadInput = EpisodeTarget & { title: string; image: string };
 interface DownloadsState {
   entries: Record<string, DownloadEntry>;
   concurrency: number;
-  initialize: (entries: DownloadEntry[], concurrency: number) => void;
+  initialize: (entries: DownloadEntry[], concurrency: number, folders?: DownloadedFolder[]) => void;
   enqueue: (input: DownloadInput) => void;
   cancel: (key: string) => void;
   remove: (key: string) => Promise<void>;
@@ -112,6 +122,8 @@ async function runDownload(input: DownloadInput, resume: boolean): Promise<void>
     slug: input.slug,
     number: input.number,
     language: useDownloadsStore.getState().entries[key]?.language ?? null,
+    title: input.title,
+    image: input.image,
   };
   const controller = new AbortController();
   controllers.set(key, controller);
@@ -207,7 +219,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
   entries: {},
   concurrency: DEFAULT_DOWNLOAD_CONCURRENCY,
 
-  initialize: (entries, concurrency) => {
+  initialize: (entries, concurrency, folders = []) => {
     const { kept, dropped, resume } = hydrateQueue(
       entries,
       (entry) => downloadKey(entry.slug, entry.number, entry.language),
@@ -219,6 +231,33 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
         `Dropping ${downloadKey(entry.slug, entry.number, entry.language)}: playlist missing`,
       );
     }
+
+    // A folder whose index entry is gone (a failed write, an unreadable index)
+    // still holds a playable episode: the record it wrote itself puts it back
+    const { adopt, drop } = classifyFolders(
+      new Set(Object.keys(kept)),
+      folders,
+      (record) => downloadKey(record.slug, record.number, record.language),
+    );
+    for (const index of adopt) {
+      const folder = folders[index]!;
+      const record = folder.record!;
+      const key = downloadKey(record.slug, record.number, record.language);
+      kept[key] = {
+        ...record,
+        status: "done",
+        segmentsDone: 0,
+        segmentsTotal: 0,
+        bytes: 0,
+        playlistUri: folder.playlistUri,
+        error: null,
+      };
+      logger.info("download", `Adopted ${key}: the index had lost it`);
+    }
+    for (const index of drop) {
+      deleteDownloadFolder(folders[index]!.dirUri);
+    }
+    if (adopt.length > 0 || drop.length > 0) persist(kept);
 
     set({ entries: kept, concurrency: clampConcurrency(concurrency) });
     // An interrupted queue resumes: segment files already on disk are skipped,

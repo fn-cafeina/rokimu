@@ -6,6 +6,7 @@ import { isRetryable, statusOf } from "@/utils/httpError";
 import { backoffDelay, withAuthRetry } from "@/utils/retry";
 import { logger } from "@/utils/logger";
 import { orderServers, segmentConcurrencyFor } from "@/utils/serverOrder";
+import type { DownloadedFolder, FolderRecord } from "@/utils/downloadQueue";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { source } from "./source";
 import { canResumeFolder, markerFor } from "./downloadResume";
@@ -27,6 +28,9 @@ const STALL_TIMEOUT_MS = 45_000;
 
 const DOWNLOADS_DIR = "downloads";
 const PLAYLIST_FILE = "index.m3u8";
+// The folder's own record of what it holds: without it, a lost index entry left
+// the bytes on disk with no way back into the app
+const META_FILE = "meta.json";
 // Marks a folder as written in the current format: segments stay encrypted and
 // the local playlist carries their key. Older folders were decrypted in place.
 const FORMAT_MARKER = "format";
@@ -36,6 +40,9 @@ export interface EpisodeTarget {
   number: string;
   /** Server language. Without one, the first server is used and the folder is "default". */
   language?: string | null;
+  /** Carried into the folder record; the index is what usually holds them. */
+  title?: string;
+  image?: string;
 }
 
 interface EpisodeDownloadProgress {
@@ -45,7 +52,6 @@ interface EpisodeDownloadProgress {
 }
 
 interface EpisodeDownloadResult {
-  dirUri: string;
   playlistUri: string;
   bytes: number;
   segmentsTotal: number;
@@ -85,6 +91,60 @@ export function isEpisodeDownloaded(slug: string, number: string, language: stri
 export function deleteEpisodeDownload(slug: string, number: string, language: string | null): void {
   const dir = episodeDirectory(slug, number, language);
   if (dir.exists) dir.delete();
+}
+
+/** Deletes a folder the index never knew, addressed by the URI the scan returned. */
+export function deleteDownloadFolder(dirUri: string): void {
+  try {
+    const dir = new Directory(dirUri);
+    if (dir.exists) dir.delete();
+  } catch (error) {
+    logger.warn("download", `Failed to delete ${dirUri}`, error);
+  }
+}
+
+function readRecord(dir: Directory): FolderRecord | null {
+  const file = new File(dir, META_FILE);
+  if (!file.exists) return null;
+  try {
+    const parsed = JSON.parse(file.textSync()) as Partial<FolderRecord>;
+    if (typeof parsed.slug !== "string" || typeof parsed.number !== "string") return null;
+    return {
+      slug: parsed.slug,
+      number: parsed.number,
+      title: typeof parsed.title === "string" ? parsed.title : "",
+      image: typeof parsed.image === "string" ? parsed.image : "",
+      language: typeof parsed.language === "string" ? parsed.language : null,
+      createdAt: typeof parsed.createdAt === "number" ? parsed.createdAt : 0,
+    };
+  } catch (error) {
+    logger.warn("download", `Unreadable record in ${dir.uri}`, error);
+    return null;
+  }
+}
+
+/**
+ * Every episode folder on disk, one level per anime. Boot uses it to reconcile
+ * the index: a record and a playlist are all a folder needs to be adopted.
+ */
+export async function scanDownloadFolders(): Promise<DownloadedFolder[]> {
+  const root = new Directory(Paths.document, DOWNLOADS_DIR);
+  if (!root.exists) return [];
+  const folders: DownloadedFolder[] = [];
+  for (const animeEntry of root.list()) {
+    if (!(animeEntry instanceof Directory)) continue;
+    for (const episodeEntry of animeEntry.list()) {
+      if (!(episodeEntry instanceof Directory)) continue;
+      const playlist = new File(episodeEntry, PLAYLIST_FILE);
+      folders.push({
+        dirUri: episodeEntry.uri,
+        playlistUri: playlist.exists ? playlist.uri : null,
+        hasPlaylist: playlist.exists,
+        record: readRecord(episodeEntry),
+      });
+    }
+  }
+  return folders;
 }
 
 function extensionOf(uri: string, fallback: string): string {
@@ -361,6 +421,15 @@ export async function downloadEpisode(
   }
   dir.create({ intermediates: true, idempotent: true });
   await marker.write(markerFor(server));
+  const record: FolderRecord = {
+    slug: target.slug,
+    number: target.number,
+    title: target.title ?? "",
+    image: target.image ?? "",
+    language,
+    createdAt: Date.now(),
+  };
+  await new File(dir, META_FILE).write(JSON.stringify(record));
 
   const init = playlist.initSegment != null
     ? await downloadInit(playlist.initSegment, dir, stream.headers, signal)
@@ -457,7 +526,6 @@ export async function downloadEpisode(
   logger.info("download", `Saved ${target.slug} ep ${target.number} (${segmentsTotal} segments)`);
 
   return {
-    dirUri: dir.uri,
     playlistUri: playlistFile.uri,
     bytes: bytesDone,
     segmentsTotal,
