@@ -71,6 +71,7 @@ export async function loadCached<T>(
       const serialized = JSON.stringify(entry);
       if (serialized.length <= LIMITS.CACHE_MAX_ENTRY_SIZE) {
         await storage.setRaw(cacheKey, serialized);
+        if (cacheKey.startsWith(`${CACHE_PREFIXES.SEARCH}_`)) void pruneSearchCache();
       } else {
         logger.warn("cache", `Entry "${cacheKey}" too large (${(serialized.length / 1024).toFixed(1)}KB), skipping`);
       }
@@ -97,6 +98,35 @@ export async function pruneExpiredCache(): Promise<void> {
       }
     }),
   );
+}
+
+/**
+ * One entry per search term, and the boot sweep is too far away to help a long
+ * session: without this, a heavy day of searching fills AsyncStorage and the
+ * writes that matter (library, download index) start failing.
+ */
+const SEARCH_CACHE_ENTRIES = 30;
+
+async function pruneSearchCache(): Promise<void> {
+  const prefix = `${CACHE_PREFIXES.SEARCH}_`;
+  const keys = (await storage.getAllKeys()).filter((key) => key.startsWith(prefix));
+  if (keys.length === 0) return;
+
+  const now = Date.now();
+  const live: { key: string; expiration: number }[] = [];
+  for (const key of keys) {
+    const entry = await storage.get<{ expiration?: unknown }>(key);
+    const expiration = typeof entry?.expiration === "number" ? entry.expiration : 0;
+    if (expiration <= now) await storage.remove(key);
+    else live.push({ key, expiration });
+  }
+
+  // Over the cap the shortest-lived entries go first: they expire soonest anyway
+  live.sort((a, b) => a.expiration - b.expiration);
+  const excess = live.length - SEARCH_CACHE_ENTRIES;
+  for (const { key } of live.slice(0, Math.max(0, excess))) {
+    await storage.remove(key);
+  }
 }
 
 /**
