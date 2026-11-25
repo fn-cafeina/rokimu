@@ -71,6 +71,7 @@ export async function loadCached<T>(
       const serialized = JSON.stringify(entry);
       if (serialized.length <= LIMITS.CACHE_MAX_ENTRY_SIZE) {
         await storage.setRaw(cacheKey, serialized);
+        remember(cacheKey, entry.expiration);
         if (cacheKey.startsWith(`${CACHE_PREFIXES.SEARCH}_`)) void pruneSearchCache();
       } else {
         logger.warn("cache", `Entry "${cacheKey}" too large (${(serialized.length / 1024).toFixed(1)}KB), skipping`);
@@ -92,12 +93,14 @@ export async function pruneExpiredCache(): Promise<void> {
   const now = Date.now();
   await Promise.all(
     keys.map(async (key) => {
-      const entry = await storage.get<{ expiration?: unknown }>(key);
-      if (typeof entry?.expiration === "number" && entry.expiration < now) {
+      const expiration = await expirationOf(key);
+      if (expiration != null && expiration < now) {
         await storage.remove(key);
+        forget(key);
       }
     }),
   );
+  persistExpirations();
 }
 
 /**
@@ -115,10 +118,13 @@ async function pruneSearchCache(): Promise<void> {
   const now = Date.now();
   const live: { key: string; expiration: number }[] = [];
   for (const key of keys) {
-    const entry = await storage.get<{ expiration?: unknown }>(key);
-    const expiration = typeof entry?.expiration === "number" ? entry.expiration : 0;
-    if (expiration <= now) await storage.remove(key);
-    else live.push({ key, expiration });
+    const expiration = (await expirationOf(key)) ?? 0;
+    if (expiration <= now) {
+      await storage.remove(key);
+      forget(key);
+    } else {
+      live.push({ key, expiration });
+    }
   }
 
   // Over the cap the shortest-lived entries go first: they expire soonest anyway
@@ -126,7 +132,9 @@ async function pruneSearchCache(): Promise<void> {
   const excess = live.length - SEARCH_CACHE_ENTRIES;
   for (const { key } of live.slice(0, Math.max(0, excess))) {
     await storage.remove(key);
+    forget(key);
   }
+  persistExpirations();
 }
 
 /**
@@ -136,6 +144,55 @@ async function pruneSearchCache(): Promise<void> {
 function isCacheKey(key: string): boolean {
   if (key.startsWith(ANIME_SNAPSHOT_PREFIX)) return false;
   return Object.values(CACHE_PREFIXES).some((prefix) => key === prefix || key.startsWith(`${prefix}_`));
+}
+
+/**
+ * key → expiration, kept next to the entries. A sweep that had to parse every
+ * payload to read its date spent the boot budget on JSON, up to the 6MB cap.
+ */
+const CACHE_INDEX_KEY = "cache_index";
+const expirations = new Map<string, number>();
+let indexLoaded = false;
+// One write at a time: the index is rewritten whole, so two in flight race
+let indexWrite: Promise<void> = Promise.resolve();
+
+async function loadExpirations(): Promise<void> {
+  if (indexLoaded) return;
+  indexLoaded = true;
+  const stored = await storage.get<Record<string, number>>(CACHE_INDEX_KEY);
+  if (stored == null) return;
+  for (const [key, value] of Object.entries(stored)) {
+    // Values written by this session are newer than anything on disk
+    if (typeof value === "number" && !expirations.has(key)) expirations.set(key, value);
+  }
+}
+
+function persistExpirations(): void {
+  const snapshot = JSON.stringify(Object.fromEntries(expirations));
+  indexWrite = indexWrite.then(() => storage.setRaw(CACHE_INDEX_KEY, snapshot)).catch(() => {});
+}
+
+function remember(key: string, expiration: number): void {
+  loadExpirations().catch(() => {});
+  expirations.set(key, expiration);
+  persistExpirations();
+}
+
+function forget(key: string): void {
+  if (!expirations.delete(key)) return;
+  persistExpirations();
+}
+
+/** The known expiration, or the one the entry still carries from an older build. */
+async function expirationOf(key: string): Promise<number | null> {
+  await loadExpirations();
+  const known = expirations.get(key);
+  if (known != null) return known;
+  const entry = await storage.get<{ expiration?: unknown }>(key);
+  if (typeof entry?.expiration !== "number") return null;
+  // Learned values land on disk once the sweep ends, not per key
+  expirations.set(key, entry.expiration);
+  return entry.expiration;
 }
 
 // Shared resolved-stream cache used by resolveStreamCached
@@ -150,12 +207,17 @@ async function getCachedStream(server: { url: string; id: string }): Promise<Str
 }
 
 function setCachedStream(server: { url: string; id: string }, result: StreamUrlResult): Promise<void> {
-  return storage.set(streamCacheKey(server), { payload: result, expiration: Date.now() + CACHE_TTL.STREAM });
+  const key = streamCacheKey(server);
+  const expiration = Date.now() + CACHE_TTL.STREAM;
+  remember(key, expiration);
+  return storage.set(key, { payload: result, expiration });
 }
 
 /** A stream that failed at the video layer is dead: drop it so the next attempt resolves fresh */
 export function invalidateCachedStream(server: { url: string; id: string }): Promise<void> {
-  return storage.remove(streamCacheKey(server));
+  const key = streamCacheKey(server);
+  forget(key);
+  return storage.remove(key);
 }
 
 /**
