@@ -188,6 +188,11 @@ function keyOfItem(item: QueuedDownload): string {
   return downloadKey(item.input.slug, item.input.number, item.input.language ?? null);
 }
 
+function dequeue(key: string): void {
+  const index = queue.findIndex((item) => keyOfItem(item) === key);
+  if (index >= 0) queue.splice(index, 1);
+}
+
 function pump(): void {
   const { concurrency, entries } = useDownloadsStore.getState();
   const freeSlots = concurrency - activeWorkers;
@@ -256,8 +261,7 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
   cancel: (key) => {
     const entry = get().entries[key];
     controllers.get(key)?.abort();
-    const index = queue.findIndex((item) => downloadKey(item.input.slug, item.input.number, item.input.language ?? null) === key);
-    if (index >= 0) queue.splice(index, 1);
+    dequeue(key);
     const rest = withoutKey(get().entries, key);
     set({ entries: rest });
     persist(rest);
@@ -275,13 +279,20 @@ export const useDownloadsStore = create<DownloadsState>((set, get) => ({
   remove: async (key) => {
     const entry = get().entries[key];
     if (entry == null) return;
+    // A running worker deletes its folder once it stops writing (its own
+    // finally): deleting here as well let it drop new segments into a folder
+    // the index no longer knows about
+    const running = controllers.has(key);
     controllers.get(key)?.abort();
+    dequeue(key);
     const rest = withoutKey(get().entries, key);
     set({ entries: rest });
-    try {
-      deleteEpisodeDownload(entry.slug, entry.number, entry.language);
-    } catch (error) {
-      logger.warn("download", `Failed to delete files for ${key}`, error);
+    if (!running) {
+      try {
+        deleteEpisodeDownload(entry.slug, entry.number, entry.language);
+      } catch (error) {
+        logger.warn("download", `Failed to delete files for ${key}`, error);
+      }
     }
     // The files are gone: restoring the entry on a failed write would offer a
     // download that cannot play. Memory keeps the removal and the next
