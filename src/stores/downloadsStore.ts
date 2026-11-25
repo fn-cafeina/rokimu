@@ -8,7 +8,7 @@ import {
 } from "@/services/downloader";
 import { storage } from "@/utils/storage";
 import { logger } from "@/utils/logger";
-import { downloadKey, hydrateQueue, isWaiting, type DownloadStatus, type QueuedEntry } from "@/utils/downloadQueue";
+import { downloadKey, drainStartable, hydrateQueue, isWaiting, type DownloadStatus, type QueuedEntry } from "@/utils/downloadQueue";
 
 export { downloadKey };
 export type { DownloadStatus };
@@ -184,16 +184,18 @@ async function persistRemoval(entries: Record<string, DownloadEntry>): Promise<v
   }
 }
 
+function keyOfItem(item: QueuedDownload): string {
+  return downloadKey(item.input.slug, item.input.number, item.input.language ?? null);
+}
+
 function pump(): void {
   const { concurrency, entries } = useDownloadsStore.getState();
-  while (activeWorkers < concurrency && queue.length > 0) {
-    const nextItem = queue.shift();
-    if (nextItem == null) break;
-    const key = downloadKey(nextItem.input.slug, nextItem.input.number, nextItem.input.language ?? null);
-    // Removed, finished or mismatched while it waited: nothing to download
-    if (!isWaiting(entries, key)) continue;
-    void runDownload(nextItem.input, nextItem.resume);
-  }
+  const freeSlots = concurrency - activeWorkers;
+  if (freeSlots <= 0 || queue.length === 0) return;
+  const { start, rest } = drainStartable(queue, keyOfItem, (key) => isWaiting(entries, key), freeSlots);
+  queue.length = 0;
+  queue.push(...rest);
+  for (const item of start) void runDownload(item.input, item.resume);
 }
 
 export const useDownloadsStore = create<DownloadsState>((set, get) => ({

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   downloadKey,
+  drainStartable,
   hasDownloadFor,
   hydrateQueue,
   isWaiting,
@@ -76,5 +77,29 @@ const intact = hydrateQueue([entry({ status: "done" })], (e) => downloadKey(e.sl
 assert.deepEqual(intact.dropped, []);
 assert.deepEqual(intact.resume, []);
 assert.equal(intact.kept[downloadKey("one-piece", "1", "Latino")]?.status, "done");
+
+// A free worker starts only entries that still wait, in queue order, and drops
+// the ones that stopped waiting while they sat there
+const waiting = new Set(["a", "c"]);
+const stillWaits = (key: string) => waiting.has(key);
+assert.deepEqual(drainStartable(["a", "b", "c"], (k) => k, stillWaits, 1), {
+  start: ["a"],
+  rest: ["c"],
+});
+
+// No free slot starts nothing and never reorders
+assert.deepEqual(drainStartable(["a", "b", "c"], (k) => k, stillWaits, 0), {
+  start: [],
+  rest: ["a", "c"],
+});
+
+// Enough slots start every waiting entry
+assert.deepEqual(drainStartable(["a", "b", "c"], (k) => k, stillWaits, 5), {
+  start: ["a", "c"],
+  rest: [],
+});
+
+// An empty queue is not a start
+assert.deepEqual(drainStartable([], (k) => k, stillWaits, 3), { start: [], rest: [] });
 
 console.log("download queue ok");

@@ -88,3 +88,25 @@ export function hydrateQueue<T extends QueuedEntry>(
   }
   return { kept, dropped, resume: resumeTargets(Object.values(kept)) };
 }
+
+/**
+ * What a free worker may start now, in queue order. An item whose entry stopped
+ * waiting (removed, finished, mismatched) leaves the queue for good; everything
+ * past the free slots stays queued, in order.
+ */
+export function drainStartable<T>(
+  queue: T[],
+  keyOf: (item: T) => string,
+  isWaiting: (key: string) => boolean,
+  freeSlots: number,
+): { start: T[]; rest: T[] } {
+  const start: T[] = [];
+  const rest: T[] = [];
+  for (const item of queue) {
+    const key = keyOf(item);
+    if (!isWaiting(key)) continue;
+    if (start.length < freeSlots) start.push(item);
+    else rest.push(item);
+  }
+  return { start, rest };
+}
