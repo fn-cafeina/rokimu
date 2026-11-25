@@ -4,16 +4,15 @@ import { logger } from "@/utils/logger";
 import { SourceError } from "@/utils/errors";
 import { storage } from "@/utils/storage";
 import { mergeCookies } from "./cookies";
-import { washOutcome, isValidSessionCookies } from "./sessionRules";
+import { washOutcome, isValidSessionCookies, shouldSkipWash } from "./sessionRules";
 import { webViewBridge } from "./webview";
 
 const SESSION_KEY = "scraper_session";
 // Slow devices can take well over 15s to clear a Cloudflare challenge.
 // Matches the bootstrap poll window so both sides share one 40s timing.
 const SESSION_REFRESH_TIMEOUT = 40_000;
-// After a failed wash, retries skip washing briefly: stacked 40s waits would
-// hang the ladder while Cloudflare is down. The next fetch decides instead.
-const WASH_FAIL_FAST_WINDOW = 15_000;
+// After a failed wash, retries skip washing briefly (WASH_FAIL_FAST_WINDOW):
+// stacked 40s waits would hang the ladder while Cloudflare is down.
 // WebView often reports twice in one wash (partial then full cookies).
 // Opening on the first report fires requests with an incomplete jar and
 // guarantees a 403. Settle: consume only after 1.5s without new updates.
@@ -107,7 +106,7 @@ class SessionManager {
 
   private async executeRefresh(): Promise<void> {
     const startedAt = Date.now();
-    if (Date.now() - this.lastWashFailedAt < WASH_FAIL_FAST_WINDOW) {
+    if (shouldSkipWash(this.lastWashFailedAt, startedAt)) {
       throw new SourceError("Session wash failed recently - fetch decides", "AUTH_ERROR");
     }
     try {

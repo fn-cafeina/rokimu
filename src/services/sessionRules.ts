@@ -15,6 +15,16 @@ export function isValidSessionCookies(raw: string | undefined | null): boolean {
   return raw.includes(CLEARANCE_COOKIE);
 }
 
+/**
+ * A wash that just failed must not stack a second 40s wait: the requests behind
+ * it hang while Cloudflare is down. The next fetch decides instead.
+ */
+export const WASH_FAIL_FAST_WINDOW = 15_000;
+
+export function shouldSkipWash(lastFailedAt: number, now: number): boolean {
+  return lastFailedAt > 0 && now - lastFailedAt < WASH_FAIL_FAST_WINDOW;
+}
+
 export type WashOutcome =
   | { ok: true }
   | { ok: false; reason: "no-report" | "no-clearance" };
