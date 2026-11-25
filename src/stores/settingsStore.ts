@@ -42,6 +42,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setEpisodeOrder: async (slug, order) => {
     const previous = get().episodeOrderBySlug;
+    const previousOrder = get().episodeOrder;
     const bySlug = { ...previous, [slug]: order };
     set({ episodeOrderBySlug: bySlug, episodeOrder: order });
     // One write for both: the map is the memory, the single value is the default
@@ -51,7 +52,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           storage.set(EPISODE_ORDER_BY_SLUG_KEY, bySlug),
           storage.set(EPISODE_ORDER_KEY, order),
         ]).then(() => undefined),
-      () => set({ episodeOrderBySlug: previous }),
+      () => set({ episodeOrderBySlug: previous, episodeOrder: previousOrder }),
       "settings",
     );
   },
