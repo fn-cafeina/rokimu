@@ -28,8 +28,9 @@ function labelFor(status: DownloadStatus | undefined, title: string): string {
  * tick repaints this button and not the episode list around it.
  */
 export function EpisodeDownloadButton({ slug, number, onRequestDownload }: EpisodeDownloadButtonProps) {
-  const entries = useDownloadsStore((s) => s.entries);
-  const entry = activeEntryForEpisode(entries, slug, number);
+  // The entry object itself, not the whole map: a progress tick for another
+  // episode leaves this reference unchanged and costs no re-render
+  const entry = useDownloadsStore((s) => activeEntryForEpisode(s.entries, slug, number));
   const cancel = useDownloadsStore((s) => s.cancel);
 
   const status = entry?.status;
