@@ -1,19 +1,9 @@
 import Constants from "expo-constants";
-import NetInfo from "@react-native-community/netinfo";
 import { create } from "zustand";
 import { storage } from "@/utils/storage";
 import { persistWithRollback } from "@/utils/persist";
 import { logger } from "@/utils/logger";
-import { SourceError } from "@/utils/errors";
-import {
-  EMPTY_CHECK,
-  dataFromStored,
-  isNewer,
-  parseStoredCheck,
-  shouldCheck,
-  type StoredCheck,
-  type UpdateCheckData,
-} from "@/utils/updateCheck";
+import type { UpdateCheckData } from "@/utils/updateCheck";
 import {
   ResourceRunner,
   resourceInitialState,
@@ -26,12 +16,12 @@ import {
   openInstallPermissionSettings,
   type DownloadProgress,
 } from "@/services/updater";
-import { fetchLatestRelease } from "@/services/release";
+import { createReleaseCheck, RELEASE_CHECK_KEY } from "@/services/releaseCheck";
 
 export const UPDATE_CHECK_KEY = "update_check_enabled";
 const INSTALL_PERMISSION_KEY = "install_permission_granted";
-/** Survives launches: the throttle and the ETag only pay off if they persist. */
-const UPDATE_STATE_KEY = "update_check_state";
+
+export const UPDATE_CHECK_RESOURCE_KEY = RELEASE_CHECK_KEY;
 
 type UpdatePhase =
   | "idle"
@@ -63,28 +53,6 @@ interface UpdateState {
 }
 
 let downloadAbort: AbortController | null = null;
-let checkPromise: Promise<boolean> | null = null;
-let storedCheck: StoredCheck | null = null;
-
-const CHECK_KEY = "check";
-export const UPDATE_CHECK_RESOURCE_KEY = CHECK_KEY;
-
-async function loadStoredCheck(): Promise<StoredCheck> {
-  if (storedCheck != null) return storedCheck;
-  const raw = await storage.get<unknown>(UPDATE_STATE_KEY);
-  storedCheck = parseStoredCheck(raw) ?? { ...EMPTY_CHECK };
-  return storedCheck;
-}
-
-async function persistCheck(next: StoredCheck): Promise<void> {
-  storedCheck = next;
-  try {
-    await storage.set(UPDATE_STATE_KEY, next);
-  } catch (error) {
-    // Losing the anchor only costs one extra request on the next launch
-    logger.warn("update", "Failed to persist the update check", error);
-  }
-}
 
 export const useUpdateStore = create<UpdateState>((set, get) => {
   const checkRunner = new ResourceRunner<UpdateCheckData>({
@@ -93,75 +61,15 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
     set: (check) => set({ check }),
   });
 
-  /** Shows a stored release without waiting for the network. */
-  function seedCheck(current: string, data: UpdateCheckData | null): void {
-    if (data == null) return;
-    // A request in flight owns the state and settles it itself
-    if (get().check.status === "loading") return;
-    set({
-      currentVersion: current,
-      check: { status: "success", key: CHECK_KEY, dataKey: CHECK_KEY, data, error: null, requestId: 0 },
-    });
-  }
-
-  async function runCheck(force: boolean): Promise<boolean> {
-    const current = Constants.expoConfig?.version;
-    if (!current) {
-      checkRunner.fail(CHECK_KEY, new SourceError("Error al obtener versión", "UNKNOWN"));
-      return false;
-    }
-    if (!force && get().updateCheckEnabled === false) return true;
-
-    const previous = await loadStoredCheck();
-    const known = dataFromStored(previous, current);
-    if (!force && !shouldCheck(previous.checkedAt, Date.now())) {
-      seedCheck(current, known);
-      return true;
-    }
-
-    // Non-forced checks skip silently when offline; a forced one surfaces it
-    try {
-      const net = await NetInfo.fetch();
-      if (net.isConnected === false || net.isInternetReachable === false) {
-        if (!force) {
-          seedCheck(current, known);
-          return true;
-        }
-        checkRunner.fail(CHECK_KEY, new SourceError("Sin conexión", "NETWORK_ERROR"));
-        return false;
-      }
-    } catch {
-    }
-
-    const outcome = await checkRunner.load(CHECK_KEY, async (signal) => {
-      const release = await fetchLatestRelease({ etag: previous.etag, signal });
-      if (release.notModified) {
-        await persistCheck({ ...previous, checkedAt: Date.now() });
-        return known ?? { updateAvailable: null, apkUrl: null };
-      }
-
-      const isPrerelease = (release.tag ?? "").includes("-");
-      const result = {
-        updateAvailable:
-          release.tag != null && !isPrerelease && isNewer(release.tag, current) ? release.tag : null,
-        apkUrl: release.apkUrl,
-      };
-      // Stored even when it is not an update: the anchor and the ETag are what
-      // keep the next launch from spending a request. A release-less answer
-      // parks nulls, which is the empty anchor the next check starts from.
-      await persistCheck({
-        checkedAt: Date.now(),
-        etag: release.etag,
-        tag: release.tag,
-        apkUrl: release.apkUrl,
-      });
-      return result;
-    });
-
-    if (outcome.status !== "success") return false;
-    set({ currentVersion: current });
-    return true;
-  }
+  // The check lives in its own module: this store owns the download and install
+  // machine, which is the part with phases, permissions and watchdogs
+  const releaseCheck = createReleaseCheck({
+    runner: checkRunner,
+    getCheck: () => get().check,
+    setCheck: (check) => set({ check }),
+    setCurrentVersion: (currentVersion) => set({ currentVersion }),
+    isEnabled: () => get().updateCheckEnabled !== false,
+  });
 
   return {
   updateCheckEnabled: true,
@@ -181,10 +89,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
       .get<boolean>(INSTALL_PERMISSION_KEY)
       .then((granted) => set({ installPermissionGranted: granted === true }))
       .catch(() => {});
-    // The release kept from the last check is on screen before the request runs
-    if (currentVersion != null) {
-      void loadStoredCheck().then((previous) => seedCheck(currentVersion, dataFromStored(previous, currentVersion)));
-    }
+    releaseCheck.initialize();
   },
 
   setUpdateCheckEnabled: async (enabled) => {
@@ -197,20 +102,7 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
     );
   },
 
-  checkForUpdates: async (force = false) => {
-    // A manual tap must not settle with the throttled answer of the background
-    // check already in flight: it waits for that one, then runs its own
-    if (checkPromise) {
-      if (!force) return checkPromise;
-      await checkPromise;
-    }
-    checkPromise = runCheck(force);
-    try {
-      return await checkPromise;
-    } finally {
-      checkPromise = null;
-    }
-  },
+  checkForUpdates: releaseCheck.checkForUpdates,
   startUpdate: () => {
     const data = get().check.data;
     if (data?.updateAvailable == null) return;
