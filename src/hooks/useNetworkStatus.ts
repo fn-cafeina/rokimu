@@ -2,27 +2,16 @@ import NetInfo, { type NetInfoState } from "@react-native-community/netinfo";
 import { useCallback, useEffect, useState } from "react";
 import { logger } from "@/utils/logger";
 
-type ConnectionType = "wifi" | "cellular" | "none" | "unknown" | null;
-
 interface NetworkStatus {
-  isConnected: boolean | null;
+  /** null until the platform answers for the first time */
   isInternetReachable: boolean | null;
-  connectionType: ConnectionType;
-}
-
-function toConnectionType(type: string): ConnectionType {
-  return type === "wifi" || type === "cellular" ? (type as ConnectionType) : "unknown";
 }
 
 export function useNetworkStatus(): NetworkStatus {
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isInternetReachable, setIsInternetReachable] = useState<boolean | null>(null);
-  const [connectionType, setConnectionType] = useState<ConnectionType>(null);
 
   const applyNetworkState = useCallback((state: NetInfoState) => {
-    setIsConnected(state.isConnected ?? false);
     setIsInternetReachable(state.isInternetReachable ?? false);
-    setConnectionType(toConnectionType(state.type));
   }, []);
 
   useEffect(() => {
@@ -31,11 +20,10 @@ export function useNetworkStatus(): NetworkStatus {
       .then(applyNetworkState)
       .catch((error) => {
         logger.error("network", "Failed to fetch network status", error);
-        setIsConnected(false);
         setIsInternetReachable(false);
       });
     return () => unsubscribe();
   }, [applyNetworkState]);
 
-  return { isConnected, isInternetReachable, connectionType };
+  return { isInternetReachable };
 }
