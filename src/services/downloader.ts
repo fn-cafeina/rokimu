@@ -338,9 +338,9 @@ export async function downloadEpisode(
   // key, the folder and the delete path pointing at different places.
   const language = target.language ?? null;
   const dir = episodeDirectory(target.slug, target.number, language);
-  // A folder without the marker holds segments from the older format, where the
-  // downloader wrote them decrypted: mixing those with encrypted ones and a key
-  // line would hand the player garbage
+  // A folder is reused only when the same server wrote it: another source
+  // segments the episode differently, and folders from older versions hold
+  // segments the downloader used to write decrypted
   const marker = new File(dir, FORMAT_MARKER);
   const markerValue = marker.exists ? await marker.text() : null;
   if (!canResumeFolder(options.resume === true, markerValue, markerFor(server))) {
