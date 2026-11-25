@@ -60,13 +60,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
   // Bridge URLs expire with the session: a dead chain means the cached list is
   // as stale as the URL it carries
-  const refreshServers = async (ctx: { slug: string; number: string }, signal: AbortSignal): Promise<VideoServer[]> => {
+  const loadServers = (
+    ctx: { slug: string; number: string },
+    signal: AbortSignal,
+    force: boolean,
+  ): Promise<VideoServer[]> => {
     const cacheKey = `${CACHE_PREFIXES.SERVERS}_${ctx.slug}_${ctx.number}`;
     lastServersKey = cacheKey;
     return loadCached(
       cacheKey,
       (sig) => source.getEpisodeServers(ctx.slug, ctx.number, { signal: sig }),
-      { ttl: CACHE_TTL.SERVERS, signal, force: true },
+      { ttl: CACHE_TTL.SERVERS, signal, force },
     );
   };
 
@@ -92,7 +96,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       if (isAuthError(error) || isCancelled(error)) throw error;
       logger.warn("stream", `Chain dead on ${chosen.title} (${chosen.language}): ${toAppError(error).type}`);
       dropPlaybackArtifacts();
-      const same = findServer(await refreshServers(ctx, signal), chosen);
+      const same = findServer(await loadServers(ctx, signal, true), chosen);
       if (same == null) throw error;
       lastStreamServer = same;
       const retried = await resolveStreamCached(same, { force: true, signal });
@@ -109,16 +113,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     fetchServers: async (slug: string, number: string, force = false) => {
       const key = `${slug}_${number}`;
-      const cacheKey = `${CACHE_PREFIXES.SERVERS}_${key}`;
-      lastServersKey = cacheKey;
       return serversRunner.load(key, (signal) =>
         withAuthRetry(
-          (attempt) =>
-            loadCached(cacheKey, (sig) => source.getEpisodeServers(slug, number, { signal: sig }), {
-              ttl: CACHE_TTL.SERVERS,
-              signal,
-              force: attempt > 0 ? true : force,
-            }),
+          (attempt) => loadServers({ slug, number }, signal, attempt > 0 || force),
           { signal, maxRetries: 2, tag: "servers" },
         ),
       );
