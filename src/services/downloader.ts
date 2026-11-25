@@ -51,14 +51,27 @@ interface EpisodeDownloadResult {
   segmentsTotal: number;
 }
 
+/**
+ * Every name that lands on disk goes through this: the slug and the number come
+ * from the page, and a path separator in either one escapes the downloads folder.
+ */
+function safeName(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+}
+
 /** One folder per language: an episode can keep Latino and Subtitulado at once. */
 function languageDir(language: string | null): string {
-  const normalized = (language ?? "").normalize("NFD").replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
-  return normalized === "" || normalized === "-" ? "default" : normalized;
+  return safeName(language ?? "") || "default";
 }
 
 function episodeDirectory(slug: string, number: string, language: string | null): Directory {
-  return new Directory(Paths.document, DOWNLOADS_DIR, slug, `ep-${number}-${languageDir(language)}`);
+  const anime = safeName(slug) || "anime";
+  const episode = safeName(number) || "unknown";
+  return new Directory(Paths.document, DOWNLOADS_DIR, anime, `ep-${episode}-${languageDir(language)}`);
 }
 
 function episodePlaylist(slug: string, number: string, language: string | null): File {
