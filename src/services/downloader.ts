@@ -8,6 +8,7 @@ import { logger } from "@/utils/logger";
 import { orderServers, segmentConcurrencyFor } from "@/utils/serverOrder";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { source } from "./source";
+import { canResumeFolder, markerFor } from "./downloadResume";
 import {
   buildLocalPlaylist,
   parseMediaPlaylist,
@@ -17,7 +18,7 @@ import {
   type HlsSegment,
 } from "./hls";
 
-// Every segment is decrypted in pure JS (AES-128 CBC) and crosses the bridge
+// Segment bytes land on disk as the CDN served them, still encrypted
 // One segment is retried on 429/5xx before the worker gives up
 const DOWNLOAD_ATTEMPTS = 3;
 // A transfer that stops moving is aborted: a dead socket otherwise holds one
@@ -29,7 +30,6 @@ const PLAYLIST_FILE = "index.m3u8";
 // Marks a folder as written in the current format: segments stay encrypted and
 // the local playlist carries their key. Older folders were decrypted in place.
 const FORMAT_MARKER = "format";
-const FORMAT_VERSION = "aes-key-v1";
 
 export interface EpisodeTarget {
   slug: string;
@@ -342,11 +342,12 @@ export async function downloadEpisode(
   // downloader wrote them decrypted: mixing those with encrypted ones and a key
   // line would hand the player garbage
   const marker = new File(dir, FORMAT_MARKER);
-  if (options.resume !== true || (dir.exists && !marker.exists)) {
+  const markerValue = marker.exists ? await marker.text() : null;
+  if (!canResumeFolder(options.resume === true, markerValue, markerFor(server))) {
     deleteEpisodeDownload(target.slug, target.number, language);
   }
   dir.create({ intermediates: true, idempotent: true });
-  await marker.write(FORMAT_VERSION);
+  await marker.write(markerFor(server));
 
   const init = playlist.initSegment != null
     ? await downloadInit(playlist.initSegment, dir, stream.headers, signal)
