@@ -19,7 +19,7 @@ Expo 58 + React Native 0.88. **Android-only** (no iOS/web). File-based routing v
 
 - **Package manager:** bun. Use `bun add`, `bunx expo install`, `bun install --frozen-lockfile` in CI. Never npm.
 - **State:** Zustand stores in `src/stores/` (catalog, details, search, saved, history, downloads, player, settings, update). Use individual selectors (`useStore(s => s.field)`) — never full store subscription.
-- **Transport:** source requests go through the hidden WebView worker (`src/services/webview.ts` + `src/components/app/WebViewWorker.tsx`), so the page's cookie jar (HttpOnly included) and Cloudflare clearance do the work. `fetchWithSession` in `src/services/source.ts` is the native path for the same origin. A foreign video host's rejection never triggers a session wash.
+- **Transport:** requests go out through `fetchWithSession` in `src/services/source.ts` with the stored cookie jar. The hidden WebView worker (`src/services/webview.ts` + `src/components/app/WebViewWorker.tsx`) does one thing: navigate to the site to clear Cloudflare's challenge and report the fresh cookies. A foreign video host's rejection never triggers a session wash.
 - **Streams:** `src/services/extractors.ts` resolves Delta through its Byse AES-GCM API and Epsilon through a LuluStream embed. `src/utils/serverOrder.ts` reorders the ladder by the user's preferred server; playback plays the chosen server or fails, it never substitutes another.
 - **Downloads:** segments are fetched 5 at a time, 4 for Epsilon: expo-file-system downloads through OkHttp's `Dispatcher` (default `maxRequestsPerHost = 5`), so a bigger pool only queues, and Epsilon's CDN answers 429 above four. `segmentConcurrencyFor` in `src/utils/serverOrder.ts` owns that number. Segments stay encrypted; the player decrypts them.
 - **Browse:** `/directorio` takes `genre`, `type`, `status`, `year` and `page` in the same request and answers with 28 cards plus a `Página X/Y` footer and a `rel="next"` link only when another page exists. The taxonomy paths (`/genero/<slug>`, `/anio/<year>`) ignore any extra param, so filtering never uses them. The search API (`/api/anime/search?q=`) takes only `q` and ignores `page`, so text and filters never combine.
@@ -34,9 +34,9 @@ Expo 58 + React Native 0.88. **Android-only** (no iOS/web). File-based routing v
 | `src/config/source.ts` | Base URL, endpoints |
 | `src/config/browse.ts` | Browse query, type/status/year/genre lists |
 | `src/config/cache.ts` | Cache prefixes & TTLs |
-| `src/services/webview.ts` | WebView worker transport (page-context fetches) |
+| `src/services/webview.ts` | WebView worker bridge: wash navigation, reload, cookie reports |
 | `src/services/session.ts` | Session management (Cloudflare) |
-| `src/services/source.ts` | HTTP fetcher with session, native and WebView paths |
+| `src/services/source.ts` | HTTP fetcher with session, retries and the challenge ladder |
 | `src/services/parsers.ts` | HTML / RSC parser |
 | `src/services/extractors.ts` | Byse AES-GCM decrypt (Delta), LuluStream embed (Epsilon) |
 | `src/services/hls.ts` | HLS playlist parsing and local playlist build |
