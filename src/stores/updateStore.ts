@@ -1,13 +1,19 @@
 import Constants from "expo-constants";
 import NetInfo from "@react-native-community/netinfo";
 import { create } from "zustand";
-import { TIMEOUTS } from "@/config/cache";
 import { storage } from "@/utils/storage";
 import { persistWithRollback } from "@/utils/persist";
 import { logger } from "@/utils/logger";
-import { SourceError, isCancelled } from "@/utils/errors";
-import { withTimeout } from "@/utils/withTimeout";
-import { EMPTY_CHECK, parseStoredCheck, shouldCheck, type StoredCheck } from "@/utils/updateCheck";
+import { SourceError } from "@/utils/errors";
+import {
+  EMPTY_CHECK,
+  dataFromStored,
+  isNewer,
+  parseStoredCheck,
+  shouldCheck,
+  type StoredCheck,
+  type UpdateCheckData,
+} from "@/utils/updateCheck";
 import {
   ResourceRunner,
   resourceInitialState,
@@ -20,29 +26,12 @@ import {
   openInstallPermissionSettings,
   type DownloadProgress,
 } from "@/services/updater";
+import { fetchLatestRelease } from "@/services/release";
 
 export const UPDATE_CHECK_KEY = "update_check_enabled";
 const INSTALL_PERMISSION_KEY = "install_permission_granted";
-const GITHUB_RELEASES_URL =
-  "https://api.github.com/repos/fn-cafeina/rokimu/releases/latest";
 /** Survives launches: the throttle and the ETag only pay off if they persist. */
 const UPDATE_STATE_KEY = "update_check_state";
-
-function parseVersion(v: string): number[] {
-  return v.split(".").map((n) => parseInt(n, 10) || 0);
-}
-
-function isNewer(latest: string, current: string): boolean {
-  const l = parseVersion(latest);
-  const c = parseVersion(current);
-  for (let i = 0; i < Math.max(l.length, c.length); i++) {
-    const a = l[i] ?? 0;
-    const b = c[i] ?? 0;
-    if (a > b) return true;
-    if (a < b) return false;
-  }
-  return false;
-}
 
 type UpdatePhase =
   | "idle"
@@ -52,11 +41,6 @@ type UpdatePhase =
   | "installing"
   | "error"
   | "ready";
-
-interface UpdateCheckData {
-  updateAvailable: string | null;
-  apkUrl: string | null;
-}
 
 interface UpdateState {
   updateCheckEnabled: boolean;
@@ -84,14 +68,6 @@ let storedCheck: StoredCheck | null = null;
 
 const CHECK_KEY = "check";
 export const UPDATE_CHECK_RESOURCE_KEY = CHECK_KEY;
-
-/** Release held from the last answer, when it beats the installed version. */
-function dataFromStored(value: StoredCheck, current: string): UpdateCheckData | null {
-  if (value.tag == null || value.apkUrl == null) return null;
-  // Prereleases and downgrades never reach the user
-  if (value.tag.includes("-") || !isNewer(value.tag, current)) return null;
-  return { updateAvailable: value.tag, apkUrl: value.apkUrl };
-}
 
 async function loadStoredCheck(): Promise<StoredCheck> {
   if (storedCheck != null) return storedCheck;
@@ -158,62 +134,26 @@ export const useUpdateStore = create<UpdateState>((set, get) => {
     }
 
     const outcome = await checkRunner.load(CHECK_KEY, async (signal) => {
-      const headers: Record<string, string> = {
-        Accept: "application/vnd.github+json",
-        "User-Agent": "Rokimu-Android",
-      };
-      // An unchanged release answers 304, which costs no rate limit
-      if (previous.etag != null) headers["If-None-Match"] = previous.etag;
-
-      let res: Response;
-      // One helper owns the deadline: a stall here is a timeout the check can
-      // report, not a cancellation that leaves the row stuck on "Buscando..."
-      try {
-        res = await withTimeout(
-          signal,
-          TIMEOUTS.UPDATE_CHECK,
-          (requestSignal) => fetch(GITHUB_RELEASES_URL, { headers, signal: requestSignal }),
-          "Se agotó el tiempo de búsqueda",
-        );
-      } catch (err) {
-        if (err instanceof SourceError || isCancelled(err)) throw err;
-        throw new SourceError("Error al buscar actualizaciones", "NETWORK_ERROR");
-      }
-
-      if (res.status === 304) {
+      const release = await fetchLatestRelease({ etag: previous.etag, signal });
+      if (release.notModified) {
         await persistCheck({ ...previous, checkedAt: Date.now() });
         return known ?? { updateAvailable: null, apkUrl: null };
       }
-      if (res.status === 404) {
-        await persistCheck({ ...EMPTY_CHECK, checkedAt: Date.now() });
-        return { updateAvailable: null, apkUrl: null };
-      }
-      if (!res.ok) throw new SourceError("Error al buscar actualizaciones", "NETWORK_ERROR");
 
-      const data = (await res.json()) as {
-        tag_name?: string;
-        assets?: { name: string; browser_download_url: string; size?: number }[];
-      };
-      const latest = (data.tag_name ?? "").replace(/^v/, "").trim();
-      if (!latest) throw new SourceError("Error al buscar actualizaciones", "UNKNOWN");
-      const isPrerelease = latest.includes("-");
-      const apkAsset = data.assets?.find(
-        (a) =>
-          a.name.toLowerCase().startsWith("rokimu-") &&
-          a.name.toLowerCase().endsWith(".apk") &&
-          (a.size == null || a.size > 5 * 1024 * 1024),
-      );
+      const isPrerelease = (release.tag ?? "").includes("-");
       const result = {
-        updateAvailable: !isPrerelease && isNewer(latest, current) ? latest : null,
-        apkUrl: apkAsset?.browser_download_url ?? null,
+        updateAvailable:
+          release.tag != null && !isPrerelease && isNewer(release.tag, current) ? release.tag : null,
+        apkUrl: release.apkUrl,
       };
       // Stored even when it is not an update: the anchor and the ETag are what
-      // keep the next launch from spending a request
+      // keep the next launch from spending a request. A release-less answer
+      // parks nulls, which is the empty anchor the next check starts from.
       await persistCheck({
         checkedAt: Date.now(),
-        etag: res.headers.get("etag"),
-        tag: latest,
-        apkUrl: result.apkUrl,
+        etag: release.etag,
+        tag: release.tag,
+        apkUrl: release.apkUrl,
       });
       return result;
     });

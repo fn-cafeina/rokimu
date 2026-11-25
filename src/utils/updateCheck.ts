@@ -41,3 +41,32 @@ export function parseStoredCheck(raw: unknown): StoredCheck | null {
 export function shouldCheck(checkedAt: number, now: number): boolean {
   return checkedAt <= 0 || now - checkedAt >= CHECK_INTERVAL_MS;
 }
+
+export interface UpdateCheckData {
+  updateAvailable: string | null;
+  apkUrl: string | null;
+}
+
+function parseVersion(v: string): number[] {
+  return v.split(".").map((n) => parseInt(n, 10) || 0);
+}
+
+export function isNewer(latest: string, current: string): boolean {
+  const l = parseVersion(latest);
+  const c = parseVersion(current);
+  for (let i = 0; i < Math.max(l.length, c.length); i++) {
+    const a = l[i] ?? 0;
+    const b = c[i] ?? 0;
+    if (a > b) return true;
+    if (a < b) return false;
+  }
+  return false;
+}
+
+/** Release held from the last answer, when it beats the installed version. */
+export function dataFromStored(value: StoredCheck, current: string): UpdateCheckData | null {
+  if (value.tag == null || value.apkUrl == null) return null;
+  // Prereleases and downgrades never reach the user
+  if (value.tag.includes("-") || !isNewer(value.tag, current)) return null;
+  return { updateAvailable: value.tag, apkUrl: value.apkUrl };
+}
