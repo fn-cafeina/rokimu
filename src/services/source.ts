@@ -3,6 +3,7 @@ import { SOURCE_CONFIG, LANGUAGE_MAP } from "@/config/source";
 import { logger } from "@/utils/logger";
 import { SourceError } from "@/utils/errors";
 import { backoffDelay } from "@/utils/retry";
+import { failurePlan, timeoutPlan } from "./fetchRules";
 import { sessionManager } from "./session";
 import { HtmlParser, cleanTitle, extractJson, isChallengeHtml, parsePagination, type Pagination } from "./parsers";
 import { buildHeaders, isSourceUrl } from "./requestHeaders";
@@ -80,31 +81,25 @@ async function fetchWithSession(path: string, options: RequestInit = {}): Promis
 
       if (!res.ok) {
         logger.info("fetch", `HTTP ${res.status} for ${url}`);
+        const plan = failurePlan({
+          status: res.status,
+          isSourceOrigin,
+          challengeBody: isChallengeHtml(body),
+          hasMoreAttempts,
+        });
 
-        if (res.status === 403 || res.status === 401) {
-          if (isSourceOrigin) {
-            logger.info("fetch", `Auth error ${res.status} detected, entering ladder`);
-            throw new SourceError("Authentication failed - session invalid", "AUTH_ERROR");
-          }
+        if (plan === "wash") {
+          logger.info("fetch", `Auth error ${res.status} on the source origin, entering ladder`);
+          throw new SourceError("Authentication failed - session invalid", "AUTH_ERROR");
+        }
+        if (plan === "rejected") {
           logger.info("fetch", `Foreign host rejected with ${res.status}: ${url}`);
           throw new SourceError(`HTTP Error: ${res.status}`, "VIDEO_ERROR");
         }
-
-        // Retry only transient statuses (5xx, 429); 4xx errors are final
-        const retryable = res.status >= 500 || res.status === 429;
-        if (retryable && hasMoreAttempts) {
+        if (plan === "retry") {
           logger.info("fetch", `Retrying (${attempt + 1}/${TIMEOUTS.MAX_ATTEMPTS}) for HTTP ${res.status}: ${url}`);
           await new Promise((resolve) => setTimeout(resolve, backoffDelay(attempt)));
           continue;
-        }
-
-        // Cloudflare challenges from the source origin arrive as non-ok HTML
-        // pages; route them into the session refresh ladder instead of
-        // reporting a network error. Foreign hosts run their own challenges
-        // that our wash cannot clear, so they are not session failures.
-        if (isSourceOrigin && isChallengeHtml(body)) {
-          logger.info("fetch", `Challenge body on HTTP ${res.status}, entering ladder`);
-          throw new SourceError("Challenge page — session invalid", "AUTH_ERROR");
         }
       }
       logger.debug("fetch", `OK ${res.status} for ${url}`);
@@ -116,7 +111,7 @@ async function fetchWithSession(path: string, options: RequestInit = {}): Promis
       if (error instanceof Error && error.name === "AbortError") {
         if (timedOut && !options.signal?.aborted) {
           logger.warn("fetch", `Timeout (${TIMEOUTS.REQUEST_TIMEOUT / 1000}s, attempt ${attempt + 1}/${TIMEOUTS.MAX_ATTEMPTS}) for ${url}`);
-          if (attempt + 1 < TIMEOUTS.TIMEOUT_ATTEMPTS) {
+          if (timeoutPlan(attempt, TIMEOUTS.TIMEOUT_ATTEMPTS) === "retry") {
             logger.info("fetch", `Retrying (${attempt + 1}/${TIMEOUTS.MAX_ATTEMPTS}) after timeout: ${url}`);
             await new Promise((resolve) => setTimeout(resolve, backoffDelay(attempt)));
             continue;
