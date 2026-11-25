@@ -22,7 +22,6 @@ export interface HlsSegment {
   /** Media sequence number, the default IV source when the key has none. */
   sequence: number;
   key: HlsKey | null;
-  map: HlsInitSegment | null;
   range: ByteRange | null;
 }
 
@@ -129,6 +128,7 @@ export function parseMediaPlaylist(body: string, baseUrl: string): HlsMediaPlayl
   let mediaSequence = 0;
   let currentKey: HlsKey | null = null;
   let currentMap: HlsInitSegment | null = null;
+  let initUri: string | null = null;
   let currentDuration: number | null = null;
   let currentRange: ByteRange | null = null;
   let mapRangeEnd = 0;
@@ -150,7 +150,15 @@ export function parseMediaPlaylist(body: string, baseUrl: string): HlsMediaPlayl
       continue;
     }
     if (line.startsWith("#EXT-X-MAP:")) {
-      currentMap = parseMap(line.slice("#EXT-X-MAP:".length), baseUrl);
+      const map = parseMap(line.slice("#EXT-X-MAP:".length), baseUrl);
+      // One local playlist can carry one init segment. A second one starts a
+      // decode chain the downloader cannot describe, and pointing every segment
+      // at the last init plays garbage instead of failing.
+      if (initUri != null && initUri !== map.uri) {
+        throw new SourceError("Playlist con más de un segmento init", "VIDEO_ERROR");
+      }
+      initUri = map.uri;
+      currentMap = map;
       continue;
     }
     if (line.startsWith("#EXT-X-BYTERANGE:")) {
@@ -176,7 +184,6 @@ export function parseMediaPlaylist(body: string, baseUrl: string): HlsMediaPlayl
       duration: currentDuration,
       sequence,
       key: currentKey,
-      map: currentMap,
       range,
     });
     currentDuration = null;

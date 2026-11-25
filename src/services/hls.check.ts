@@ -98,9 +98,40 @@ seg.m4s
   const playlist = parseMediaPlaylist(body, BASE);
   assert.equal(playlist.initSegment!.uri, "https://cdn.example.com/hls/ep1/init.mp4");
   assert.deepEqual(playlist.initSegment!.range, { length: 700, offset: 0 });
-  // The first segment without an offset continues after the init byterange
+  // The first segment without an offset continues after the previous segment,
+  // never after the init byterange
   assert.deepEqual(playlist.segments[0]!.range, { length: 900, offset: 0 });
-  assert.equal(playlist.segments[0]!.map!.uri, "https://cdn.example.com/hls/ep1/init.mp4");
+}
+
+// A second init segment starts a decode chain the local playlist cannot express:
+// downloading only the last one would play garbage past the switch
+{
+  const body = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-MAP:URI="init-a.mp4"
+#EXTINF:6,
+a1.m4s
+#EXT-X-MAP:URI="init-b.mp4"
+#EXTINF:6,
+b1.m4s
+`;
+  assert.throws(() => parseMediaPlaylist(body, BASE), /más de un segmento init/);
+}
+
+// The same init repeated is one init, not a switch
+{
+  const body = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:6,
+a.m4s
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:6,
+b.m4s
+`;
+  const playlist = parseMediaPlaylist(body, BASE);
+  assert.equal(playlist.segments.length, 2);
+  assert.equal(playlist.initSegment!.uri, "https://cdn.example.com/hls/ep1/init.mp4");
 }
 
 // SAMPLE-AES and friends cannot be downloaded, and must say so
