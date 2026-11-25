@@ -68,6 +68,15 @@ class Storage {
       return [];
     }
   }
+
+  /** Boot sweep: drops every key under `prefix` whose suffix `keep` rejects. */
+  async prunePrefix(prefix: string, keep: (suffix: string) => boolean): Promise<void> {
+    const stale = (await this.getAllKeys())
+      .filter((key) => key.startsWith(prefix))
+      .map((key) => key.slice(prefix.length))
+      .filter((suffix) => !keep(suffix));
+    await Promise.all(stale.map((suffix) => this.remove(`${prefix}${suffix}`)));
+  }
 }
 
 export const storage = new Storage();

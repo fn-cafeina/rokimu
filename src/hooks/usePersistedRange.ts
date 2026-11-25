@@ -8,13 +8,8 @@ const RANGE_KEY_PREFIX = "range_";
 const rangeKey = (slug: string) => `${RANGE_KEY_PREFIX}${slug}`;
 
 /** Boot sweep: a range for an anime nobody keeps only counts against the cap. */
-export async function prunePersistedRanges(keep: (slug: string) => boolean): Promise<void> {
-  const keys = await storage.getAllKeys();
-  const stale = keys
-    .filter((key) => key.startsWith(RANGE_KEY_PREFIX))
-    .map((key) => key.slice(RANGE_KEY_PREFIX.length))
-    .filter((slug) => !keep(slug));
-  await Promise.all(stale.map((slug) => storage.remove(rangeKey(slug))));
+export function prunePersistedRanges(keep: (slug: string) => boolean): Promise<void> {
+  return storage.prunePrefix(RANGE_KEY_PREFIX, keep);
 }
 
 export function usePersistedRange(slug: string | undefined) {

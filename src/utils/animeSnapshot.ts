@@ -38,11 +38,6 @@ export function forgetAnimeSnapshot(slug: string): Promise<void> {
 }
 
 /** Boot sweep: a copy nobody can reach only counts against the storage cap. */
-export async function pruneAnimeSnapshots(keep: (slug: string) => boolean): Promise<void> {
-  const keys = await storage.getAllKeys();
-  const stale = keys
-    .filter((key) => key.startsWith(ANIME_SNAPSHOT_PREFIX))
-    .map((key) => key.slice(ANIME_SNAPSHOT_PREFIX.length))
-    .filter((slug) => !keep(slug));
-  await Promise.all(stale.map(forgetAnimeSnapshot));
+export function pruneAnimeSnapshots(keep: (slug: string) => boolean): Promise<void> {
+  return storage.prunePrefix(ANIME_SNAPSHOT_PREFIX, keep);
 }
