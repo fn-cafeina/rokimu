@@ -1,4 +1,3 @@
-import { cbc } from "@noble/ciphers/aes.js";
 import { SourceError } from "@/utils/errors";
 
 interface ByteRange {
@@ -201,15 +200,6 @@ export function sequenceIv(sequence: number): Uint8Array {
     remaining = Math.floor(remaining / 256);
   }
   return iv;
-}
-
-/** Decrypts an AES-128 segment. PKCS#7 padding is stripped by the cipher. */
-export function decryptSegment(payload: Uint8Array, key: Uint8Array, iv: Uint8Array): Uint8Array {
-  try {
-    return cbc(key, iv).decrypt(payload);
-  } catch (error) {
-    throw new SourceError(`No se pudo descifrar el segmento: ${(error as Error).message}`, "VIDEO_ERROR");
-  }
 }
 
 interface LocalPlaylistSegment {

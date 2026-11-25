@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
-import { cbc } from "@noble/ciphers/aes.js";
 import {
   buildLocalPlaylist,
-  decryptSegment,
   parseMediaPlaylist,
   sequenceIv,
 } from "./hls";
@@ -111,15 +109,6 @@ seg.m4s
     () => parseMediaPlaylist('#EXTM3U\n#EXT-X-KEY:METHOD=SAMPLE-AES,URI="k"\n#EXTINF:6,\nseg.ts\n', BASE),
     /no soportado/,
   );
-}
-
-// Decryption round trip with PKCS#7 padding
-{
-  const key = new Uint8Array(16).fill(7);
-  const iv = sequenceIv(3);
-  const plaintext = new TextEncoder().encode("segment payload bytes");
-  const encrypted = cbc(key, iv).encrypt(plaintext);
-  assert.deepEqual([...decryptSegment(encrypted, key, iv)], [...plaintext]);
 }
 
 // Local playlist drops keys, keeps durations and points at local files
