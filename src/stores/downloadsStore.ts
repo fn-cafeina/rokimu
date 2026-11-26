@@ -15,6 +15,7 @@ import {
   drainStartable,
   hydrateQueue,
   isWaiting,
+  ownsKey,
   type DownloadStatus,
   type DownloadedFolder,
   type QueuedEntry,
@@ -166,17 +167,22 @@ async function runDownload(input: DownloadInput, resume: boolean): Promise<void>
       updateEntry(key, { status: "error", error: appError.message });
     }
   } finally {
-    controllers.delete(key);
-    activeWorkers -= 1;
-    // The cancel path deletes the folder while segments are still landing, so
-    // a cancelled worker cleans up after itself once it has stopped writing
-    if (controller.signal.aborted) {
-      try {
-        deleteEpisodeDownload(target.slug, target.number, target.language);
-      } catch (error) {
-        logger.warn("download", `Failed to delete files for ${key}`, error);
+    // Only the worker that still owns the key cleans up: cancel and download
+    // again leaves the older worker finishing its abort, and the folder and the
+    // abort handle belong to the newer download now
+    if (ownsKey(controllers, key, controller)) {
+      controllers.delete(key);
+      // The cancel path deletes the folder while segments are still landing, so
+      // a cancelled worker cleans up after itself once it has stopped writing
+      if (controller.signal.aborted) {
+        try {
+          deleteEpisodeDownload(target.slug, target.number, target.language);
+        } catch (error) {
+          logger.warn("download", `Failed to delete files for ${key}`, error);
+        }
       }
     }
+    activeWorkers -= 1;
     persist(useDownloadsStore.getState().entries);
     pump();
   }

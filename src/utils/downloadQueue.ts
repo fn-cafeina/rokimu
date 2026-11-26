@@ -57,6 +57,15 @@ export function isWaiting(entries: Record<string, QueuedEntry>, key: string): bo
   return entries[key]?.status === "queued";
 }
 
+/**
+ * Cleanup belongs to the worker that still owns the key. A cancel followed by a
+ * new download of the same episode leaves the older worker finishing its abort:
+ * deleting its abort handle or the folder on disk would kill the new download.
+ */
+export function ownsKey<T>(controllers: ReadonlyMap<string, T>, key: string, worker: T): boolean {
+  return controllers.get(key) === worker;
+}
+
 interface HydratedQueue<T extends QueuedEntry> {
   /** Entries that survive the boot, keyed as the store keys them */
   kept: Record<string, T>;

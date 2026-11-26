@@ -6,6 +6,7 @@ import {
   hasDownloadFor,
   hydrateQueue,
   isWaiting,
+  ownsKey,
   resumeTargets,
   type FolderRecord,
   type QueuedEntry,
@@ -158,5 +159,14 @@ const duplicated = classifyFolders(
 );
 assert.deepEqual(duplicated.adopt, [0]);
 assert.deepEqual(duplicated.drop, []);
+
+// A worker cleans up only while it still owns the key: cancel followed by a new
+// download of the same episode keeps the new abort handle and its folder
+const owned = new Map<string, string>([[key, "worker-2"]]);
+assert.equal(ownsKey(owned, key, "worker-2"), true);
+assert.equal(ownsKey(owned, key, "worker-1"), false);
+owned.delete(key);
+assert.equal(ownsKey(owned, key, "worker-2"), false);
+assert.equal(ownsKey(owned, "other", "worker-2"), false);
 
 console.log("download queue ok");
