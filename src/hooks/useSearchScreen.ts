@@ -23,7 +23,9 @@ export function useSearchScreen() {
   const debouncedTerm = useDebounce(term, 300);
 
   const searchAnimes = results.data ?? [];
-  const isLoading = results.status === "loading";
+  // Keyed to the term on screen: a previous term still loading must not spin
+  // the refresh control of the query the user is typing now
+  const isLoading = results.status === "loading" && results.key === term.trim();
   const error = errorFor(results, results.key ?? "");
   const hasQuery = term.trim().length >= MIN_SEARCH_LENGTH;
   // True from the first keystroke until this term settles: the debounce window
