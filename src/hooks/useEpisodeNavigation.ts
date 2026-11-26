@@ -21,14 +21,15 @@ export function useEpisodeNavigation(player: VideoPlayer, animeTitle: string, an
       const prevEpNumber = currentEpNumber;
 
       const ct = player.currentTime;
-      if (ct > 10 && prevEpNumber && prevEpNumber !== targetEp.number) {
+      const dur = player.duration;
+      if (ct > 10 && dur > 0 && prevEpNumber && prevEpNumber !== targetEp.number) {
         addToHistorySafe(addToHistory, makeHistoryEntry({
           title: animeTitle,
           url: targetSlug,
           image: animeImage,
           number: prevEpNumber,
           progress: ct,
-          duration: player.duration,
+          duration: dur,
         }));
       }
 
