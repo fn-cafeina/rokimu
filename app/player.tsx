@@ -9,6 +9,7 @@ import { useAnimeDetail } from "@/hooks/useAnimeDetail";
 import { useEpisodeNavigation } from "@/hooks/useEpisodeNavigation";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { usePlayerStore } from "@/stores/playerStore";
+import { useDownloadsStore } from "@/stores/downloadsStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { findHistoryEntry } from "@/utils/history";
 import { setupImmersiveMode, cleanupImmersiveMode } from "@/services/playerUI";
@@ -245,6 +246,15 @@ function PlayerContent() {
 
   useEffect(() => {
     const fail = (message: string | undefined) => {
+      // A local copy that fails the video layer is dead on disk: deleting it
+      // keeps the retry from replaying the same broken file and lets it fall
+      // through to the network
+      if (streamUrl != null && streamUrl.startsWith("file://")) {
+        const broken = Object.entries(useDownloadsStore.getState().entries).find(
+          ([, entry]) => entry.playlistUri === streamUrl,
+        );
+        if (broken != null) void useDownloadsStore.getState().remove(broken[0]);
+      }
       usePlayerStore.getState().failStream({ type: "VIDEO_ERROR", message: message ?? "Video player error" });
     };
     const sub = player.addListener("statusChange", ({ status, error }) => {
