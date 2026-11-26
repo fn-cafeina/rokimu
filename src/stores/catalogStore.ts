@@ -4,6 +4,7 @@ import { browseQuery, EMPTY_FILTER, type BrowseFilter } from "@/config/browse";
 import { loadCached } from "@/utils/cache";
 import { appendPage } from "@/utils/paging";
 import { withAuthRetry } from "@/utils/retry";
+import { isCancelled } from "@/utils/errors";
 import { ResourceRunner, resourceInitialState, type ResourceState } from "@/utils/resource";
 import { CACHE_PREFIXES, CACHE_TTL } from "@/config/cache";
 import { logger } from "@/utils/logger";
@@ -57,6 +58,9 @@ export function commitFor(resource: ResourceState<BrowsePage>, query: string): P
 }
 
 export const useCatalogStore = create<CatalogState>((set, get) => {
+  // One page request at a time: a filter change owns the listing that replaces
+  // the one whose next page was in flight
+  let pageController: AbortController | null = null;
   const runner = new ResourceRunner<BrowsePage>({
     tag: "home",
     get: () => get().resource,
@@ -102,11 +106,14 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
       const { hasMore, isLoadingMore, query, page, filter } = get();
       if (!hasMore || isLoadingMore) return;
       set({ isLoadingMore: true });
+      pageController?.abort();
+      const controller = new AbortController();
+      pageController = controller;
       try {
-        const next = await withAuthRetry(() => source.getBrowsePage(browseQuery(filter, page + 1)), {
-          maxRetries: 2,
-          tag: "home",
-        });
+        const next = await withAuthRetry(
+          () => source.getBrowsePage(browseQuery(filter, page + 1), { signal: controller.signal }),
+          { signal: controller.signal, maxRetries: 2, tag: "home" },
+        );
         // A refresh or filter change that landed mid-flight owns the list now
         if (get().query !== query || get().page !== page) return;
         const merged = appendPage(get().items, next.items);
@@ -121,6 +128,11 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
           isLoadingMore: false,
         });
       } catch (error) {
+        // A filter change aborts the page: the new listing owns the flag now
+        if (isCancelled(error)) {
+          set({ isLoadingMore: false });
+          return;
+        }
         if (get().query !== query) return;
         // Keep the list loadable: the next scroll retries instead of dying here
         logger.warn("home", `Page ${page + 1} failed for ${query}`, error);
@@ -131,6 +143,9 @@ export const useCatalogStore = create<CatalogState>((set, get) => {
     setFilter: (filter) => {
       const query = browseQuery(filter, 1);
       if (query === get().query) return;
+      // The page in flight belongs to the listing being replaced
+      pageController?.abort();
+      pageController = null;
       set({ filter, query, items: [], page: 1, lastPage: 1, hasMore: true, isLoadingMore: false });
       void get().fetchCatalog();
     },
