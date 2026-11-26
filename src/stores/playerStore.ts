@@ -141,6 +141,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     },
 
     playLocal: (number: string, playlistUri: string) => {
+      // A resolution still in flight for another episode would settle after this
+      // one and replace the media under the episode now on screen
+      streamRunner.cancel();
       dropPlaybackArtifacts();
       set({
         streamEpisodeNumber: number,
